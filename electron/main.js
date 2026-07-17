@@ -247,7 +247,25 @@ function buildFileTree(dirPath, relativePath = '') {
   return entries;
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  // Handle --open argument from CLI
+  const openArg = process.argv.find((arg, i) => process.argv[i - 1] === '--open');
+  if (openArg) {
+    const targetPath = path.resolve(openArg);
+    if (fs.existsSync(targetPath)) {
+      const stat = fs.statSync(targetPath);
+      if (stat.isFile()) {
+        const content = fs.readFileSync(targetPath, 'utf-8');
+        const fileName = path.basename(targetPath);
+        mainWindow.webContents.on('did-finish-load', () => {
+          mainWindow.webContents.send('load-file', { content, fileName, filePath: targetPath });
+        });
+      }
+    }
+  }
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

@@ -1,12 +1,26 @@
 {
-  "name": "markdown-viewer",
-  "version": "1.0.0",
-  "description": "A lightweight Markdown file viewer with themes, zoom, and local file support",
+  "name": "mdview",
+  "version": "0.0.2",
+  "description": "A lightweight Markdown viewer with themes, fonts, zoom, and local file support",
   "main": "electron/main.js",
+  "bin": {
+    "mdview": "./bin/mdview.js"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "bin/**/*",
+    "*.ps1"
+  ],
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on tcp:3000 -t 10000 && electron .\"",
-    "build": "vite build && electron-builder",
-    "preview": "vite preview"
+    "build": "vite build",
+    "build:win": "vite build && electron-builder --win",
+    "build:portable": "vite build && electron-builder --win --config.win.target=portable",
+    "build:nsis": "vite build && electron-builder --win --config.win.target=nsis",
+    "preview": "vite preview",
+    "start": "electron .",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
@@ -39,12 +53,44 @@
   "build": {
     "appId": "com.markdown-viewer.app",
     "productName": "Markdown Viewer",
+    "copyright": "Copyright © 2026",
     "files": [
       "dist/**/*",
       "electron/**/*"
     ],
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Markdown Viewer",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
     }
-  }
+  },
+  "keywords": ["markdown", "viewer", "editor", "themes", "electron"],
+  "author": "",
+  "license": "MIT"
 }

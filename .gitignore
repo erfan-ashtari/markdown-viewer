@@ -1,6 +1,9 @@
 node_modules/
 dist/
 release/
+build/*.ico
+build/*.png
+build/*.svg
 .mimocode/
 *.log
 .env
