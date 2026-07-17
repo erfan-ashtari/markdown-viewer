@@ -34,8 +34,6 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
     setTheme,
     currentFont,
     setCurrentFont,
-    openInNewTab,
-    setOpenInNewTab,
     tabs,
     activeTabId,
     isFullscreen
@@ -48,8 +46,25 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
   const [headerPinned, setHeaderPinned] = useState(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const activeTab = tabs.find(t => t.id === activeTabId)
+
+  // Close all menus when clicking outside
+  useEffect(() => {
+    if (!showThemeMenu && !showFontMenu && !showSettingsMenu) return
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowThemeMenu(false)
+        setShowFontMenu(false)
+        setShowSettingsMenu(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showThemeMenu, showFontMenu, showSettingsMenu])
 
   // Auto-hide header in fullscreen
   useEffect(() => {
@@ -314,7 +329,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
       </div>
 
       {/* Right side: Theme, Export, Settings */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div ref={menuRef} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         {/* Theme selector */}
         <div style={{ position: 'relative' }}>
           <button
@@ -594,13 +609,13 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
                 e.currentTarget.style.backgroundColor = 'transparent'
               }
             }}
-            title="Export & Settings"
+            title="Export"
           >
-            <Settings size={18} />
+            <Download size={18} />
           </button>
-          
+
           {showSettingsMenu && (
-            <div 
+            <div
               style={{
                 position: 'absolute',
                 top: '100%',
@@ -610,20 +625,11 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
                 border: '1px solid var(--border-color)',
                 borderRadius: '8px',
                 padding: '8px',
-                minWidth: '200px',
+                minWidth: '180px',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                 zIndex: 1000,
               }}
             >
-              <div style={{ 
-                padding: '4px 8px', 
-                fontSize: '11px', 
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                Export
-              </div>
               <button
                 onClick={() => {
                   onExportPDF()
@@ -643,15 +649,11 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
                   textAlign: 'left',
                   fontSize: '13px',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
               >
                 <Download size={14} />
-                <span>Export as PDF</span>
+                Export as PDF
               </button>
               <button
                 onClick={() => {
@@ -672,58 +674,36 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
                   textAlign: 'left',
                   fontSize: '13px',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
               >
                 <Download size={14} />
-                <span>Export as HTML</span>
+                Export as HTML
               </button>
-              
-              <div style={{ 
-                padding: '4px 8px', 
-                marginTop: '8px',
-                fontSize: '11px', 
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
-                Settings
-              </div>
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={openInNewTab}
-                  onChange={(e) => setOpenInNewTab(e.target.checked)}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span>Open files in new tab</span>
-              </label>
             </div>
           )}
         </div>
+
+        {/* Settings button — opens settings window */}
+        <button
+          onClick={() => window.electronAPI?.openSettings()}
+          style={{
+            padding: '8px',
+            borderRadius: '6px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent' }}
+          title="Settings"
+        >
+          <Settings size={18} />
+        </button>
       </div>
     </div>
   )

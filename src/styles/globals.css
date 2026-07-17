@@ -17,6 +17,15 @@
   --selection-bg: rgba(13, 110, 253, 0.3);
   --scrollbar-thumb: rgba(128, 128, 128, 0.3);
   --scrollbar-thumb-hover: rgba(128, 128, 128, 0.5);
+  --md-heading: #1a1a2e;
+  --md-strong: #24292e;
+  --md-em: #6a737d;
+  --md-blockquote-border: #d0d7de;
+  --md-blockquote-text: #57606a;
+  --md-list-marker: #57606a;
+  --md-hr: #d0d7de;
+  --md-table-stripe: #f6f8fa;
+  --md-table-border: #d0d7de;
 }
 
 /* Dark theme */
@@ -38,6 +47,15 @@
   --selection-bg: rgba(77, 163, 255, 0.3);
   --scrollbar-thumb: rgba(128, 128, 128, 0.3);
   --scrollbar-thumb-hover: rgba(128, 128, 128, 0.5);
+  --md-heading: #e0e0e0;
+  --md-strong: #ffffff;
+  --md-em: #b0b0b0;
+  --md-blockquote-border: #555555;
+  --md-blockquote-text: #999999;
+  --md-list-marker: #4da3ff;
+  --md-hr: #444444;
+  --md-table-stripe: #2a2a2a;
+  --md-table-border: #404040;
 }
 
 [data-theme="github-dark"] {
@@ -56,6 +74,15 @@
   --tab-active-bg: #0d1117;
   --code-bg: #161b22;
   --selection-bg: rgba(56, 139, 253, 0.4);
+  --md-heading: #e6edf3;
+  --md-strong: #f0f6fc;
+  --md-em: #8b949e;
+  --md-blockquote-border: #3b4958;
+  --md-blockquote-text: #8b949e;
+  --md-list-marker: #58a6ff;
+  --md-hr: #21262d;
+  --md-table-stripe: #161b22;
+  --md-table-border: #30363d;
 }
 
 [data-theme="monokai"] {
@@ -73,6 +100,15 @@
   --tab-bg: #1e1f1c;
   --tab-active-bg: #272822;
   --code-bg: #1e1f1c;
+  --md-heading: #a6e22e;
+  --md-strong: #f8f8f2;
+  --md-em: #fd971f;
+  --md-blockquote-border: #75715e;
+  --md-blockquote-text: #a6a68a;
+  --md-list-marker: #66d9ef;
+  --md-hr: #49483e;
+  --md-table-stripe: #2d2e27;
+  --md-table-border: #49483e;
 }
 
 [data-theme="nord"] {
@@ -90,6 +126,15 @@
   --tab-bg: #3b4252;
   --tab-active-bg: #2e3440;
   --code-bg: #3b4252;
+  --md-heading: #eceff4;
+  --md-strong: #eceff4;
+  --md-em: #a0aabe;
+  --md-blockquote-border: #4c566a;
+  --md-blockquote-text: #a0aabe;
+  --md-list-marker: #88c0d0;
+  --md-hr: #4c566a;
+  --md-table-stripe: #353c4a;
+  --md-table-border: #4c566a;
 }
 
 [data-theme="dracula"] {
@@ -107,6 +152,15 @@
   --tab-bg: #21222c;
   --tab-active-bg: #282a36;
   --code-bg: #21222c;
+  --md-heading: #bd93f9;
+  --md-strong: #ff79c6;
+  --md-em: #50fa7b;
+  --md-blockquote-border: #6272a4;
+  --md-blockquote-text: #bfbfbf;
+  --md-list-marker: #8be9fd;
+  --md-hr: #44475a;
+  --md-table-stripe: #2c2e3a;
+  --md-table-border: #44475a;
 }
 
 [data-theme="solarized"] {
@@ -124,6 +178,15 @@
   --tab-bg: #073642;
   --tab-active-bg: #002b36;
   --code-bg: #073642;
+  --md-heading: #93a1a1;
+  --md-strong: #fdf6e3;
+  --md-em: #2aa198;
+  --md-blockquote-border: #586e75;
+  --md-blockquote-text: #93a1a1;
+  --md-list-marker: #268bd2;
+  --md-hr: #586e75;
+  --md-table-stripe: #063440;
+  --md-table-border: #586e75;
 }
 
 [data-theme="one-dark"] {
@@ -141,6 +204,15 @@
   --tab-bg: #21252b;
   --tab-active-bg: #282c34;
   --code-bg: #21252b;
+  --md-heading: #e5c07b;
+  --md-strong: #e06c75;
+  --md-em: #c678dd;
+  --md-blockquote-border: #5c6370;
+  --md-blockquote-text: #888d95;
+  --md-list-marker: #61afef;
+  --md-hr: #3e4451;
+  --md-table-stripe: #252a32;
+  --md-table-border: #3e4451;
 }
 
 [data-theme="material"] {
@@ -158,6 +230,15 @@
   --tab-bg: #1c2127;
   --tab-active-bg: #263238;
   --code-bg: #1c2127;
+  --md-heading: #c3e88d;
+  --md-strong: #f07178;
+  --md-em: #c792ea;
+  --md-blockquote-border: #546e7a;
+  --md-blockquote-text: #a0a0a0;
+  --md-list-marker: #82aaff;
+  --md-hr: #37474f;
+  --md-table-stripe: #222c32;
+  --md-table-border: #37474f;
 }
 
 [data-theme="paper"] {
@@ -175,6 +256,15 @@
   --tab-bg: #e8e8e8;
   --tab-active-bg: #f5f5f5;
   --code-bg: #e8e8e8;
+  --md-heading: #1a1a1a;
+  --md-strong: #1a1a1a;
+  --md-em: #555555;
+  --md-blockquote-border: #bbbbbb;
+  --md-blockquote-text: #666666;
+  --md-list-marker: #0066cc;
+  --md-hr: #cccccc;
+  --md-table-stripe: #eeeeee;
+  --md-table-border: #cccccc;
 }
 
 [data-theme="newsprint"] {
@@ -192,6 +282,15 @@
   --tab-bg: #e8e0d0;
   --tab-active-bg: #f7f3e9;
   --code-bg: #e8e0d0;
+  --md-heading: #1a1a1a;
+  --md-strong: #1a1a1a;
+  --md-em: #555555;
+  --md-blockquote-border: #8b0000;
+  --md-blockquote-text: #666666;
+  --md-list-marker: #8b0000;
+  --md-hr: #999999;
+  --md-table-stripe: #f0e8d8;
+  --md-table-border: #999999;
 }
 
 /* Global styles */
@@ -244,6 +343,7 @@ body {
   font-size: 1rem;
   line-height: 1.6;
   word-wrap: break-word;
+  color: var(--text-primary);
 }
 
 .markdown-body h1,
@@ -257,12 +357,13 @@ body {
   font-weight: 600;
   line-height: 1.25;
   font-family: var(--font-heading, inherit);
+  color: var(--md-heading);
 }
 
 .markdown-body h1,
 .markdown-body h2 {
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--md-hr);
 }
 
 .markdown-body h1 { font-size: 2em; }
@@ -287,14 +388,15 @@ body {
 .markdown-body a:hover,
 .md-link:hover {
   text-decoration: underline;
+  color: var(--accent-hover);
 }
 
 .md-link.md-link-visited {
-  color: #8b5cf6;
+  color: var(--md-visited, #8b5cf6);
 }
 
 .md-link-visited:hover {
-  color: #7c3aed;
+  color: var(--md-visited-hover, #7c3aed);
 }
 
 .md-link-tooltip {
@@ -317,17 +419,19 @@ body {
 
 .markdown-body strong {
   font-weight: 600;
+  color: var(--md-strong);
 }
 
 .markdown-body em {
   font-style: italic;
+  color: var(--md-em);
 }
 
 .markdown-body blockquote {
   margin: 16px 0;
   padding: 0 1em;
-  color: var(--text-muted);
-  border-left: 0.25em solid var(--border-color);
+  color: var(--md-blockquote-text);
+  border-left: 0.25em solid var(--md-blockquote-border);
 }
 
 .markdown-body ul,
@@ -351,6 +455,7 @@ body {
   background-color: var(--code-bg);
   border-radius: 3px;
   font-family: var(--font-code, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace);
+  color: var(--accent-color);
 }
 
 .markdown-body pre {
@@ -390,28 +495,29 @@ body {
 .markdown-body table th,
 .markdown-body table td {
   padding: 6px 13px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--md-table-border);
 }
 
 .markdown-body table th {
   font-weight: 600;
   background-color: var(--code-bg);
+  color: var(--md-heading);
 }
 
 .markdown-body table tr {
   background-color: transparent;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--md-table-border);
 }
 
 .markdown-body table tr:nth-child(2n) {
-  background-color: var(--code-bg);
+  background-color: var(--md-table-stripe);
 }
 
 .markdown-body hr {
   height: 0.25em;
   padding: 0;
   margin: 24px 0;
-  background-color: var(--border-color);
+  background-color: var(--md-hr);
   border: 0;
 }
 
@@ -431,6 +537,18 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 16px 0;
+}
+
+/* KaTeX color overrides for dark themes */
+[data-theme="dark"] .katex,
+[data-theme="github-dark"] .katex,
+[data-theme="monokai"] .katex,
+[data-theme="nord"] .katex,
+[data-theme="dracula"] .katex,
+[data-theme="solarized"] .katex,
+[data-theme="one-dark"] .katex,
+[data-theme="material"] .katex {
+  color: var(--text-primary);
 }
 
 /* Mermaid diagrams */

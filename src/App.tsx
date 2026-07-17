@@ -49,23 +49,134 @@ const App: React.FC = () => {
   const activeTab = tabs.find(t => t.id === activeTabId)
   const isFullscreen = useAppStore(state => state.isFullscreen)
 
-  // Keyboard shortcuts for zoom
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+      // Don't intercept if typing in an input
+      if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
+
+      const ctrl = e.ctrlKey || e.metaKey
+      const state = useAppStore.getState()
+
+      // Ctrl+Tab / Ctrl+Shift+Tab — navigate between tabs
+      if (ctrl && e.key === 'Tab') {
         e.preventDefault()
-        setZoomLevel(zoomLevel + 10)
-      } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        const { tabs, activeTabId } = state
+        if (tabs.length <= 1) return
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId)
+        const nextIndex = e.shiftKey
+          ? (currentIndex - 1 + tabs.length) % tabs.length
+          : (currentIndex + 1) % tabs.length
+        state.setActiveTab(tabs[nextIndex].id)
+        return
+      }
+
+      // Ctrl+=/Ctrl++ — zoom in
+      if (ctrl && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
-        setZoomLevel(zoomLevel - 10)
-      } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        state.setZoomLevel(state.zoomLevel + 10)
+        return
+      }
+
+      // Ctrl+- — zoom out
+      if (ctrl && e.key === '-') {
         e.preventDefault()
-        setZoomLevel(100)
+        state.setZoomLevel(state.zoomLevel - 10)
+        return
+      }
+
+      // Ctrl+0 — reset zoom
+      if (ctrl && e.key === '0') {
+        e.preventDefault()
+        state.setZoomLevel(100)
+        return
+      }
+
+      // Ctrl+Shift+W — toggle width mode
+      if (ctrl && e.shiftKey && e.key === 'W') {
+        e.preventDefault()
+        state.toggleContentWidth()
+        return
+      }
+
+      // Ctrl+Shift+F — toggle fullscreen
+      if (ctrl && e.shiftKey && e.key === 'F') {
+        e.preventDefault()
+        document.documentElement.requestFullscreen?.()
+        return
+      }
+
+      // Ctrl+Shift+B — toggle sidebar
+      if (ctrl && e.shiftKey && e.key === 'B') {
+        e.preventDefault()
+        state.toggleSidebar()
+        return
+      }
+
+      // Ctrl+1..9 — switch to tab by position
+      if (ctrl && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
+        const index = parseInt(e.key) - 1
+        if (index < state.tabs.length) {
+          state.setActiveTab(state.tabs[index].id)
+        }
+        return
+      }
+
+      // Ctrl+W — close current tab
+      if (ctrl && e.key === 'w') {
+        e.preventDefault()
+        if (state.activeTabId) {
+          state.closeTab(state.activeTabId)
+        }
+        return
+      }
+
+      // ArrowLeft / ArrowRight — navigate between .md files in directory
+      if (e.key === 'ArrowLeft' && !ctrl) {
+        e.preventDefault()
+        state.navigateToAdjacentFile('prev')
+        return
+      }
+      if (e.key === 'ArrowRight' && !ctrl) {
+        e.preventDefault()
+        state.navigateToAdjacentFile('next')
+        return
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [zoomLevel, setZoomLevel])
+  }, [])
+
+  // Fetch directory .md files when active tab changes
+  useEffect(() => {
+    if (!activeTab || activeTab.type !== 'markdown') return
+    const dir = activeTab.filePath.replace(/[\\/][^\\/]+$/, '')
+    window.electronAPI?.listMdFiles(dir).then((files) => {
+      if (files) useAppStore.getState().setDirFiles(files)
+    })
+  }, [activeTab?.id])
+
+  // Listen for settings changes from the settings window
+  useEffect(() => {
+    window.electronAPI?.onSettingsChanged?.((data: { key: string; value: any }) => {
+      const state = useAppStore.getState()
+      switch (data.key) {
+        case 'theme':
+          state.setTheme(data.value)
+          break
+        case 'font':
+          state.setCurrentFont(data.value)
+          break
+        case 'contentWidth':
+          useAppStore.setState({ contentWidth: data.value })
+          break
+        case 'zoomLevel':
+          state.setZoomLevel(data.value)
+          break
+      }
+    })
+  }, [])
 
   // Detect fullscreen changes via Electron IPC
   useEffect(() => {

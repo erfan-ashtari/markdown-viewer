@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
+let settingsWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -107,6 +108,60 @@ ipcMain.handle('read-file', async (event, filePath) => {
     return null;
   }
 });
+
+ipcMain.handle('list-md-files', async (event, dirPath) => {
+  try {
+    const items = fs.readdirSync(dirPath);
+    return items
+      .filter(item => /\.(md|markdown)$/i.test(item))
+      .sort((a, b) => a.localeCompare(b))
+      .map(item => ({
+        name: item,
+        path: path.join(dirPath, item),
+      }));
+  } catch (error) {
+    console.error('Error listing directory:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('open-settings', async () => {
+  if (settingsWindow) {
+    settingsWindow.focus()
+    return
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    title: 'Settings',
+    resizable: true,
+    backgroundColor: '#1e1e1e',
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+  })
+
+  const isDev = !app.isPackaged
+  if (isDev) {
+    settingsWindow.loadURL('http://localhost:3000/settings.html')
+  } else {
+    settingsWindow.loadFile(path.join(__dirname, '../dist/settings.html'))
+  }
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null
+  })
+
+  // Forward settings changes to main window
+  ipcMain.on('settings-changed', (event, data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('settings-changed', data)
+    }
+  })
+})
 
 ipcMain.handle('open-external', async (event, link) => {
   await shell.openExternal(link);

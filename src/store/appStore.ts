@@ -10,10 +10,16 @@ export interface Tab {
   type: 'markdown' | 'other'
 }
 
+interface DirFile {
+  name: string
+  path: string
+}
+
 interface AppState {
   // File state
   tabs: Tab[]
   activeTabId: string | null
+  dirFiles: DirFile[]
 
   // UI state
   sidebarOpen: boolean
@@ -37,12 +43,15 @@ interface AppState {
   setCurrentFont: (fontId: string) => void
   setOpenInNewTab: (value: boolean) => void
   setIsFullscreen: (value: boolean) => void
+  setDirFiles: (files: DirFile[]) => void
+  navigateToAdjacentFile: (direction: 'prev' | 'next') => Promise<void>
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   // File state
   tabs: [],
   activeTabId: null,
+  dirFiles: [],
   
   // UI state
   sidebarOpen: true,
@@ -134,4 +143,35 @@ export const useAppStore = create<AppState>((set, get) => ({
   setOpenInNewTab: (value) => set({ openInNewTab: value }),
 
   setIsFullscreen: (value) => set({ isFullscreen: value }),
+
+  setDirFiles: (files) => set({ dirFiles: files }),
+
+  navigateToAdjacentFile: async (direction) => {
+    const state = get()
+    const activeTab = state.tabs.find(t => t.id === state.activeTabId)
+    if (!activeTab || activeTab.type !== 'markdown') return
+
+    const currentIndex = state.dirFiles.findIndex(f => f.path === activeTab.filePath)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1
+    if (targetIndex < 0 || targetIndex >= state.dirFiles.length) return
+
+    const targetFile = state.dirFiles[targetIndex]
+    try {
+      const result = await window.electronAPI?.readFile(targetFile.path)
+      if (result) {
+        // Update existing tab content
+        set({
+          tabs: state.tabs.map(t =>
+            t.id === state.activeTabId
+              ? { ...t, filePath: result.filePath, fileName: result.fileName, content: result.content }
+              : t
+          ),
+        })
+      }
+    } catch (error) {
+      console.error('Failed to navigate to file:', error)
+    }
+  },
 }))
