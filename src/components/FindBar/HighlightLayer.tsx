@@ -1,83 +1,124 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 
 interface HighlightLayerProps {
   containerRef: React.RefObject<HTMLDivElement | null>
   query: string
   activeIndex: number
-  matchCount: number
 }
 
-// Find the nth occurrence of query in container.textContent and select it
-function selectNthMatch(container: HTMLElement, query: string, n: number): boolean {
-  if (!query || n <= 0) return false
+interface MatchOffset {
+  start: number
+  end: number
+}
+
+function findMatches(text: string, query: string): MatchOffset[] {
+  if (!query) return []
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const regex = new RegExp(escaped, 'gi')
+  const matches: MatchOffset[] = []
+  let m: RegExpExecArray | null
+  while ((m = regex.exec(text)) !== null) {
+    matches.push({ start: m.index, end: m.index + m[0].length })
+  }
+  return matches
+}
 
+function offsetToRange(container: HTMLElement, start: number, end: number): Range | null {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
-  let matchCount = 0
-  let cumulativeOffset = 0
+  let cumulative = 0
+  let range: Range | null = null
 
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text
-    const text = textNode.textContent || ''
-    let m: RegExpExecArray | null
-    regex.lastIndex = 0
+    const len = textNode.textContent?.length || 0
+    const nodeEnd = cumulative + len
 
-    while ((m = regex.exec(text)) !== null) {
-      matchCount++
-      if (matchCount === n) {
-        // Found the target match — select it
-        const range = document.createRange()
-        range.setStart(textNode, m.index)
-        range.setEnd(textNode, m.index + m[0].length)
-        const selection = window.getSelection()
-        selection?.removeAllRanges()
-        selection?.addRange(range)
-
-        // Scroll into view
-        const parent = textNode.parentElement
-        if (parent) {
-          parent.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        }
-        return true
-      }
+    if (nodeEnd <= start) {
+      cumulative = nodeEnd
+      continue
     }
-    cumulativeOffset += text.length
+    if (cumulative >= end) break
+
+    const localStart = Math.max(0, start - cumulative)
+    const localEnd = Math.min(len, end - cumulative)
+
+    if (!range) {
+      range = document.createRange()
+      range.setStart(textNode, localStart)
+    }
+    range.setEnd(textNode, localEnd)
+
+    if (nodeEnd >= end) break
+    cumulative = nodeEnd
   }
-  return false
+
+  return range
 }
 
-export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, query, activeIndex, matchCount }) => {
-  const lastActiveRef = useRef(0)
+function clearHighlights() {
+  if (typeof CSS !== 'undefined' && 'highlights' in CSS) {
+    CSS.highlights.delete('find-match')
+    CSS.highlights.delete('find-active')
+  }
+}
 
-  const clearSelection = useCallback(() => {
-    window.getSelection()?.removeAllRanges()
-  }, [])
+function buildHighlights(container: HTMLElement, query: string, activeIndex: number) {
+  clearHighlights()
+  if (!query) return
 
-  // When active match changes, select it
-  useEffect(() => {
-    if (!containerRef.current || !query || matchCount === 0 || activeIndex === 0) {
-      clearSelection()
-      lastActiveRef.current = 0
-      return
+  const textContent = container.textContent || ''
+  const matches = findMatches(textContent, query)
+  if (matches.length === 0) return
+
+  const ranges: Range[] = []
+  for (const match of matches) {
+    const range = offsetToRange(container, match.start, match.end)
+    if (range) ranges.push(range)
+  }
+  if (ranges.length === 0) return
+
+  CSS.highlights.set('find-match', new Highlight(...ranges))
+
+  if (activeIndex > 0 && activeIndex <= ranges.length) {
+    CSS.highlights.set('find-active', new Highlight(ranges[activeIndex - 1]))
+    const parent = ranges[activeIndex - 1].startContainer.parentElement
+    if (parent) {
+      parent.scrollIntoView({ block: 'center', behavior: 'smooth' })
     }
-    if (activeIndex === lastActiveRef.current) return
-    lastActiveRef.current = activeIndex
-    selectNthMatch(containerRef.current, query, activeIndex)
-  }, [query, activeIndex, matchCount, containerRef, clearSelection])
+  }
+}
 
-  // Clear selection when query is cleared
+const CSS_SUPPORTED = typeof CSS !== 'undefined' && 'highlights' in CSS
+
+export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, query, activeIndex }) => {
+  const prevQuery = useRef(query)
+
   useEffect(() => {
-    if (!query) {
-      clearSelection()
-      lastActiveRef.current = 0
+    if (!CSS_SUPPORTED) return
+    const container = containerRef.current
+    if (!container) return
+
+    const queryChanged = prevQuery.current !== query
+    prevQuery.current = query
+
+    if (queryChanged) {
+      // Query changed: clear old, wait for DOM to settle, then build new
+      clearHighlights()
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          buildHighlights(containerRef.current, query, activeIndex)
+        }
+      })
+    } else {
+      // Same query, just activeIndex changed (navigation)
+      buildHighlights(container, query, activeIndex)
     }
-  }, [query, clearSelection])
+  }) // No deps — we track changes via ref
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => clearSelection()
-  }, [clearSelection])
+    return () => clearHighlights()
+  }, [])
 
   return null
 }
