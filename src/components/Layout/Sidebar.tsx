@@ -16,6 +16,8 @@ import {
   ArrowDownAZ,
   Clock,
   FileType2,
+  Search,
+  X,
 } from 'lucide-react'
 import { isTextFile } from '../Text/languageMap'
 import { useAppStore } from '../../store/appStore'
@@ -117,6 +119,73 @@ function sortNodes(nodes: FileNode[], sortKey: SortKey, ascending: boolean): Fil
     ...node,
     children: node.children ? sortNodes(node.children, sortKey, ascending) : undefined,
   }))
+}
+
+const SearchResultItem: React.FC<{
+  node: FileNode
+  onClick: (node: FileNode) => void
+}> = ({ node, onClick }) => {
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleClick = async () => {
+    setIsLoading(true)
+    await onClick(node)
+    setIsLoading(false)
+  }
+
+  // Show relative path from root
+  const dirPart = node.relativePath.includes('/')
+    ? node.relativePath.substring(0, node.relativePath.lastIndexOf('/'))
+    : ''
+
+  return (
+    <div
+      className="tree-item"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '4px 8px',
+        paddingLeft: '12px',
+        cursor: 'pointer',
+        borderRadius: '4px',
+        margin: '0 4px',
+        fontSize: '13px',
+        color: 'var(--text-primary)',
+        transition: 'background-color 0.15s',
+      }}
+      onClick={handleClick}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent'
+      }}
+    >
+      <span style={{ width: '14px', flexShrink: 0 }} />
+      {getFileIcon(node.name)}
+      <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+        <div style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {isLoading ? 'Loading...' : node.name}
+        </div>
+        {dirPart && (
+          <div style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {dirPart}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 const TreeItem: React.FC<{
@@ -246,6 +315,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [sortAsc, setSortAsc] = useState(true)
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<FileNode[] | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
   const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
 
@@ -298,6 +371,73 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
       setSortAsc(true)
     }
     setSortDropdownOpen(false)
+  }
+
+  // Flatten tree into a list of all files
+  const flattenTree = (nodes: FileNode[]): FileNode[] => {
+    const result: FileNode[] = []
+    for (const node of nodes) {
+      if (node.type === 'file') result.push(node)
+      if (node.children) result.push(...flattenTree(node.children))
+    }
+    return result
+  }
+
+  const handleSearch = () => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q || !fileTree.length) {
+      setSearchResults(null)
+      return
+    }
+    const allFiles = flattenTree(fileTree)
+    const matches = allFiles.filter((f) => f.name.toLowerCase().includes(q))
+    setSearchResults(matches)
+  }
+
+  const handleSearchSubmit = () => {
+    handleSearch()
+  }
+
+  const handleSearchResultClick = async (node: FileNode) => {
+    const isMd = /\.(md|markdown)$/i.test(node.name)
+    if (isMd || isTextFile(node.name)) {
+      try {
+        const result = await window.electronAPI?.readFile(node.path)
+        if (result) {
+          if (isMd) {
+            onFileSelect(result.filePath, result.content, result.fileName)
+          } else {
+            onNonMarkdownFile(result.filePath, result.content, result.fileName)
+          }
+          // Collapse search, load parent directory
+          setSearchOpen(false)
+          setSearchQuery('')
+          setSearchResults(null)
+          const parentDir = node.path.replace(/[\\/][^\\/]+$/, '')
+          await loadTree(parentDir)
+        }
+      } catch (error) {
+        console.error('Failed to read file:', error)
+      }
+    } else {
+      onNonMarkdownFile(node.path, '', node.name)
+      setSearchOpen(false)
+      setSearchQuery('')
+      setSearchResults(null)
+      const parentDir = node.path.replace(/[\\/][^\\/]+$/, '')
+      await loadTree(parentDir)
+    }
+  }
+
+  const handleSearchToggle = () => {
+    const next = !searchOpen
+    setSearchOpen(next)
+    if (!next) {
+      setSearchQuery('')
+      setSearchResults(null)
+    } else {
+      setTimeout(() => searchInputRef.current?.focus(), 50)
+    }
   }
 
   const handleOpenFolder = async () => {
@@ -398,6 +538,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
           {rootPath || 'Explorer'}
         </span>
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
+          {/* Search toggle */}
+          <button
+            onClick={handleSearchToggle}
+            title={searchOpen ? 'Close search' : 'Search files'}
+            style={{
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: searchOpen ? 'var(--bg-tertiary)' : 'transparent',
+              color: searchOpen ? 'var(--accent-color)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+            }}
+            onMouseLeave={(e) => {
+              if (!searchOpen) e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <Search size={14} />
+          </button>
+
           {/* Refresh button */}
           <button
             onClick={handleRefresh}
@@ -562,10 +728,109 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
           </button>
         </div>
       </div>
+
+      {/* Search bar */}
+      {searchOpen && (
+        <div
+          style={{
+            padding: '8px 12px',
+            borderBottom: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSearchSubmit()
+              if (e.key === 'Escape') handleSearchToggle()
+            }}
+            placeholder="Search files..."
+            style={{
+              flex: 1,
+              padding: '5px 8px',
+              fontSize: '12px',
+              borderRadius: '4px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              outline: 'none',
+            }}
+          />
+          <button
+            onClick={handleSearchSubmit}
+            title="Search"
+            style={{
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: 'var(--accent-color)',
+              color: 'white',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <Search size={13} />
+          </button>
+          <button
+            onClick={handleSearchToggle}
+            title="Close search"
+            style={{
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
       
       {/* File tree */}
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
-        {sortedTree.length === 0 ? (
+        {searchResults !== null ? (
+          searchResults.length === 0 ? (
+            <div style={{
+              padding: '32px 16px',
+              textAlign: 'center',
+              color: 'var(--text-muted)',
+              fontSize: '13px',
+            }}>
+              <p>No files match "{searchQuery}"</p>
+            </div>
+          ) : (
+            <>
+              <div style={{
+                padding: '4px 12px 8px',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+              }}>
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+              </div>
+              {searchResults.map((node) => (
+                <SearchResultItem
+                  key={node.path}
+                  node={node}
+                  onClick={handleSearchResultClick}
+                />
+              ))}
+            </>
+          )
+        ) : sortedTree.length === 0 ? (
           <div style={{ 
             padding: '32px 16px', 
             textAlign: 'center', 
