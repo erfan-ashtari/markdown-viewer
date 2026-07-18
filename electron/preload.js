@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFullscreenChanged: (callback) => ipcRenderer.on('fullscreen-changed', (event, isFullscreen) => callback(isFullscreen)),
   onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (event, data) => callback(data)),
   rendererReady: () => ipcRenderer.send('renderer-ready'),
+  exportPdf: (htmlContent, margins) => ipcRenderer.invoke('export-pdf', htmlContent, margins),
   getPathForFile: (file) => {
     try {
       return webUtils.getPathForFile(file);

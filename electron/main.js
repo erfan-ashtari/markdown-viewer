@@ -385,6 +385,47 @@ app.whenReady().then(() => {
   createWindow();
 });
 
+ipcMain.handle('export-pdf', async (event, htmlContent, margins) => {
+  let printWindow = null;
+  try {
+    printWindow = new BrowserWindow({
+      show: false,
+      width: 800,
+      height: 600,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+
+    // Wait for fonts and KaTeX to render
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const pdfBuffer = await printWindow.webContents.printToPDF({
+      printBackground: true,
+      pageSize: 'A4',
+      margins: {
+        marginType: 'custom',
+        top: margins?.top ?? 0,
+        bottom: margins?.bottom ?? 0,
+        left: margins?.left ?? 0,
+        right: margins?.right ?? 0,
+      },
+    });
+
+    return pdfBuffer;
+  } catch (error) {
+    console.error('PDF export error:', error);
+    throw error;
+  } finally {
+    if (printWindow && !printWindow.isDestroyed()) {
+      printWindow.close();
+    }
+  }
+});
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

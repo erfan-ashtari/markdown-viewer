@@ -29,6 +29,7 @@ declare global {
       onFullscreenChanged: (callback: (isFullscreen: boolean) => void) => void
       onSettingsChanged: (callback: (data: { key: string; value: any }) => void) => void
       rendererReady: () => void
+      exportPdf: (htmlContent: string, margins?: { top: number; bottom: number; left: number; right: number }) => Promise<Buffer>
       getPathForFile: (file: File) => string | null
     }
   }
@@ -146,7 +147,7 @@ const MarkdownLink: React.FC<{ href: string; children: React.ReactNode; visitedL
         const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6')
         for (const h of headings) {
           if (h.id === targetId || h.textContent?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') === targetId) {
-            target = h
+            target = h as HTMLElement
             break
           }
         }

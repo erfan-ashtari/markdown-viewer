@@ -1,10 +1,12 @@
-import React, { useEffect, useCallback, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
 import { Tabs } from './components/Layout/Tabs'
 import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
 import { FontLoader } from './components/FontLoader'
+import { ExportManager } from './export/ExportManager'
+import { ExportFormat } from './export/types/ExportOptions'
 import {
   File, FileText, FileCode, FileImage, FileJson, FileCog, FileArchive
 } from 'lucide-react'
@@ -31,6 +33,8 @@ const getFileIconLarge = (name: string) => {
       return <File {...iconProps} style={{ color: '#8b949e', opacity: 0.7 }} />
   }
 }
+
+const exportManager = ExportManager.create()
 
 const App: React.FC = () => {
   const {
@@ -300,79 +304,52 @@ const App: React.FC = () => {
     addTab(path, '', name, 'other')
   }
 
-  const handleTabSelect = (tab: any) => {
+  const handleTabSelect = () => {
     // Tab is already activated in the Tabs component
   }
 
   const handleExportPDF = async () => {
     if (!activeTab) return
-    
+
     try {
-      // Dynamic import for html2canvas and jspdf
-      const html2canvas = (await import('html2canvas')).default
-      const { jsPDF } = await import('jspdf')
-      
-      const markdownBody = document.querySelector('.markdown-body')
-      if (!markdownBody) return
-      
-      const canvas = await html2canvas(markdownBody as HTMLElement, {
-        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim(),
-        scale: 2,
+      let pdfMargins = { top: 0, bottom: 0, left: 0, right: 0 }
+      try {
+        const saved = localStorage.getItem('markdown-viewer-local-settings')
+        if (saved) {
+          const settings = JSON.parse(saved)
+          if (settings.pdfMargins) {
+            pdfMargins = settings.pdfMargins
+          }
+        }
+      } catch {}
+
+      await exportManager.export({
+        format: ExportFormat.PDF,
+        markdown: activeTab.content,
+        title: activeTab.fileName.replace(/\.md$/, ''),
+        theme: currentTheme,
+        pdfMargins,
       })
-      
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF('p', 'mm', 'a4')
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-      
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-      pdf.save(`${activeTab.fileName.replace(/\.md$/, '')}.pdf`)
     } catch (error) {
       console.error('Export PDF failed:', error)
       alert('Failed to export PDF. Please try again.')
     }
   }
 
-  const handleExportHTML = () => {
+  const handleExportHTML = async () => {
     if (!activeTab) return
-    
-    const markdownBody = document.querySelector('.markdown-body')
-    if (!markdownBody) return
-    
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${activeTab.fileName}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 2rem;
-      line-height: 1.6;
-      color: #24292e;
-      background-color: #ffffff;
+
+    try {
+      await exportManager.export({
+        format: ExportFormat.HTML,
+        markdown: activeTab.content,
+        title: activeTab.fileName.replace(/\.md$/, ''),
+        theme: currentTheme,
+      })
+    } catch (error) {
+      console.error('Export HTML failed:', error)
+      alert('Failed to export HTML. Please try again.')
     }
-    /* Add your styles here */
-  </style>
-</head>
-<body>
-  ${markdownBody.innerHTML}
-</body>
-</html>
-    `
-    
-    const blob = new Blob([htmlContent], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${activeTab.fileName.replace(/\.md$/, '')}.html`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   // Handle drag and drop for .md files — read content via FileReader, get real path via webUtils

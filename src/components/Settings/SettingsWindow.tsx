@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, Monitor, Palette, Type, Sliders, Info, RotateCcw, Download, Upload } from 'lucide-react'
+import { Monitor, Palette, Type, Sliders, Info, RotateCcw, Download, Upload } from 'lucide-react'
 import { useAppStore, Theme } from '../../store/appStore'
 import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
@@ -37,7 +37,6 @@ export const SettingsWindow: React.FC = () => {
     currentFont, setCurrentFont,
     contentWidth, toggleContentWidth,
     zoomLevel, setZoomLevel,
-    sidebarOpen, toggleSidebar,
   } = useAppStore()
 
   const [localSettings, setLocalSettings] = useState({
@@ -45,7 +44,11 @@ export const SettingsWindow: React.FC = () => {
     autoHideHeader: true,
     smoothScrolling: true,
     showLineNumbers: false,
+    pdfMargins: { top: 0.79, bottom: 0.79, left: 0.71, right: 0.71 },
   })
+
+  // Relational always resets to true on mount — never persisted
+  const [pdfMarginsRelational, setPdfMarginsRelational] = useState(true)
 
   // Load local settings from localStorage
   useEffect(() => {
@@ -189,6 +192,8 @@ export const SettingsWindow: React.FC = () => {
           <PreferencesSection
             localSettings={localSettings}
             saveLocalSettings={saveLocalSettings}
+            pdfMarginsRelational={pdfMarginsRelational}
+            setPdfMarginsRelational={setPdfMarginsRelational}
           />
         )}
         {activeSection === 'shortcuts' && <ShortcutsSection />}
@@ -345,11 +350,16 @@ const AppearanceSection: React.FC<{
   </div>
 )
 
+// A4 base margins — relational scaling preserves this ratio
+const A4_MARGINS = { top: 0.79, bottom: 0.79, left: 0.71, right: 0.71 }
+
 // ===== Preferences Section =====
 const PreferencesSection: React.FC<{
   localSettings: any
   saveLocalSettings: (s: any) => void
-}> = ({ localSettings, saveLocalSettings }) => (
+  pdfMarginsRelational: boolean
+  setPdfMarginsRelational: (v: boolean) => void
+}> = ({ localSettings, saveLocalSettings, pdfMarginsRelational, setPdfMarginsRelational }) => (
   <div>
     <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>Preferences</h2>
 
@@ -375,6 +385,78 @@ const PreferencesSection: React.FC<{
         value={localSettings.showLineNumbers}
         onChange={(v) => saveLocalSettings({ ...localSettings, showLineNumbers: v })}
       />
+    </SettingGroup>
+
+    <SettingGroup title="PDF Export Margins (inches)">
+      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+        Margins applied when exporting to PDF. Set to 0 for edge-to-edge background.
+      </p>
+      <div style={{ marginBottom: '12px' }}>
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+        }}>
+          <input
+            type="checkbox"
+            checked={pdfMarginsRelational}
+            onChange={(e) => setPdfMarginsRelational(e.target.checked)}
+            style={{ accentColor: 'var(--accent-color)' }}
+          />
+          Keep A4 proportions (relational)
+        </label>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', marginLeft: '24px' }}>
+          When checked, all margins scale together to preserve the aspect ratio
+        </p>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxWidth: '400px' }}>
+        {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
+          <label key={side} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+              {side}
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={3}
+              step={0.01}
+              value={localSettings.pdfMargins?.[side] ?? 0}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value) || 0
+                const margins = { ...localSettings.pdfMargins }
+
+                if (pdfMarginsRelational) {
+                  // Scale all margins proportionally based on which side changed
+                  const base = A4_MARGINS[side]
+                  if (base > 0) {
+                    const scale = val / base
+                    margins.top = Math.round(A4_MARGINS.top * scale * 100) / 100
+                    margins.bottom = Math.round(A4_MARGINS.bottom * scale * 100) / 100
+                    margins.left = Math.round(A4_MARGINS.left * scale * 100) / 100
+                    margins.right = Math.round(A4_MARGINS.right * scale * 100) / 100
+                  }
+                } else {
+                  margins[side] = val
+                }
+
+                saveLocalSettings({ ...localSettings, pdfMargins: margins })
+              }}
+              style={{
+                padding: '6px 8px',
+                borderRadius: '4px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                width: '100%',
+              }}
+            />
+          </label>
+        ))}
+      </div>
     </SettingGroup>
   </div>
 )

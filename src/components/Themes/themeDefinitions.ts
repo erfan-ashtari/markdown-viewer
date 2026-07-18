@@ -1,4 +1,4 @@
-import { Theme } from '../store/appStore'
+import { Theme } from '../../store/appStore'
 
 export interface ThemeConfig {
   name: string

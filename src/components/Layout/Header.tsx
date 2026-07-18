@@ -14,7 +14,7 @@ import {
   Type
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
-import { themeList, Theme } from '../Themes/themeDefinitions'
+import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
 
 interface HeaderProps {
