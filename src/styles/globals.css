@@ -572,3 +572,36 @@ body {
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
+
+/* Sidebar refresh spin animation */
+@keyframes sidebar-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sidebar-spin {
+  animation: sidebar-spin 0.6s ease-in-out;
+}
+
+/* Sidebar resize handle hover */
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
+  background-color: var(--accent-color);
+  opacity: 0.4;
+}
+
+/* Sidebar sort dropdown */
+.sidebar-sort-dropdown {
+  animation: sidebar-dropdown-in 0.12s ease-out;
+}
+
+@keyframes sidebar-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

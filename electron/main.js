@@ -305,20 +305,26 @@ function buildFileTree(dirPath, relativePath = '') {
       const itemRelativePath = relativePath ? `${relativePath}/${item.name}` : item.name;
       if (item.isDirectory()) {
         if (!item.name.startsWith('.') && item.name !== 'node_modules') {
+          let mtimeMs = 0;
+          try { mtimeMs = fs.statSync(itemPath).mtimeMs; } catch {}
           entries.push({
             name: item.name,
             path: itemPath,
             relativePath: itemRelativePath,
             type: 'directory',
+            mtimeMs,
             children: buildFileTree(itemPath, itemRelativePath),
           });
         }
       } else {
+        let mtimeMs = 0;
+        try { mtimeMs = fs.statSync(itemPath).mtimeMs; } catch {}
         entries.push({
           name: item.name,
           path: itemPath,
           relativePath: itemRelativePath,
           type: 'file',
+          mtimeMs,
         });
       }
     }

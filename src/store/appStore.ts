@@ -23,6 +23,7 @@ interface AppState {
 
   // UI state
   sidebarOpen: boolean
+  sidebarWidth: number
   zoomLevel: number
   contentWidth: 'full' | 'medium' | 'a4'
   currentTheme: Theme
@@ -37,6 +38,7 @@ interface AppState {
   closeAllTabs: () => void
   setActiveTab: (tabId: string) => void
   toggleSidebar: () => void
+  setSidebarWidth: (width: number) => void
   setZoomLevel: (level: number) => void
   toggleContentWidth: () => void
   setTheme: (theme: Theme) => void
@@ -54,6 +56,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // UI state
   sidebarOpen: true,
+  sidebarWidth: 260,
   zoomLevel: 100,
   contentWidth: 'full',
   currentTheme: 'github-dark',
@@ -130,6 +133,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveTab: (tabId) => set({ activeTabId: tabId }),
   
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+  
+  setSidebarWidth: (width) => set({ sidebarWidth: Math.max(180, Math.min(500, width)) }),
   
   setZoomLevel: (level) => set({
     zoomLevel: Math.max(50, Math.min(300, level)),

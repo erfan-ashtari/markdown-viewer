@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Folder,
   File,
@@ -11,8 +11,14 @@ import {
   FileCog,
   FileArchive,
   FolderOpen,
+  RefreshCw,
+  ArrowUpAZ,
+  ArrowDownAZ,
+  Clock,
+  FileType2,
 } from 'lucide-react'
 import { isTextFile } from '../Text/languageMap'
+import { useAppStore } from '../../store/appStore'
 
 interface FileNode {
   name: string
@@ -20,7 +26,10 @@ interface FileNode {
   relativePath: string
   type: 'file' | 'directory'
   children?: FileNode[]
+  mtimeMs?: number
 }
+
+type SortKey = 'name' | 'date' | 'type'
 
 interface SidebarProps {
   onFileSelect: (path: string, content: string, name: string) => void
@@ -75,6 +84,41 @@ const getFileIcon = (name: string) => {
   }
 }
 
+function getExt(name: string): string {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
+}
+
+function sortNodes(nodes: FileNode[], sortKey: SortKey, ascending: boolean): FileNode[] {
+  const sorted = [...nodes].sort((a, b) => {
+    // Directories always come first
+    if (a.type === 'directory' && b.type !== 'directory') return -1
+    if (a.type !== 'directory' && b.type === 'directory') return 1
+
+    let cmp = 0
+    switch (sortKey) {
+      case 'name':
+        cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        break
+      case 'date':
+        cmp = (a.mtimeMs ?? 0) - (b.mtimeMs ?? 0)
+        break
+      case 'type': {
+        const extA = a.type === 'directory' ? '' : getExt(a.name)
+        const extB = b.type === 'directory' ? '' : getExt(b.name)
+        cmp = extA.localeCompare(extB) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        break
+      }
+    }
+    return ascending ? cmp : -cmp
+  })
+
+  return sorted.map((node) => ({
+    ...node,
+    children: node.children ? sortNodes(node.children, sortKey, ascending) : undefined,
+  }))
+}
+
 const TreeItem: React.FC<{
   node: FileNode
   onFileSelect: (path: string, content: string, name: string) => void
@@ -104,7 +148,6 @@ const TreeItem: React.FC<{
         setIsLoading(false)
       }
     } else {
-      // Read content for text files, skip for binary
       if (isTextFile(node.name)) {
         setIsLoading(true)
         try {
@@ -199,20 +242,63 @@ const TreeItem: React.FC<{
 export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFile, isOpen, dirToLoad }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [rootPath, setRootPath] = useState<string | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortAsc, setSortAsc] = useState(true)
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false)
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth)
+  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
+
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const sortDropdownRef = useRef<HTMLDivElement>(null)
+  const lastRootPath = useRef<string | null>(null)
+
+  const loadTree = useCallback(async (folderPath: string) => {
+    const result = await window.electronAPI?.buildFileTree?.(folderPath)
+    if (result) {
+      setFileTree(result.tree)
+      setRootPath(result.name)
+      lastRootPath.current = folderPath
+    }
+  }, [])
 
   // When dirToLoad changes (e.g. from file association), load that folder's tree
   const prevDirRef = React.useRef<string | null>(null)
   React.useEffect(() => {
     if (dirToLoad && dirToLoad !== prevDirRef.current) {
       prevDirRef.current = dirToLoad
-      window.electronAPI?.buildFileTree?.(dirToLoad).then((result) => {
-        if (result) {
-          setFileTree(result.tree)
-          setRootPath(result.name)
-        }
-      })
+      loadTree(dirToLoad)
     }
-  }, [dirToLoad])
+  }, [dirToLoad, loadTree])
+
+  // Close sort dropdown on outside click
+  useEffect(() => {
+    if (!sortDropdownOpen) return
+    const handler = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [sortDropdownOpen])
+
+  const handleRefresh = async () => {
+    if (isRefreshing || !lastRootPath.current) return
+    setIsRefreshing(true)
+    await loadTree(lastRootPath.current)
+    setTimeout(() => setIsRefreshing(false), 600)
+  }
+
+  const handleSortSelect = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc)
+    } else {
+      setSortKey(key)
+      setSortAsc(true)
+    }
+    setSortDropdownOpen(false)
+  }
 
   const handleOpenFolder = async () => {
     if (window.electronAPI) {
@@ -220,6 +306,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
       if (result) {
         setFileTree(result.tree)
         setRootPath(result.name)
+        lastRootPath.current = result.name
       }
     }
   }
@@ -238,20 +325,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
     }
   }
 
+  // Resize handle via mouse drag
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = sidebarWidth
+
+    const onMouseMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX
+      setSidebarWidth(startWidth + delta)
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [sidebarWidth, setSidebarWidth])
+
+  const sortedTree = sortNodes(fileTree, sortKey, sortAsc)
+
+  const sortLabel: Record<SortKey, string> = {
+    name: 'Name',
+    date: 'Date Modified',
+    type: 'Type',
+  }
+
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
+      ref={sidebarRef}
       style={{
-        width: '260px',
+        width: `${sidebarWidth}px`,
         height: '100%',
-        borderRight: '1px solid var(--border-color)',
         backgroundColor: 'var(--sidebar-bg)',
         display: 'flex',
         flexDirection: 'column',
+        position: 'relative',
+        flexShrink: 0,
       }}
     >
-      <div 
+      {/* Header */}
+      <div
         style={{
           padding: '12px',
           borderBottom: '1px solid var(--border-color)',
@@ -260,16 +382,142 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
           justifyContent: 'space-between',
         }}
       >
-        <span style={{ 
-          fontSize: '12px', 
-          fontWeight: 600, 
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          color: 'var(--text-secondary)',
-        }}>
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            color: 'var(--text-secondary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flex: 1,
+          }}
+        >
           {rootPath || 'Explorer'}
         </span>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
+          {/* Refresh button */}
+          <button
+            onClick={handleRefresh}
+            disabled={!lastRootPath.current}
+            title="Refresh"
+            style={{
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: lastRootPath.current ? 'var(--text-secondary)' : 'var(--text-muted)',
+              cursor: lastRootPath.current ? 'pointer' : 'default',
+              transition: 'background-color 0.15s',
+              opacity: lastRootPath.current ? 1 : 0.4,
+            }}
+            onMouseEnter={(e) => {
+              if (lastRootPath.current) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <RefreshCw
+              size={14}
+              className={isRefreshing ? 'sidebar-spin' : ''}
+            />
+          </button>
+
+          {/* Sort dropdown */}
+          <div ref={sortDropdownRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+              title={`Sort by: ${sortLabel[sortKey]}${sortAsc ? ' (A-Z)' : ' (Z-A)'}`}
+              style={{
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                border: 'none',
+                backgroundColor: sortDropdownOpen ? 'var(--bg-tertiary)' : 'transparent',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+              }}
+              onMouseLeave={(e) => {
+                if (!sortDropdownOpen) e.currentTarget.style.backgroundColor = 'transparent'
+              }}
+            >
+              {sortKey === 'name' && (sortAsc ? <ArrowUpAZ size={14} /> : <ArrowDownAZ size={14} />)}
+              {sortKey === 'date' && <Clock size={14} />}
+              {sortKey === 'type' && <FileType2 size={14} />}
+            </button>
+
+            {sortDropdownOpen && (
+              <div
+                className="sidebar-sort-dropdown"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '4px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  minWidth: '150px',
+                  zIndex: 100,
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ padding: '4px 0' }}>
+                  {(['name', 'date', 'type'] as SortKey[]).map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => handleSortSelect(key)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '6px 12px',
+                        border: 'none',
+                        backgroundColor: sortKey === key ? 'var(--bg-tertiary)' : 'transparent',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        textAlign: 'left',
+                        transition: 'background-color 0.1s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+                      }}
+                      onMouseLeave={(e) => {
+                        if (sortKey !== key) e.currentTarget.style.backgroundColor = 'transparent'
+                      }}
+                    >
+                      {key === 'name' && <ArrowUpAZ size={13} style={{ color: 'var(--text-muted)' }} />}
+                      {key === 'date' && <Clock size={13} style={{ color: 'var(--text-muted)' }} />}
+                      {key === 'type' && <FileType2 size={13} style={{ color: 'var(--text-muted)' }} />}
+                      <span style={{ flex: 1 }}>{sortLabel[key]}</span>
+                      {sortKey === key && (
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          {sortAsc ? 'A→Z' : 'Z→A'}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* File / Folder buttons */}
           <button
             onClick={handleOpenFile}
             style={{
@@ -315,8 +563,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
         </div>
       </div>
       
+      {/* File tree */}
       <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
-        {fileTree.length === 0 ? (
+        {sortedTree.length === 0 ? (
           <div style={{ 
             padding: '32px 16px', 
             textAlign: 'center', 
@@ -329,7 +578,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
             </p>
           </div>
         ) : (
-          fileTree.map((node) => (
+          sortedTree.map((node) => (
             <TreeItem
               key={node.path}
               node={node}
@@ -339,6 +588,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
           ))
         )}
       </div>
+
+      {/* Resize handle */}
+      <div
+        className="sidebar-resize-handle"
+        onMouseDown={handleResizeMouseDown}
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: -3,
+          width: 6,
+          height: '100%',
+          cursor: 'col-resize',
+          zIndex: 10,
+        }}
+      />
     </div>
   )
 }
