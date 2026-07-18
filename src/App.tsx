@@ -350,11 +350,20 @@ const App: React.FC = () => {
     setFindActiveIndex(0)
   }, [])
 
-  // Close find bar on tab switch
+  // Re-run search when switching tabs (find bar stays open)
   useEffect(() => {
-    setFindOpen(false)
-    setFindMatchCount(0)
-    setFindActiveIndex(0)
+    if (!findQuery || !activeTab) {
+      setFindMatchCount(0)
+      setFindActiveIndex(0)
+      return
+    }
+    const text = activeTab.content
+    const escaped = findQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(escaped, 'gi')
+    let count = 0
+    while (regex.exec(text) !== null) count++
+    setFindMatchCount(count)
+    setFindActiveIndex(count > 0 ? 1 : 0)
   }, [activeTabId])
 
   const handleExportPDF = async () => {
