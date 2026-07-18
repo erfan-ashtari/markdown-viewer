@@ -81,6 +81,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "MarkdownViewer",
+      "deleteAppDataOnUninstall": true,
       "installerIcon": "build/installer.ico",
       "uninstallerIcon": "build/uninstaller.ico",
       "installerHeaderIcon": "build/installer.ico"

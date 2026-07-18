@@ -18,7 +18,6 @@ declare global {
       openSettings: () => Promise<void>
       readFile: (filePath: string) => Promise<{ filePath: string; content: string; fileName: string } | null>
       listMdFiles: (dirPath: string) => Promise<{ name: string; path: string }[]>
-      getFilePath: (file: File) => string | undefined
       sendSettingsChanged: (data: { key: string; value: any }) => void
       onSelectAll: (callback: () => void) => void
       onLoadFile: (callback: (data: { content: string; fileName: string; filePath: string }) => void) => void

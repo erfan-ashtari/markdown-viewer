@@ -360,7 +360,7 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  // Handle drag and drop for .md files — global window handler
+  // Handle drag and drop for .md files — read content via FileReader, pass name to main for path
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault()
@@ -374,23 +374,26 @@ const App: React.FC = () => {
 
       for (const file of files) {
         if (/\.(md|markdown)$/i.test(file.name)) {
-          // Use webUtils.getPathForFile to get the file path in Electron
-          const filePath = window.electronAPI?.getFilePath?.(file as any)
-          if (filePath) {
-            window.electronAPI?.readFile(filePath).then((result) => {
-              if (result) {
-                const state = useAppStore.getState()
-                state.addTab(result.filePath, result.content, result.fileName, 'markdown')
-                if (!state.sidebarOpen) {
-                  state.toggleSidebar()
-                }
-                const dir = result.filePath.replace(/[\\/][^\\/]+$/, '')
-                window.electronAPI?.listMdFiles(dir).then((files) => {
-                  if (files) useAppStore.getState().setDirFiles(files)
-                })
-              }
-            })
+          const reader = new FileReader()
+          reader.onload = () => {
+            const content = reader.result as string
+            // Try to get real path via electron file.path (works in dev)
+            // In packaged app, file.path may be empty — use fileName as fallback
+            const filePath = (file as any).path || file.name
+            const state = useAppStore.getState()
+            state.addTab(filePath, content, file.name, 'markdown')
+            if (!state.sidebarOpen) {
+              state.toggleSidebar()
+            }
+            // Try to load directory listing if we have a real path
+            if ((file as any).path) {
+              const dir = filePath.replace(/[\\/][^\\/]+$/, '')
+              window.electronAPI?.listMdFiles(dir).then((files) => {
+                if (files) useAppStore.getState().setDirFiles(files)
+              })
+            }
           }
+          reader.readAsText(file)
         }
       }
     }
