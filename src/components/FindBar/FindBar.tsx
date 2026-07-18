@@ -12,12 +12,14 @@ interface FindBarProps {
 export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, matchCount, activeIndex, onNavigate }) => {
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  const lastSearchedRef = useRef('')
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 30)
   }, [])
 
   const handleSearch = useCallback(() => {
+    lastSearchedRef.current = query
     onSearch(query)
   }, [query, onSearch])
 
@@ -34,6 +36,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, 
   }, [activeIndex, matchCount, onNavigate])
 
   const handleClose = useCallback(() => {
+    lastSearchedRef.current = ''
     onSearch('')
     onClose()
   }, [onSearch, onClose])
@@ -41,7 +44,11 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (matchCount === 0) {
+      // If query changed since last search, do a new search
+      // Otherwise navigate to next/prev result
+      if (query !== lastSearchedRef.current) {
+        handleSearch()
+      } else if (matchCount === 0) {
         handleSearch()
       } else {
         e.shiftKey ? handlePrev() : handleNext()
