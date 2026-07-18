@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   sendSettingsChanged: (data) => ipcRenderer.send('settings-changed', data),
   onSelectAll: (callback) => ipcRenderer.on('select-all', callback),
   onLoadFile: (callback) => ipcRenderer.on('load-file', (event, data) => callback(data)),
+  onOpenFileFromPath: (callback) => ipcRenderer.on('open-file-from-path', (event, data) => callback(data)),
   onFullscreenChanged: (callback) => ipcRenderer.on('fullscreen-changed', (event, isFullscreen) => callback(isFullscreen)),
   onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (event, data) => callback(data)),
 });

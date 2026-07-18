@@ -11,6 +11,7 @@ function createWindow() {
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    title: 'Markdown Viewer',
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#1e1e1e',
     webPreferences: {
@@ -250,7 +251,7 @@ function buildFileTree(dirPath, relativePath = '') {
 app.whenReady().then(() => {
   createWindow();
 
-  // Handle --open argument from CLI
+  // Handle --open argument from CLI or file association
   const openArg = process.argv.find((arg, i) => process.argv[i - 1] === '--open');
   if (openArg) {
     const targetPath = path.resolve(openArg);
@@ -259,13 +260,41 @@ app.whenReady().then(() => {
       if (stat.isFile()) {
         const content = fs.readFileSync(targetPath, 'utf-8');
         const fileName = path.basename(targetPath);
+        const dirPath = path.dirname(targetPath);
         mainWindow.webContents.on('did-finish-load', () => {
-          mainWindow.webContents.send('load-file', { content, fileName, filePath: targetPath });
+          mainWindow.webContents.send('open-file-from-path', { content, fileName, filePath: targetPath, dirPath });
         });
       }
     }
   }
 });
+
+// Handle second instance (when app is already running and user opens a file)
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    // Find the file path in command line args
+    const fileArg = commandLine.find(arg => arg.endsWith('.md') || arg.endsWith('.markdown'));
+    if (fileArg) {
+      const targetPath = path.resolve(fileArg);
+      if (fs.existsSync(targetPath)) {
+        const content = fs.readFileSync(targetPath, 'utf-8');
+        const fileName = path.basename(targetPath);
+        const dirPath = path.dirname(targetPath);
+        mainWindow.webContents.send('open-file-from-path', { content, fileName, filePath: targetPath, dirPath });
+      }
+    }
+  });
+}
+
+// Register file associations
+app.setAsDefaultProtocolClient('mdview');
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

@@ -178,6 +178,21 @@ const App: React.FC = () => {
     })
   }, [])
 
+  // Handle file opening from OS (double-click, right-click Open with)
+  useEffect(() => {
+    window.electronAPI?.onOpenFileFromPath?.((data: { content: string; fileName: string; filePath: string; dirPath: string }) => {
+      const state = useAppStore.getState()
+      // Open the sidebar and navigate to the directory
+      if (!state.sidebarOpen) state.toggleSidebar()
+      // Add the file as a tab
+      state.addTab(data.filePath, data.content, data.fileName, 'markdown')
+      // Fetch directory files for navigation
+      window.electronAPI?.listMdFiles(data.dirPath).then((files) => {
+        if (files) state.setDirFiles(files)
+      })
+    })
+  }, [])
+
   // Detect fullscreen changes via Electron IPC
   useEffect(() => {
     const handleFullscreenChanged = (isFs: boolean) => {
@@ -345,8 +360,61 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
+  // Handle drag and drop for .md files
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const files = Array.from(e.dataTransfer.files)
+    for (const file of files) {
+      if (/\.(md|markdown)$/i.test(file.name)) {
+        const filePath = (file as any).path
+        if (filePath) {
+          const result = await window.electronAPI?.readFile(filePath)
+          if (result) {
+            addTab(result.filePath, result.content, result.fileName, 'markdown')
+          }
+        }
+      }
+    }
+  }
+
+  // Global drop handler for the window
+  useEffect(() => {
+    const handleWindowDragOver = (e: DragEvent) => { e.preventDefault() }
+    const handleWindowDrop = (e: DragEvent) => {
+      e.preventDefault()
+      const files = Array.from(e.dataTransfer?.files || [])
+      for (const file of files) {
+        if (/\.(md|markdown)$/i.test(file.name)) {
+          const filePath = (file as any).path
+          if (filePath) {
+            window.electronAPI?.readFile(filePath).then((result) => {
+              if (result) {
+                useAppStore.getState().addTab(result.filePath, result.content, result.fileName, 'markdown')
+              }
+            })
+          }
+        }
+      }
+    }
+    window.addEventListener('dragover', handleWindowDragOver)
+    window.addEventListener('drop', handleWindowDrop)
+    return () => {
+      window.removeEventListener('dragover', handleWindowDragOver)
+      window.removeEventListener('drop', handleWindowDrop)
+    }
+  }, [])
+
   return (
-    <div style={{
+    <div
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',

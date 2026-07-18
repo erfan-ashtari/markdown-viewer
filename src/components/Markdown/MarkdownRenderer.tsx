@@ -21,6 +21,7 @@ declare global {
       sendSettingsChanged: (data: { key: string; value: any }) => void
       onSelectAll: (callback: () => void) => void
       onLoadFile: (callback: (data: { content: string; fileName: string; filePath: string }) => void) => void
+      onOpenFileFromPath: (callback: (data: { content: string; fileName: string; filePath: string; dirPath: string }) => void) => void
       onFullscreenChanged: (callback: (isFullscreen: boolean) => void) => void
       onSettingsChanged: (callback: (data: { key: string; value: any }) => void) => void
     }

@@ -1,11 +1,9 @@
 {
-  "name": "mdview",
-  "version": "0.0.2",
+  "name": "mdview-app",
+  "version": "0.0.4",
   "description": "A lightweight Markdown viewer with themes, fonts, zoom, and local file support",
   "main": "electron/main.js",
-  "bin": {
-    "mdview": "./bin/mdview.js"
-  },
+  "bin": "./bin/mdview.js",
   "files": [
     "dist/**/*",
     "electron/**/*",
@@ -53,6 +51,7 @@
   "build": {
     "appId": "com.markdown-viewer.app",
     "productName": "Markdown Viewer",
+    "executableName": "MarkdownViewer",
     "copyright": "Copyright © 2026",
     "files": [
       "dist/**/*",
@@ -72,7 +71,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico",
+      "icon": "build/mdview.ico",
       "artifactName": "${productName}-${version}-setup.${ext}"
     },
     "nsis": {
@@ -81,10 +80,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Markdown Viewer",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico"
+      "shortcutName": "MarkdownViewer",
+      "installerIcon": "build/installer.ico",
+      "uninstallerIcon": "build/uninstaller.ico",
+      "installerHeaderIcon": "build/installer.ico"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
