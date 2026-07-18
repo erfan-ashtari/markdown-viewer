@@ -666,16 +666,3 @@ body {
   opacity: 0.35;
   cursor: default;
 }
-
-/* Find bar match highlight */
-.find-bar-highlight {
-  background-color: rgba(255, 210, 50, 0.35);
-  color: inherit;
-  border-radius: 2px;
-  padding: 0;
-}
-
-.find-bar-highlight-active {
-  background-color: rgba(255, 140, 0, 0.75);
-  outline: 1px solid rgba(255, 140, 0, 0.9);
-}

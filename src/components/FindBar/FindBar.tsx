@@ -6,136 +6,104 @@ interface FindBarProps {
   containerRef: React.RefObject<HTMLDivElement | null>
 }
 
+interface MatchInfo {
+  node: Text
+  offset: number
+  length: number
+}
+
+function findAllMatches(container: HTMLElement, query: string): MatchInfo[] {
+  const matches: MatchInfo[] = []
+  if (!query) return matches
+
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escaped, 'gi')
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
+  while (walker.nextNode()) {
+    const textNode = walker.currentNode as Text
+    const text = textNode.textContent || ''
+    let m: RegExpExecArray | null
+    regex.lastIndex = 0
+    while ((m = regex.exec(text)) !== null) {
+      matches.push({ node: textNode, offset: m.index, length: m[0].length })
+    }
+  }
+  return matches
+}
+
+function selectMatch(match: MatchInfo) {
+  const range = document.createRange()
+  range.setStart(match.node, match.offset)
+  range.setEnd(match.node, match.offset + match.length)
+  const selection = window.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+  // Scroll the match into view
+  range.getBoundingClientRect() // force layout
+  const rect = range.getBoundingClientRect()
+  const container = range.startContainer.parentElement?.closest('.markdown-body, .text-viewer')
+  if (container && rect.top !== 0) {
+    container.scrollTo({
+      top: container.scrollTop + rect.top - container.getBoundingClientRect().height / 2,
+      behavior: 'smooth',
+    })
+  }
+}
+
 export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef }) => {
   const [query, setQuery] = useState('')
   const [matches, setMatches] = useState<number>(0)
   const [currentIdx, setCurrentIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const markEls = useRef<HTMLElement[]>([])
+  const matchRefs = useRef<MatchInfo[]>([])
 
   // Focus input on mount
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 30)
   }, [])
 
-  // Clear highlights when query changes or component unmounts
-  const clearHighlights = useCallback(() => {
-    markEls.current.forEach((mark) => {
-      // Only manipulate if still connected to the DOM
-      if (mark.isConnected) {
-        mark.replaceWith(...mark.childNodes)
-      }
-    })
-    markEls.current = []
-    // Merge adjacent text nodes that were split
-    if (containerRef.current?.isConnected) {
-      containerRef.current.normalize()
-    }
-  }, [containerRef])
-
-  // On unmount, just clear our refs — don't touch the DOM, let React handle it
+  // Clear selection on unmount
   useEffect(() => {
     return () => {
-      markEls.current = []
+      matchRefs.current = []
+      window.getSelection()?.removeAllRanges()
     }
   }, [])
 
-  // Highlight all matches in the DOM
-  const highlightAll = useCallback((q: string) => {
-    clearHighlights()
-    if (!q || !containerRef.current) {
+  const handleSearch = useCallback(() => {
+    if (!query || !containerRef.current) {
       setMatches(0)
       setCurrentIdx(0)
+      matchRefs.current = []
+      window.getSelection()?.removeAllRanges()
       return
     }
-
-    const walker = document.createTreeWalker(
-      containerRef.current,
-      NodeFilter.SHOW_TEXT,
-      null,
-    )
-
-    const textNodes: Text[] = []
-    while (walker.nextNode()) {
-      textNodes.push(walker.currentNode as Text)
+    const found = findAllMatches(containerRef.current, query)
+    matchRefs.current = found
+    setMatches(found.length)
+    if (found.length > 0) {
+      setCurrentIdx(1)
+      selectMatch(found[0])
+    } else {
+      setCurrentIdx(0)
+      window.getSelection()?.removeAllRanges()
     }
+  }, [query, containerRef])
 
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(escaped, 'gi')
-    let totalMatches = 0
-    const marks: HTMLElement[] = []
-
-    for (const textNode of textNodes) {
-      const text = textNode.textContent || ''
-      if (!regex.test(text)) continue
-      regex.lastIndex = 0
-
-      const frag = document.createDocumentFragment()
-      let lastIdx = 0
-      let m: RegExpExecArray | null
-
-      while ((m = regex.exec(text)) !== null) {
-        // Text before match
-        if (m.index > lastIdx) {
-          frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)))
-        }
-        // The match wrapped in <mark>
-        const mark = document.createElement('mark')
-        mark.className = 'find-bar-highlight'
-        mark.textContent = m[0]
-        frag.appendChild(mark)
-        marks.push(mark)
-        totalMatches++
-        lastIdx = m.index + m[0].length
-      }
-
-      // Remaining text
-      if (lastIdx < text.length) {
-        frag.appendChild(document.createTextNode(text.slice(lastIdx)))
-      }
-
-      textNode.replaceWith(frag)
-    }
-
-    markEls.current = marks
-    setMatches(totalMatches)
-    setCurrentIdx(totalMatches > 0 ? 1 : 0)
-
-    // Mark first match as active
-    if (marks.length > 0) {
-      marks[0].classList.add('find-bar-highlight-active')
-      marks[0].scrollIntoView({ block: 'center', behavior: 'smooth' })
-    }
-  }, [containerRef, clearHighlights])
-
-  // Navigate to a specific match index
   const goToMatch = useCallback((idx: number) => {
-    const marks = markEls.current
+    const marks = matchRefs.current
     if (marks.length === 0) return
     const clamped = ((idx - 1) % marks.length + marks.length) % marks.length
-    // Remove active class from all, add to current
-    marks.forEach((m) => m.classList.remove('find-bar-highlight-active'))
-    marks[clamped].classList.add('find-bar-highlight-active')
     setCurrentIdx(clamped + 1)
-    marks[clamped].scrollIntoView({ block: 'center', behavior: 'smooth' })
+    selectMatch(marks[clamped])
   }, [])
 
-  const handleSearch = () => {
-    highlightAll(query)
-  }
-
-  const handlePrev = () => {
-    goToMatch(currentIdx - 1)
-  }
-
-  const handleNext = () => {
-    goToMatch(currentIdx + 1)
-  }
-
-  const handleClose = () => {
-    clearHighlights()
+  const handleClose = useCallback(() => {
+    matchRefs.current = []
+    window.getSelection()?.removeAllRanges()
     onClose()
-  }
+  }, [onClose])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -143,7 +111,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
       if (matches === 0) {
         handleSearch()
       } else {
-        e.shiftKey ? handlePrev() : handleNext()
+        e.shiftKey ? goToMatch(currentIdx - 1) : goToMatch(currentIdx + 1)
       }
     }
     if (e.key === 'Escape') {
@@ -160,10 +128,11 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)
-          // Clear old highlights when typing new query
-          if (matches > 0) clearHighlights()
+          // Reset when typing
           setMatches(0)
           setCurrentIdx(0)
+          matchRefs.current = []
+          window.getSelection()?.removeAllRanges()
         }}
         onKeyDown={handleKeyDown}
         placeholder="Find..."
@@ -186,7 +155,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
       )}
       <button
         className="find-bar-btn"
-        onClick={handlePrev}
+        onClick={() => goToMatch(currentIdx - 1)}
         disabled={matches === 0}
         title="Previous match (Shift+Enter)"
       >
@@ -194,7 +163,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
       </button>
       <button
         className="find-bar-btn"
-        onClick={handleNext}
+        onClick={() => goToMatch(currentIdx + 1)}
         disabled={matches === 0}
         title="Next match (Enter)"
       >
