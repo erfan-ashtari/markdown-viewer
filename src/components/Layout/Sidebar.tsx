@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import {
   Folder,
   File,
@@ -121,10 +121,41 @@ function sortNodes(nodes: FileNode[], sortKey: SortKey, ascending: boolean): Fil
   }))
 }
 
+// Stable style objects — created once, referenced by all TreeItem/SearchResultItem instances
+const treeItemBaseStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '4px 8px',
+  cursor: 'pointer',
+  borderRadius: '4px',
+  margin: '0 4px',
+  fontSize: '13px',
+  color: 'var(--text-primary)',
+  transition: 'background-color 0.15s',
+}
+
+const treeItemSpacerStyle: React.CSSProperties = { width: '14px', flexShrink: 0 }
+
+const treeItemNameStyle: React.CSSProperties = {
+  flex: 1,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
+const searchDirTextStyle: React.CSSProperties = {
+  fontSize: '11px',
+  color: 'var(--text-muted)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+}
+
 const SearchResultItem: React.FC<{
   node: FileNode
   onClick: (node: FileNode) => void
-}> = ({ node, onClick }) => {
+}> = React.memo(({ node, onClick }) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const handleClick = async () => {
@@ -141,19 +172,7 @@ const SearchResultItem: React.FC<{
   return (
     <div
       className="tree-item"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '4px 8px',
-        paddingLeft: '12px',
-        cursor: 'pointer',
-        borderRadius: '4px',
-        margin: '0 4px',
-        fontSize: '13px',
-        color: 'var(--text-primary)',
-        transition: 'background-color 0.15s',
-      }}
+      style={{ ...treeItemBaseStyle, paddingLeft: '12px' }}
       onClick={handleClick}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
@@ -162,38 +181,28 @@ const SearchResultItem: React.FC<{
         e.currentTarget.style.backgroundColor = 'transparent'
       }}
     >
-      <span style={{ width: '14px', flexShrink: 0 }} />
+      <span style={treeItemSpacerStyle} />
       {getFileIcon(node.name)}
       <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
-        <div style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
+        <div style={treeItemNameStyle}>
           {isLoading ? 'Loading...' : node.name}
         </div>
         {dirPart && (
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
+          <div style={searchDirTextStyle}>
             {dirPart}
           </div>
         )}
       </div>
     </div>
   )
-}
+})
 
 const TreeItem: React.FC<{
   node: FileNode
   onFileSelect: (path: string, content: string, name: string) => void
   onNonMarkdownFile: (path: string, content: string, name: string) => void
   level?: number
-}> = ({ node, onFileSelect, onNonMarkdownFile, level = 0 }) => {
+}> = React.memo(({ node, onFileSelect, onNonMarkdownFile, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -241,19 +250,7 @@ const TreeItem: React.FC<{
     <div>
       <div
         className="tree-item"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '4px 8px',
-          paddingLeft: `${level * 16 + 8}px`,
-          cursor: 'pointer',
-          borderRadius: '4px',
-          margin: '0 4px',
-          fontSize: '13px',
-          color: 'var(--text-primary)',
-          transition: 'background-color 0.15s',
-        }}
+        style={{ ...treeItemBaseStyle, paddingLeft: `${level * 16 + 8}px` }}
         onClick={handleClick}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
@@ -277,16 +274,11 @@ const TreeItem: React.FC<{
           </>
         ) : (
           <>
-            <span style={{ width: '14px', flexShrink: 0 }} />
+            <span style={treeItemSpacerStyle} />
             {getFileIcon(node.name)}
           </>
         )}
-        <span style={{ 
-          flex: 1, 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
-          whiteSpace: 'nowrap' 
-        }}>
+        <span style={treeItemNameStyle}>
           {isLoading ? 'Loading...' : node.name}
         </span>
       </div>
@@ -306,7 +298,7 @@ const TreeItem: React.FC<{
       )}
     </div>
   )
-}
+})
 
 export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFile, isOpen, dirToLoad }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
@@ -489,7 +481,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
     document.addEventListener('mouseup', onMouseUp)
   }, [sidebarWidth, setSidebarWidth])
 
-  const sortedTree = sortNodes(fileTree, sortKey, sortAsc)
+  const sortedTree = useMemo(() => sortNodes(fileTree, sortKey, sortAsc), [fileTree, sortKey, sortAsc])
 
   const sortLabel: Record<SortKey, string> = {
     name: 'Name',

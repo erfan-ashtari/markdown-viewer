@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import {
   PanelLeftClose,
   PanelLeft,
@@ -22,22 +22,20 @@ interface HeaderProps {
   onExportHTML: () => void
 }
 
-export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => {
-  const {
-    sidebarOpen,
-    toggleSidebar,
-    zoomLevel,
-    setZoomLevel,
-    contentWidth,
-    toggleContentWidth,
-    currentTheme,
-    setTheme,
-    currentFont,
-    setCurrentFont,
-    tabs,
-    activeTabId,
-    isFullscreen
-  } = useAppStore()
+export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExportHTML }) => {
+  const sidebarOpen = useAppStore(s => s.sidebarOpen)
+  const toggleSidebar = useAppStore(s => s.toggleSidebar)
+  const zoomLevel = useAppStore(s => s.zoomLevel)
+  const setZoomLevel = useAppStore(s => s.setZoomLevel)
+  const contentWidth = useAppStore(s => s.contentWidth)
+  const toggleContentWidth = useAppStore(s => s.toggleContentWidth)
+  const currentTheme = useAppStore(s => s.currentTheme)
+  const setTheme = useAppStore(s => s.setTheme)
+  const currentFont = useAppStore(s => s.currentFont)
+  const setCurrentFont = useAppStore(s => s.setCurrentFont)
+  const tabs = useAppStore(s => s.tabs)
+  const activeTabId = useAppStore(s => s.activeTabId)
+  const isFullscreen = useAppStore(s => s.isFullscreen)
 
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const [showFontMenu, setShowFontMenu] = useState(false)
@@ -48,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
   const headerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
-  const activeTab = tabs.find(t => t.id === activeTabId)
+  const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
 
   // Close all menus when clicking outside
   useEffect(() => {
@@ -707,4 +705,4 @@ export const Header: React.FC<HeaderProps> = ({ onExportPDF, onExportHTML }) => 
       </div>
     </div>
   )
-}
+})

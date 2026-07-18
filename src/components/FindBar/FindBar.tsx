@@ -6,7 +6,7 @@ interface FindBarProps {
   containerRef: React.RefObject<HTMLDivElement | null>
 }
 
-export const FindBar: React.FC<FindBarProps> = ({ onClose, containerRef }) => {
+export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef }) => {
   const [query, setQuery] = useState('')
   const [matches, setMatches] = useState<number>(0)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -205,4 +205,4 @@ export const FindBar: React.FC<FindBarProps> = ({ onClose, containerRef }) => {
       </button>
     </div>
   )
-}
+})

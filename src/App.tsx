@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
@@ -40,21 +40,19 @@ const getFileIconLarge = (name: string) => {
 const exportManager = ExportManager.create()
 
 const App: React.FC = () => {
-  const {
-    tabs,
-    activeTabId,
-    sidebarOpen,
-    zoomLevel,
-    contentWidth,
-    currentFont,
-    setZoomLevel,
-    addTab,
-    setTheme,
-    currentTheme
-  } = useAppStore()
+  const tabs = useAppStore(s => s.tabs)
+  const activeTabId = useAppStore(s => s.activeTabId)
+  const sidebarOpen = useAppStore(s => s.sidebarOpen)
+  const zoomLevel = useAppStore(s => s.zoomLevel)
+  const contentWidth = useAppStore(s => s.contentWidth)
+  const setZoomLevel = useAppStore(s => s.setZoomLevel)
+  const addTab = useAppStore(s => s.addTab)
+  const setTheme = useAppStore(s => s.setTheme)
+  const currentTheme = useAppStore(s => s.currentTheme)
+  const currentFont = useAppStore(s => s.currentFont)
 
-  const activeTab = tabs.find(t => t.id === activeTabId)
-  const isFullscreen = useAppStore(state => state.isFullscreen)
+  const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
+  const isFullscreen = useAppStore(s => s.isFullscreen)
   const [dirToLoad, setDirToLoad] = useState<string | null>(null)
   const [findOpen, setFindOpen] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)

@@ -48,7 +48,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({ content, fileName, z
     }
   }, [handleWheel])
 
-  const lineCount = content.split('\n').length
+  const lineCount = useMemo(() => content.split('\n').length, [content])
 
   return (
     <div

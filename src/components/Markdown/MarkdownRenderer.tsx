@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -218,6 +218,25 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, zoo
     }
   }, [handleWheel])
 
+  const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], [])
+  const rehypePlugins = useMemo(() => [rehypeKatex, rehypeHighlight, rehypeRaw], [])
+
+  const components = useMemo(() => ({
+    code: CodeBlock,
+    h1: (props: any) => <Heading level={1} {...props} />,
+    h2: (props: any) => <Heading level={2} {...props} />,
+    h3: (props: any) => <Heading level={3} {...props} />,
+    h4: (props: any) => <Heading level={4} {...props} />,
+    h5: (props: any) => <Heading level={5} {...props} />,
+    h6: (props: any) => <Heading level={6} {...props} />,
+    a: ({ children, href, ...rest }: any) => {
+      if (!href) return <a {...rest}>{children}</a>
+      return <MarkdownLink href={href} visitedLinks={visitedLinks} onVisit={handleVisit}>{children}</MarkdownLink>
+    },
+  }), [visitedLinks, handleVisit])
+
+  const encodedContent = useMemo(() => encodeLocalUrls(content), [content])
+
   return (
     <div ref={containerRef} className="markdown-body" style={{
       fontSize: `${zoomLevel}%`,
@@ -235,24 +254,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, zoo
       } : {}),
     }}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex, rehypeHighlight, rehypeRaw]}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
         urlTransform={(url) => url}
-        components={{
-          code: CodeBlock,
-          h1: ({ children }) => <Heading level={1}>{children}</Heading>,
-          h2: ({ children }) => <Heading level={2}>{children}</Heading>,
-          h3: ({ children }) => <Heading level={3}>{children}</Heading>,
-          h4: ({ children }) => <Heading level={4}>{children}</Heading>,
-          h5: ({ children }) => <Heading level={5}>{children}</Heading>,
-          h6: ({ children }) => <Heading level={6}>{children}</Heading>,
-          a: ({ children, href }) => {
-            if (!href) return <a>{children}</a>
-            return <MarkdownLink href={href} visitedLinks={visitedLinks} onVisit={handleVisit}>{children}</MarkdownLink>
-          },
-        }}
+        components={components}
       >
-        {encodeLocalUrls(content)}
+        {encodedContent}
       </ReactMarkdown>
     </div>
   )

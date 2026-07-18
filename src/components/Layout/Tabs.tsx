@@ -8,7 +8,13 @@ interface TabsProps {
 }
 
 export const Tabs: React.FC<TabsProps> = ({ onTabSelect, isFullscreen }) => {
-  const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, removeTab } = useAppStore()
+  const tabs = useAppStore(s => s.tabs)
+  const activeTabId = useAppStore(s => s.activeTabId)
+  const setActiveTab = useAppStore(s => s.setActiveTab)
+  const closeTab = useAppStore(s => s.closeTab)
+  const closeOtherTabs = useAppStore(s => s.closeOtherTabs)
+  const closeAllTabs = useAppStore(s => s.closeAllTabs)
+  const removeTab = useAppStore(s => s.removeTab)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null)
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
   const tabBarRef = useRef<HTMLDivElement>(null)
