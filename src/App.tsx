@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
 import { Tabs } from './components/Layout/Tabs'
 import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
 import { TextRenderer } from './components/Text/TextRenderer'
+import { FindBar } from './components/FindBar/FindBar'
 import { FontLoader } from './components/FontLoader'
 import { HighlightThemeLoader } from './components/HighlightThemeLoader'
 import { ExportManager } from './export/ExportManager'
@@ -55,6 +56,8 @@ const App: React.FC = () => {
   const activeTab = tabs.find(t => t.id === activeTabId)
   const isFullscreen = useAppStore(state => state.isFullscreen)
   const [dirToLoad, setDirToLoad] = useState<string | null>(null)
+  const [findOpen, setFindOpen] = useState(false)
+  const contentContainerRef = useRef<HTMLDivElement>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -103,6 +106,13 @@ const App: React.FC = () => {
       if (ctrl && e.shiftKey && e.key === 'W') {
         e.preventDefault()
         state.toggleContentWidth()
+        return
+      }
+
+      // Ctrl+F — open find bar
+      if (ctrl && e.key === 'f') {
+        e.preventDefault()
+        setFindOpen(true)
         return
       }
 
@@ -464,11 +474,21 @@ const App: React.FC = () => {
         }}>
           <Tabs onTabSelect={handleTabSelect} isFullscreen={isFullscreen} />
           
-          <div style={{ 
-            flex: 1, 
-            overflow: 'auto',
-            backgroundColor: 'var(--bg-primary)',
-          }}>
+          <div
+            ref={contentContainerRef}
+            style={{
+              flex: 1,
+              overflow: 'auto',
+              backgroundColor: 'var(--bg-primary)',
+              position: 'relative',
+            }}
+          >
+            {findOpen && activeTab && (
+              <FindBar
+                onClose={() => setFindOpen(false)}
+                containerRef={contentContainerRef}
+              />
+            )}
             {activeTab ? (
               activeTab.type === 'markdown' ? (
                 <MarkdownRenderer
