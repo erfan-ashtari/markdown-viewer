@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openSettings: () => ipcRenderer.invoke('open-settings'),
   getDarkMode: () => ipcRenderer.invoke('get-dark-mode'),
   sendSettingsChanged: (data) => ipcRenderer.send('settings-changed', data),
+  getFilePath: (file) => webUtils.getPathForFile(file),
   onSelectAll: (callback) => ipcRenderer.on('select-all', callback),
   onLoadFile: (callback) => ipcRenderer.on('load-file', (event, data) => callback(data)),
   onOpenFileFromPath: (callback) => ipcRenderer.on('open-file-from-path', (event, data) => callback(data)),

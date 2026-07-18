@@ -360,60 +360,51 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  // Handle drag and drop for .md files
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const files = Array.from(e.dataTransfer.files)
-    for (const file of files) {
-      if (/\.(md|markdown)$/i.test(file.name)) {
-        const filePath = (file as any).path
-        if (filePath) {
-          const result = await window.electronAPI?.readFile(filePath)
-          if (result) {
-            addTab(result.filePath, result.content, result.fileName, 'markdown')
-          }
-        }
-      }
-    }
-  }
-
-  // Global drop handler for the window
+  // Handle drag and drop for .md files — global window handler
   useEffect(() => {
-    const handleWindowDragOver = (e: DragEvent) => { e.preventDefault() }
-    const handleWindowDrop = (e: DragEvent) => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      e.dataTransfer!.dropEffect = 'copy'
+    }
+
+    const handleDrop = (e: DragEvent) => {
       e.preventDefault()
       const files = Array.from(e.dataTransfer?.files || [])
+      if (files.length === 0) return
+
       for (const file of files) {
         if (/\.(md|markdown)$/i.test(file.name)) {
-          const filePath = (file as any).path
+          // Use webUtils.getPathForFile to get the file path in Electron
+          const filePath = window.electronAPI?.getFilePath?.(file as any)
           if (filePath) {
             window.electronAPI?.readFile(filePath).then((result) => {
               if (result) {
-                useAppStore.getState().addTab(result.filePath, result.content, result.fileName, 'markdown')
+                const state = useAppStore.getState()
+                state.addTab(result.filePath, result.content, result.fileName, 'markdown')
+                if (!state.sidebarOpen) {
+                  state.toggleSidebar()
+                }
+                const dir = result.filePath.replace(/[\\/][^\\/]+$/, '')
+                window.electronAPI?.listMdFiles(dir).then((files) => {
+                  if (files) useAppStore.getState().setDirFiles(files)
+                })
               }
             })
           }
         }
       }
     }
-    window.addEventListener('dragover', handleWindowDragOver)
-    window.addEventListener('drop', handleWindowDrop)
+
+    window.addEventListener('dragover', handleDragOver)
+    window.addEventListener('drop', handleDrop)
     return () => {
-      window.removeEventListener('dragover', handleWindowDragOver)
-      window.removeEventListener('drop', handleWindowDrop)
+      window.removeEventListener('dragover', handleDragOver)
+      window.removeEventListener('drop', handleDrop)
     }
   }, [])
 
   return (
     <div
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
       style={{
       display: 'flex',
       flexDirection: 'column',
