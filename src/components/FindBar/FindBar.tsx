@@ -4,10 +4,9 @@ import { ChevronUp, ChevronDown, X } from 'lucide-react'
 interface FindBarProps {
   onClose: () => void
   containerRef: React.RefObject<HTMLDivElement | null>
-  tabKey: string | null
 }
 
-export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef, tabKey }) => {
+export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef }) => {
   const [query, setQuery] = useState('')
   const [matches, setMatches] = useState<number>(0)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -18,15 +17,6 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 30)
   }, [])
-
-  // Re-run search when switching tabs
-  useEffect(() => {
-    if (query) {
-      // Small delay to let React render the new tab content
-      const timer = setTimeout(() => highlightAll(query), 50)
-      return () => clearTimeout(timer)
-    }
-  }, [tabKey])
 
   // Clear highlights when query changes or component unmounts
   const clearHighlights = useCallback(() => {

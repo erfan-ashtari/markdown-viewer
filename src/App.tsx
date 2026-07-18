@@ -172,6 +172,11 @@ const App: React.FC = () => {
     })
   }, [activeTab?.id])
 
+  // Close find bar when switching tabs (injected <mark> elements conflict with React reconciliation)
+  useEffect(() => {
+    setFindOpen(false)
+  }, [activeTabId])
+
   // Listen for settings changes from the settings window
   useEffect(() => {
     window.electronAPI?.onSettingsChanged?.((data: { key: string; value: any }) => {
@@ -485,7 +490,6 @@ const App: React.FC = () => {
               <FindBar
                 onClose={() => setFindOpen(false)}
                 containerRef={contentContainerRef}
-                tabKey={activeTabId}
               />
             )}
             {activeTab ? (
