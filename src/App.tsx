@@ -485,6 +485,7 @@ const App: React.FC = () => {
               <FindBar
                 onClose={() => setFindOpen(false)}
                 containerRef={contentContainerRef}
+                tabKey={activeTabId}
               />
             )}
             {activeTab ? (
