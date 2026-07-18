@@ -608,19 +608,21 @@ body {
 
 /* Find bar (Ctrl+F) */
 .find-bar {
-  position: absolute;
-  top: 8px;
-  right: 16px;
+  position: sticky;
+  top: 0;
+  right: 0;
   z-index: 200;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 6px 8px;
+  margin: 0 0 0 auto;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   animation: find-bar-in 0.12s ease-out;
+  width: fit-content;
 }
 
 @keyframes find-bar-in {
@@ -667,13 +669,13 @@ body {
 
 /* Find bar match highlight */
 .find-bar-highlight {
-  background-color: rgba(255, 210, 50, 0.45);
+  background-color: rgba(255, 210, 50, 0.35);
   color: inherit;
   border-radius: 2px;
   padding: 0;
 }
 
-.find-bar-highlight:has(+ .find-bar-highlight),
-.find-bar-highlight + .find-bar-highlight {
-  /* no gap between adjacent highlights */
+.find-bar-highlight-active {
+  background-color: rgba(255, 140, 0, 0.75);
+  outline: 1px solid rgba(255, 140, 0, 0.9);
 }

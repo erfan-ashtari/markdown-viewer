@@ -97,8 +97,9 @@ export const FindBar: React.FC<FindBarProps> = ({ onClose, containerRef }) => {
     setMatches(totalMatches)
     setCurrentIdx(totalMatches > 0 ? 1 : 0)
 
-    // Scroll first match into view
+    // Mark first match as active
     if (marks.length > 0) {
+      marks[0].classList.add('find-bar-highlight-active')
       marks[0].scrollIntoView({ block: 'center', behavior: 'smooth' })
     }
   }, [containerRef, clearHighlights])
@@ -108,6 +109,9 @@ export const FindBar: React.FC<FindBarProps> = ({ onClose, containerRef }) => {
     const marks = markEls.current
     if (marks.length === 0) return
     const clamped = ((idx - 1) % marks.length + marks.length) % marks.length
+    // Remove active class from all, add to current
+    marks.forEach((m) => m.classList.remove('find-bar-highlight-active'))
+    marks[clamped].classList.add('find-bar-highlight-active')
     setCurrentIdx(clamped + 1)
     marks[clamped].scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [])
