@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect, useCallback, useState } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
@@ -48,6 +48,7 @@ const App: React.FC = () => {
 
   const activeTab = tabs.find(t => t.id === activeTabId)
   const isFullscreen = useAppStore(state => state.isFullscreen)
+  const [dirToLoad, setDirToLoad] = useState<string | null>(null)
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -179,18 +180,24 @@ const App: React.FC = () => {
   }, [])
 
   // Handle file opening from OS (double-click, right-click Open with)
+  // Reuses existing buildFileTree + readFile methods — same flow as clicking in sidebar
   useEffect(() => {
-    window.electronAPI?.onOpenFileFromPath?.((data: { content: string; fileName: string; filePath: string; dirPath: string }) => {
+    window.electronAPI?.onFileAssociationOpen?.((data: { filePath: string; dirPath: string }) => {
       const state = useAppStore.getState()
-      // Open the sidebar and navigate to the directory
-      if (!state.sidebarOpen) state.toggleSidebar()
-      // Add the file as a tab
-      state.addTab(data.filePath, data.content, data.fileName, 'markdown')
-      // Fetch directory files for navigation
+      // 1. Open sidebar and load folder tree (same as user selecting a folder)
+      if (!state.sidebarOpen) useAppStore.setState({ sidebarOpen: true })
+      setDirToLoad(data.dirPath)
       window.electronAPI?.listMdFiles(data.dirPath).then((files) => {
-        if (files) state.setDirFiles(files)
+        if (files) useAppStore.getState().setDirFiles(files)
+      })
+      // 2. Read the file and open it as a tab (same as user clicking a file in sidebar)
+      window.electronAPI?.readFile(data.filePath).then((result) => {
+        if (result) {
+          useAppStore.getState().addTab(result.filePath, result.content, result.fileName, 'markdown')
+        }
       })
     })
+    window.electronAPI?.rendererReady?.()
   }, [])
 
   // Detect fullscreen changes via Electron IPC
@@ -223,9 +230,17 @@ const App: React.FC = () => {
 
   // Handle file loading in new windows
   useEffect(() => {
-    window.electronAPI?.onLoadFile?.((data: { content: string; fileName: string; filePath: string }) => {
+    window.electronAPI?.onLoadFile?.((data: { content: string; fileName: string; filePath: string; dirPath?: string }) => {
       const isMd = /\.(md|markdown)$/i.test(data.fileName)
       addTab(data.filePath, data.content, data.fileName, isMd ? 'markdown' : 'other')
+      // If dirPath is provided (new window from file association or tab detach), open sidebar and load folder
+      if (data.dirPath) {
+        if (!useAppStore.getState().sidebarOpen) useAppStore.setState({ sidebarOpen: true })
+        setDirToLoad(data.dirPath)
+        window.electronAPI?.listMdFiles(data.dirPath).then((files) => {
+          if (files) useAppStore.getState().setDirFiles(files)
+        })
+      }
     })
   }, [addTab])
 
@@ -360,34 +375,42 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url)
   }
 
-  // Handle drag and drop for .md files — read content via FileReader, pass name to main for path
+  // Handle drag and drop for .md files — read content via FileReader, get real path via webUtils
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault()
-      e.dataTransfer!.dropEffect = 'copy'
+      e.stopPropagation()
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy'
+      }
     }
 
     const handleDrop = (e: DragEvent) => {
       e.preventDefault()
+      e.stopPropagation()
       const files = Array.from(e.dataTransfer?.files || [])
       if (files.length === 0) return
 
       for (const file of files) {
         if (/\.(md|markdown)$/i.test(file.name)) {
+          // Get real file path via webUtils (works in packaged Electron apps)
+          let realPath: string | null = null
+          try {
+            realPath = window.electronAPI?.getPathForFile?.(file) || null
+          } catch (_) {}
+
           const reader = new FileReader()
           reader.onload = () => {
             const content = reader.result as string
-            // Try to get real path via electron file.path (works in dev)
-            // In packaged app, file.path may be empty — use fileName as fallback
-            const filePath = (file as any).path || file.name
+            const filePath = realPath || file.name
             const state = useAppStore.getState()
             state.addTab(filePath, content, file.name, 'markdown')
             if (!state.sidebarOpen) {
               state.toggleSidebar()
             }
-            // Try to load directory listing if we have a real path
-            if ((file as any).path) {
-              const dir = filePath.replace(/[\\/][^\\/]+$/, '')
+            // Load directory listing for arrow-key navigation
+            if (realPath) {
+              const dir = realPath.replace(/[\\/][^\\/]+$/, '')
               window.electronAPI?.listMdFiles(dir).then((files) => {
                 if (files) useAppStore.getState().setDirFiles(files)
               })
@@ -398,11 +421,12 @@ const App: React.FC = () => {
       }
     }
 
-    window.addEventListener('dragover', handleDragOver)
-    window.addEventListener('drop', handleDrop)
+    // Use capture phase to ensure our handler runs before any inner element handlers
+    window.addEventListener('dragover', handleDragOver, true)
+    window.addEventListener('drop', handleDrop, true)
     return () => {
-      window.removeEventListener('dragover', handleDragOver)
-      window.removeEventListener('drop', handleDrop)
+      window.removeEventListener('dragover', handleDragOver, true)
+      window.removeEventListener('drop', handleDrop, true)
     }
   }, [])
 
@@ -449,6 +473,7 @@ const App: React.FC = () => {
           onFileSelect={handleFileSelect}
           onNonMarkdownFile={handleNonMarkdownFile}
           isOpen={sidebarOpen}
+          dirToLoad={dirToLoad}
         />
         
         <div style={{ 

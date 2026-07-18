@@ -1,6 +1,6 @@
 {
   "name": "mdview-app",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "A lightweight Markdown viewer with themes, fonts, zoom, and local file support",
   "main": "electron/main.js",
   "bin": "./bin/mdview.js",
@@ -64,11 +64,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/mdview.ico",
@@ -106,7 +110,13 @@
       "artifactName": "${productName}-${version}-portable.${ext}"
     }
   },
-  "keywords": ["markdown", "viewer", "editor", "themes", "electron"],
+  "keywords": [
+    "markdown",
+    "viewer",
+    "editor",
+    "themes",
+    "electron"
+  ],
   "author": "",
   "license": "MIT"
 }

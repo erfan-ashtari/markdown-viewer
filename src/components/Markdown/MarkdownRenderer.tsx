@@ -12,18 +12,24 @@ import 'highlight.js/styles/github-dark.css'
 declare global {
   interface Window {
     electronAPI?: {
+      openFile: () => Promise<{ filePath: string; content: string; fileName: string } | null>
+      openFolder: () => Promise<{ tree: any; name: string } | null>
+      buildFileTree: (dirPath: string) => Promise<{ tree: any; name: string } | null>
+      readFile: (filePath: string) => Promise<{ filePath: string; content: string; fileName: string } | null>
+      listMdFiles: (dirPath: string) => Promise<{ name: string; path: string }[]>
       openExternal: (link: string) => Promise<void>
       openFileWithSystem: (filePath: string) => Promise<void>
       openFileNewWindow: (filePath: string) => Promise<void>
       openSettings: () => Promise<void>
-      readFile: (filePath: string) => Promise<{ filePath: string; content: string; fileName: string } | null>
-      listMdFiles: (dirPath: string) => Promise<{ name: string; path: string }[]>
+      getDarkMode: () => Promise<boolean>
       sendSettingsChanged: (data: { key: string; value: any }) => void
       onSelectAll: (callback: () => void) => void
-      onLoadFile: (callback: (data: { content: string; fileName: string; filePath: string }) => void) => void
-      onOpenFileFromPath: (callback: (data: { content: string; fileName: string; filePath: string; dirPath: string }) => void) => void
+      onFileAssociationOpen: (callback: (data: { filePath: string; dirPath: string }) => void) => void
+      onLoadFile: (callback: (data: { content: string; fileName: string; filePath: string; dirPath?: string }) => void) => void
       onFullscreenChanged: (callback: (isFullscreen: boolean) => void) => void
       onSettingsChanged: (callback: (data: { key: string; value: any }) => void) => void
+      rendererReady: () => void
+      getPathForFile: (file: File) => string | null
     }
   }
 }

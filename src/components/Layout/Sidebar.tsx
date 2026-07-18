@@ -1,17 +1,16 @@
 import React, { useState } from 'react'
-import { 
-  Folder, 
-  File, 
-  ChevronRight, 
-  ChevronDown, 
-  FileText, 
-  FileCode, 
-  FileImage, 
-  FileJson, 
-  FileCog, 
+import {
+  Folder,
+  File,
+  ChevronRight,
+  ChevronDown,
+  FileText,
+  FileCode,
+  FileImage,
+  FileJson,
+  FileCog,
   FileArchive,
   FolderOpen,
-  ExternalLink
 } from 'lucide-react'
 
 interface FileNode {
@@ -26,6 +25,7 @@ interface SidebarProps {
   onFileSelect: (path: string, content: string, name: string) => void
   onNonMarkdownFile: (path: string, name: string) => void
   isOpen: boolean
+  dirToLoad?: string | null
 }
 
 const getFileIcon = (name: string) => {
@@ -82,7 +82,6 @@ const TreeItem: React.FC<{
 }> = ({ node, onFileSelect, onNonMarkdownFile, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   const isMarkdown = node.type === 'file' && /\.(md|markdown)$/i.test(node.name)
 
@@ -126,12 +125,6 @@ const TreeItem: React.FC<{
           transition: 'background-color 0.15s',
         }}
         onClick={handleClick}
-        onContextMenu={(e) => {
-          e.preventDefault()
-          if (isMarkdown) {
-            setContextMenu({ x: e.clientX, y: e.clientY })
-          }
-        }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
         }}
@@ -181,70 +174,34 @@ const TreeItem: React.FC<{
           ))}
         </div>
       )}
-
-      {contextMenu && (
-        <>
-          <div
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998 }}
-            onClick={() => setContextMenu(null)}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              left: contextMenu.x,
-              top: contextMenu.y,
-              zIndex: 9999,
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '6px',
-              padding: '4px 0',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-              minWidth: '180px',
-            }}
-          >
-            <div
-              style={{
-                padding: '6px 12px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-              }}
-              onClick={async () => {
-                setContextMenu(null)
-                if (window.electronAPI) {
-                  await window.electronAPI.openFileNewWindow(node.path)
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-              }}
-            >
-              <ExternalLink size={14} />
-              Open in New Window
-            </div>
-          </div>
-        </>
-      )}
     </div>
   )
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFile, isOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFile, isOpen, dirToLoad }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [rootPath, setRootPath] = useState<string | null>(null)
 
+  // When dirToLoad changes (e.g. from file association), load that folder's tree
+  const prevDirRef = React.useRef<string | null>(null)
+  React.useEffect(() => {
+    if (dirToLoad && dirToLoad !== prevDirRef.current) {
+      prevDirRef.current = dirToLoad
+      window.electronAPI?.buildFileTree?.(dirToLoad).then((result) => {
+        if (result) {
+          setFileTree(result.tree)
+          setRootPath(result.name)
+        }
+      })
+    }
+  }, [dirToLoad])
+
   const handleOpenFolder = async () => {
     if (window.electronAPI) {
-      const tree = await window.electronAPI.openFolder()
-      if (tree) {
-        setFileTree(tree)
-        setRootPath('Explorer')
+      const result = await window.electronAPI.openFolder()
+      if (result) {
+        setFileTree(result.tree)
+        setRootPath(result.name)
       }
     }
   }

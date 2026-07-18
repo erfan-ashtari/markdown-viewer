@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { X, FileText, XCircle, FileX } from 'lucide-react'
 import { useAppStore, Tab } from '../../store/appStore'
 
@@ -8,14 +8,38 @@ interface TabsProps {
 }
 
 export const Tabs: React.FC<TabsProps> = ({ onTabSelect, isFullscreen }) => {
-  const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs } = useAppStore()
+  const { tabs, activeTabId, setActiveTab, closeTab, closeOtherTabs, closeAllTabs, removeTab } = useAppStore()
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null)
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null)
+  const tabBarRef = useRef<HTMLDivElement>(null)
 
   if (tabs.length === 0) return null
   if (isFullscreen) return null
 
+  const handleDragStart = (e: React.DragEvent, tab: Tab) => {
+    setDraggingTabId(tab.id)
+    e.dataTransfer.setData('application/tab-id', tab.id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragEnd = (e: React.DragEvent, tab: Tab) => {
+    setDraggingTabId(null)
+    // Check if cursor left the tab bar — if so, detach tab to new window
+    const rect = tabBarRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const { clientX, clientY } = e
+    const isOutside = clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom
+    if (isOutside && tabs.length > 1) {
+      // Remove tab from current window
+      removeTab(tab.id)
+      // Open in a new window
+      window.electronAPI?.openFileNewWindow(tab.filePath)
+    }
+  }
+
   return (
     <div
+      ref={tabBarRef}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -29,6 +53,9 @@ export const Tabs: React.FC<TabsProps> = ({ onTabSelect, isFullscreen }) => {
       {tabs.map((tab) => (
         <div
           key={tab.id}
+          draggable
+          onDragStart={(e) => handleDragStart(e, tab)}
+          onDragEnd={(e) => handleDragEnd(e, tab)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -41,7 +68,8 @@ export const Tabs: React.FC<TabsProps> = ({ onTabSelect, isFullscreen }) => {
             minWidth: '120px',
             maxWidth: '200px',
             borderBottom: tab.id === activeTabId ? '2px solid var(--accent-color)' : '2px solid transparent',
-            transition: 'background-color 0.15s',
+            transition: 'background-color 0.15s, opacity 0.15s',
+            opacity: draggingTabId === tab.id ? 0.4 : 1,
           }}
           onClick={() => {
             setActiveTab(tab.id)

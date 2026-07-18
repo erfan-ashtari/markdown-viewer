@@ -27,11 +27,11 @@ interface AppState {
   contentWidth: 'full' | 'medium' | 'a4'
   currentTheme: Theme
   currentFont: string
-  openInNewTab: boolean
   isFullscreen: boolean
 
   // Actions
   addTab: (filePath: string, content: string, fileName: string, type?: 'markdown' | 'other') => void
+  removeTab: (tabId: string) => void
   closeTab: (tabId: string) => void
   closeOtherTabs: (tabId: string) => void
   closeAllTabs: () => void
@@ -41,7 +41,6 @@ interface AppState {
   toggleContentWidth: () => void
   setTheme: (theme: Theme) => void
   setCurrentFont: (fontId: string) => void
-  setOpenInNewTab: (value: boolean) => void
   setIsFullscreen: (value: boolean) => void
   setDirFiles: (files: DirFile[]) => void
   navigateToAdjacentFile: (direction: 'prev' | 'next') => Promise<void>
@@ -59,7 +58,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   contentWidth: 'full',
   currentTheme: 'github-dark',
   currentFont: 'default',
-  openInNewTab: true,
   isFullscreen: false,
   
   // Actions
@@ -83,7 +81,18 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
     }
   },
-  
+
+  removeTab: (tabId) => {
+    const state = get()
+    const newTabs = state.tabs.filter(t => t.id !== tabId)
+    let newActiveTabId = state.activeTabId
+    if (state.activeTabId === tabId) {
+      const idx = state.tabs.findIndex(t => t.id === tabId)
+      newActiveTabId = newTabs.length > 0 ? newTabs[Math.min(idx, newTabs.length - 1)].id : null
+    }
+    set({ tabs: newTabs, activeTabId: newActiveTabId })
+  },
+
   closeTab: (tabId) => {
     const state = get()
     const newTabs = state.tabs.filter(t => t.id !== tabId)
@@ -139,8 +148,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     document.documentElement.setAttribute('data-font', fontId)
     set({ currentFont: fontId })
   },
-
-  setOpenInNewTab: (value) => set({ openInNewTab: value }),
 
   setIsFullscreen: (value) => set({ isFullscreen: value }),
 

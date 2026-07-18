@@ -37,7 +37,6 @@ export const SettingsWindow: React.FC = () => {
     currentFont, setCurrentFont,
     contentWidth, toggleContentWidth,
     zoomLevel, setZoomLevel,
-    openInNewTab, setOpenInNewTab,
     sidebarOpen, toggleSidebar,
   } = useAppStore()
 
@@ -74,7 +73,6 @@ export const SettingsWindow: React.FC = () => {
       font: currentFont,
       contentWidth,
       zoomLevel,
-      openInNewTab,
       localSettings,
     }
     const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' })
@@ -100,7 +98,6 @@ export const SettingsWindow: React.FC = () => {
         if (settings.font) { setCurrentFont(settings.font); handleSettingChange('font', settings.font) }
         if (settings.contentWidth) { useAppStore.setState({ contentWidth: settings.contentWidth }); handleSettingChange('contentWidth', settings.contentWidth) }
         if (settings.zoomLevel) { setZoomLevel(settings.zoomLevel); handleSettingChange('zoomLevel', settings.zoomLevel) }
-        if (typeof settings.openInNewTab === 'boolean') setOpenInNewTab(settings.openInNewTab)
         if (settings.localSettings) {
           setLocalSettings(settings.localSettings)
           localStorage.setItem('markdown-viewer-local-settings', JSON.stringify(settings.localSettings))
@@ -172,8 +169,6 @@ export const SettingsWindow: React.FC = () => {
       <div style={{ flex: 1, overflow: 'auto', padding: '24px 32px' }}>
         {activeSection === 'general' && (
           <GeneralSection
-            openInNewTab={openInNewTab}
-            setOpenInNewTab={setOpenInNewTab}
             localSettings={localSettings}
             saveLocalSettings={saveLocalSettings}
           />
@@ -211,21 +206,13 @@ export const SettingsWindow: React.FC = () => {
 
 // ===== General Section =====
 const GeneralSection: React.FC<{
-  openInNewTab: boolean
-  setOpenInNewTab: (v: boolean) => void
   localSettings: any
   saveLocalSettings: (s: any) => void
-}> = ({ openInNewTab, setOpenInNewTab, localSettings, saveLocalSettings }) => (
+}> = ({ localSettings, saveLocalSettings }) => (
   <div>
     <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>General</h2>
 
     <SettingGroup title="File Handling">
-      <SettingToggle
-        label="Open files in new tab"
-        description="When opening a file, create a new tab instead of replacing current content"
-        value={openInNewTab}
-        onChange={setOpenInNewTab}
-      />
       <SettingToggle
         label="Show sidebar on startup"
         description="Display the file explorer sidebar when the app starts"
