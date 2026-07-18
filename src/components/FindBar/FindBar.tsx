@@ -6,57 +6,28 @@ interface FindBarProps {
   containerRef: React.RefObject<HTMLDivElement | null>
 }
 
-interface MatchInfo {
-  node: Text
-  offset: number
-  length: number
-}
-
-function findAllMatches(container: HTMLElement, query: string): MatchInfo[] {
-  const matches: MatchInfo[] = []
-  if (!query) return matches
-
-  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(escaped, 'gi')
-
+// Find the DOM position (text node + offset) for a character offset within a container
+function findPositionAtOffset(container: HTMLElement, targetOffset: number): { node: Text; offset: number } | null {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
+  let cumulative = 0
   while (walker.nextNode()) {
     const textNode = walker.currentNode as Text
-    const text = textNode.textContent || ''
-    let m: RegExpExecArray | null
-    regex.lastIndex = 0
-    while ((m = regex.exec(text)) !== null) {
-      matches.push({ node: textNode, offset: m.index, length: m[0].length })
+    const len = textNode.textContent?.length || 0
+    if (cumulative + len >= targetOffset) {
+      return { node: textNode, offset: targetOffset - cumulative }
     }
+    cumulative += len
   }
-  return matches
-}
-
-function selectMatch(match: MatchInfo) {
-  const range = document.createRange()
-  range.setStart(match.node, match.offset)
-  range.setEnd(match.node, match.offset + match.length)
-  const selection = window.getSelection()
-  selection?.removeAllRanges()
-  selection?.addRange(range)
-  // Scroll the match into view
-  range.getBoundingClientRect() // force layout
-  const rect = range.getBoundingClientRect()
-  const container = range.startContainer.parentElement?.closest('.markdown-body, .text-viewer')
-  if (container && rect.top !== 0) {
-    container.scrollTo({
-      top: container.scrollTop + rect.top - container.getBoundingClientRect().height / 2,
-      behavior: 'smooth',
-    })
-  }
+  return null
 }
 
 export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef }) => {
   const [query, setQuery] = useState('')
-  const [matches, setMatches] = useState<number>(0)
+  const [matches, setMatches] = useState(0)
   const [currentIdx, setCurrentIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const matchRefs = useRef<MatchInfo[]>([])
+  // Store character offsets of all matches in the raw text
+  const matchOffsets = useRef<number[]>([])
 
   // Focus input on mount
   useEffect(() => {
@@ -66,41 +37,80 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
   // Clear selection on unmount
   useEffect(() => {
     return () => {
-      matchRefs.current = []
+      matchOffsets.current = []
       window.getSelection()?.removeAllRanges()
     }
   }, [])
+
+  const findMatchOffsets = useCallback((text: string, q: string): number[] => {
+    if (!q) return []
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(escaped, 'gi')
+    const offsets: number[] = []
+    let m: RegExpExecArray | null
+    while ((m = regex.exec(text)) !== null) {
+      offsets.push(m.index)
+    }
+    return offsets
+  }, [])
+
+  const selectMatchAtOffset = useCallback((offset: number, length: number) => {
+    if (!containerRef.current) return
+    const pos = findPositionAtOffset(containerRef.current, offset)
+    if (!pos) return
+    const range = document.createRange()
+    range.setStart(pos.node, pos.offset)
+    range.setEnd(pos.node, pos.offset + length)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    // Scroll into view
+    const rect = range.getBoundingClientRect()
+    if (rect.top !== 0 || rect.left !== 0) {
+      const scrollParent = containerRef.current?.parentElement
+      if (scrollParent) {
+        const containerRect = scrollParent.getBoundingClientRect()
+        if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
+          scrollParent.scrollTo({
+            top: scrollParent.scrollTop + rect.top - containerRect.top - containerRect.height / 3,
+            behavior: 'smooth',
+          })
+        }
+      }
+    }
+  }, [containerRef])
 
   const handleSearch = useCallback(() => {
     if (!query || !containerRef.current) {
       setMatches(0)
       setCurrentIdx(0)
-      matchRefs.current = []
+      matchOffsets.current = []
       window.getSelection()?.removeAllRanges()
       return
     }
-    const found = findAllMatches(containerRef.current, query)
-    matchRefs.current = found
-    setMatches(found.length)
-    if (found.length > 0) {
+    const text = containerRef.current.textContent || ''
+    const offsets = findMatchOffsets(text, query)
+    matchOffsets.current = offsets
+    setMatches(offsets.length)
+    if (offsets.length > 0) {
       setCurrentIdx(1)
-      selectMatch(found[0])
+      selectMatchAtOffset(offsets[0], query.length)
     } else {
       setCurrentIdx(0)
       window.getSelection()?.removeAllRanges()
     }
-  }, [query, containerRef])
+  }, [query, containerRef, findMatchOffsets, selectMatchAtOffset])
 
   const goToMatch = useCallback((idx: number) => {
-    const marks = matchRefs.current
-    if (marks.length === 0) return
-    const clamped = ((idx - 1) % marks.length + marks.length) % marks.length
+    const offsets = matchOffsets.current
+    if (offsets.length === 0 || !query) return
+    const clamped = ((idx - 1) % offsets.length + offsets.length) % offsets.length
     setCurrentIdx(clamped + 1)
-    selectMatch(marks[clamped])
-  }, [])
+    selectMatchAtOffset(offsets[clamped], query.length)
+  }, [query, selectMatchAtOffset])
 
   const handleClose = useCallback(() => {
-    matchRefs.current = []
+    matchOffsets.current = []
     window.getSelection()?.removeAllRanges()
     onClose()
   }, [onClose])
@@ -128,10 +138,9 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)
-          // Reset when typing
           setMatches(0)
           setCurrentIdx(0)
-          matchRefs.current = []
+          matchOffsets.current = []
           window.getSelection()?.removeAllRanges()
         }}
         onKeyDown={handleKeyDown}
