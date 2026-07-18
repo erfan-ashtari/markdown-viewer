@@ -4,7 +4,9 @@ import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
 import { Tabs } from './components/Layout/Tabs'
 import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
+import { TextRenderer } from './components/Text/TextRenderer'
 import { FontLoader } from './components/FontLoader'
+import { HighlightThemeLoader } from './components/HighlightThemeLoader'
 import { ExportManager } from './export/ExportManager'
 import { ExportFormat } from './export/types/ExportOptions'
 import {
@@ -300,8 +302,8 @@ const App: React.FC = () => {
     addTab(path, content, name, 'markdown')
   }
 
-  const handleNonMarkdownFile = (path: string, name: string) => {
-    addTab(path, '', name, 'other')
+  const handleNonMarkdownFile = (path: string, content: string, name: string) => {
+    addTab(path, content, name, 'other')
   }
 
   const handleTabSelect = () => {
@@ -417,6 +419,7 @@ const App: React.FC = () => {
       color: 'var(--text-primary)',
     }}>
       <FontLoader />
+      <HighlightThemeLoader />
       {/* Fullscreen hover trigger zone */}
       {isFullscreen && (
         <div
@@ -474,6 +477,13 @@ const App: React.FC = () => {
                   contentWidth={contentWidth}
                   onZoomChange={setZoomLevel}
                 />
+              ) : activeTab.content ? (
+                <TextRenderer
+                  content={activeTab.content}
+                  fileName={activeTab.fileName}
+                  zoomLevel={zoomLevel}
+                  onZoomChange={setZoomLevel}
+                />
               ) : (
                 <div style={{
                   display: 'flex',
@@ -491,7 +501,7 @@ const App: React.FC = () => {
                       {activeTab.fileName}
                     </p>
                     <p style={{ fontSize: '14px' }}>
-                      This file type cannot be previewed
+                      Cannot preview this file type
                     </p>
                   </div>
                 </div>

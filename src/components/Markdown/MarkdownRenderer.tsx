@@ -7,7 +7,6 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
 import mermaid from 'mermaid'
 import 'katex/dist/katex.min.css'
-import 'highlight.js/styles/github-dark.css'
 
 declare global {
   interface Window {

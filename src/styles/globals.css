@@ -455,6 +455,10 @@ body {
   background-color: var(--code-bg);
   border-radius: 3px;
   font-family: var(--font-code, 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace);
+}
+
+/* Only inline code gets accent color — fenced code blocks use highlight.js colors */
+.markdown-body :not(pre) > code {
   color: var(--accent-color);
 }
 

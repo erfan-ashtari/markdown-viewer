@@ -12,6 +12,7 @@ import {
   FileArchive,
   FolderOpen,
 } from 'lucide-react'
+import { isTextFile } from '../Text/languageMap'
 
 interface FileNode {
   name: string
@@ -23,7 +24,7 @@ interface FileNode {
 
 interface SidebarProps {
   onFileSelect: (path: string, content: string, name: string) => void
-  onNonMarkdownFile: (path: string, name: string) => void
+  onNonMarkdownFile: (path: string, content: string, name: string) => void
   isOpen: boolean
   dirToLoad?: string | null
 }
@@ -77,7 +78,7 @@ const getFileIcon = (name: string) => {
 const TreeItem: React.FC<{
   node: FileNode
   onFileSelect: (path: string, content: string, name: string) => void
-  onNonMarkdownFile: (path: string, name: string) => void
+  onNonMarkdownFile: (path: string, content: string, name: string) => void
   level?: number
 }> = ({ node, onFileSelect, onNonMarkdownFile, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -103,7 +104,24 @@ const TreeItem: React.FC<{
         setIsLoading(false)
       }
     } else {
-      onNonMarkdownFile(node.path, node.name)
+      // Read content for text files, skip for binary
+      if (isTextFile(node.name)) {
+        setIsLoading(true)
+        try {
+          if (window.electronAPI) {
+            const result = await window.electronAPI.readFile(node.path)
+            if (result) {
+              onNonMarkdownFile(result.filePath, result.content, result.fileName)
+            }
+          }
+        } catch (error) {
+          console.error('Failed to read file:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      } else {
+        onNonMarkdownFile(node.path, '', node.name)
+      }
     }
   }
 
@@ -214,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
         if (isMd) {
           onFileSelect(result.filePath, result.content, result.fileName)
         } else {
-          onNonMarkdownFile(result.filePath, result.fileName)
+          onNonMarkdownFile(result.filePath, result.content, result.fileName)
         }
       }
     }
