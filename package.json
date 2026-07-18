@@ -72,7 +72,23 @@
         }
       ],
       "icon": "build/mdview.ico",
-      "artifactName": "${productName}-${version}-setup.${ext}"
+      "artifactName": "${productName}-${version}-setup.${ext}",
+      "fileAssociations": [
+        {
+          "ext": "md",
+          "name": "Markdown Document",
+          "description": "Markdown file",
+          "icon": "build/mdview.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Document",
+          "description": "Markdown file",
+          "icon": "build/mdview.ico",
+          "role": "Editor"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,

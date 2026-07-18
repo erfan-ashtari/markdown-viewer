@@ -251,10 +251,13 @@ function buildFileTree(dirPath, relativePath = '') {
 app.whenReady().then(() => {
   createWindow();
 
-  // Handle --open argument from CLI or file association
+  // Find .md file path from command line args (works for both --open and file association)
   const openArg = process.argv.find((arg, i) => process.argv[i - 1] === '--open');
-  if (openArg) {
-    const targetPath = path.resolve(openArg);
+  const fileArg = process.argv.find(arg => /\.(md|markdown)$/i.test(arg) && !arg.startsWith('--'));
+
+  const targetArg = openArg || fileArg;
+  if (targetArg) {
+    const targetPath = path.resolve(targetArg);
     if (fs.existsSync(targetPath)) {
       const stat = fs.statSync(targetPath);
       if (stat.isFile()) {
