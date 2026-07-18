@@ -57,6 +57,31 @@ const App: React.FC = () => {
   const [findOpen, setFindOpen] = useState(false)
   const contentContainerRef = useRef<HTMLDivElement>(null)
 
+  // Override setActiveTab to clear find highlights before switching
+  useEffect(() => {
+    const original = useAppStore.getState().setActiveTab
+    useAppStore.setState({
+      setActiveTab: (tabId: string) => {
+        // Synchronously remove all <mark> elements to prevent React reconciliation crash
+        const container = contentContainerRef.current
+        if (container) {
+          const marks = container.querySelectorAll('mark.find-bar-highlight')
+          marks.forEach((mark) => {
+            if (mark.parentNode) {
+              mark.replaceWith(...mark.childNodes)
+            }
+          })
+          container.normalize()
+        }
+        original(tabId)
+      },
+    })
+    // Restore original on unmount
+    return () => {
+      useAppStore.setState({ setActiveTab: original })
+    }
+  }, [])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
