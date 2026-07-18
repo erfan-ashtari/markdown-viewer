@@ -666,15 +666,3 @@ body {
   opacity: 0.35;
   cursor: default;
 }
-
-/* CSS Highlight API — find bar match highlights */
-::highlight(find-match) {
-  background-color: rgba(255, 210, 50, 0.35);
-  color: inherit;
-}
-
-::highlight(find-active) {
-  background-color: rgba(255, 140, 0, 0.75);
-  outline: 2px solid rgba(255, 140, 0, 0.9);
-  color: inherit;
-}

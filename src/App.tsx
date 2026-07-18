@@ -534,9 +534,9 @@ const App: React.FC = () => {
             {activeTab && (
               <HighlightLayer
                 containerRef={contentContainerRef}
-                content={activeTab.content}
                 query={findQuery}
                 activeIndex={findActiveIndex}
+                matchCount={findMatchCount}
               />
             )}
             {activeTab ? (
