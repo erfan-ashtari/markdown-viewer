@@ -98,16 +98,9 @@ export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, qu
       CSS.highlights.set('find-active', activeHighlight)
 
       // Scroll active match into view
-      const rect = activeRange.getBoundingClientRect()
-      const scrollParent = containerRef.current?.parentElement
-      if (scrollParent && (rect.top !== 0 || rect.left !== 0)) {
-        const containerRect = scrollParent.getBoundingClientRect()
-        if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
-          scrollParent.scrollTo({
-            top: scrollParent.scrollTop + rect.top - containerRect.top - containerRect.height / 3,
-            behavior: 'smooth',
-          })
-        }
+      const startParent = activeRange.startContainer.parentElement
+      if (startParent) {
+        startParent.scrollIntoView({ block: 'center', behavior: 'smooth' })
       }
     }
 
