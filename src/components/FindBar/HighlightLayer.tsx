@@ -4,6 +4,7 @@ interface HighlightLayerProps {
   containerRef: React.RefObject<HTMLDivElement | null>
   query: string
   activeIndex: number
+  tabId: string | null
 }
 
 interface MatchOffset {
@@ -90,11 +91,29 @@ function buildHighlights(container: HTMLElement, query: string, activeIndex: num
 
 const CSS_SUPPORTED = typeof CSS !== 'undefined' && 'highlights' in CSS
 
-export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, query, activeIndex }) => {
+export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, query, activeIndex, tabId }) => {
   const prevQuery = useRef(query)
+  const prevTabId = useRef(tabId)
 
   useEffect(() => {
     if (!CSS_SUPPORTED) return
+
+    const tabChanged = prevTabId.current !== tabId
+    prevTabId.current = tabId
+
+    // On tab switch: clear highlights from old tab, then rebuild for new tab
+    if (tabChanged) {
+      clearHighlights()
+      if (query) {
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            buildHighlights(containerRef.current, query, activeIndex)
+          }
+        })
+      }
+      return
+    }
+
     const container = containerRef.current
     if (!container) return
 
@@ -102,7 +121,6 @@ export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, qu
     prevQuery.current = query
 
     if (queryChanged) {
-      // Query changed: clear old, wait for DOM to settle, then build new
       clearHighlights()
       requestAnimationFrame(() => {
         if (containerRef.current) {
@@ -110,10 +128,9 @@ export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, qu
         }
       })
     } else {
-      // Same query, just activeIndex changed (navigation)
       buildHighlights(container, query, activeIndex)
     }
-  }) // No deps — we track changes via ref
+  })
 
   // Cleanup on unmount
   useEffect(() => {

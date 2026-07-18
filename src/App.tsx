@@ -536,6 +536,7 @@ const App: React.FC = () => {
                 containerRef={contentContainerRef}
                 query={findQuery}
                 activeIndex={findActiveIndex}
+                tabId={activeTabId}
               />
             )}
             {activeTab ? (
