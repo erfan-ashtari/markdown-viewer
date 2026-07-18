@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
@@ -6,6 +6,7 @@ import { Tabs } from './components/Layout/Tabs'
 import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
 import { TextRenderer } from './components/Text/TextRenderer'
 import { FindBar } from './components/FindBar/FindBar'
+import { HighlightLayer } from './components/FindBar/HighlightLayer'
 import { FontLoader } from './components/FontLoader'
 import { HighlightThemeLoader } from './components/HighlightThemeLoader'
 import { ExportManager } from './export/ExportManager'
@@ -55,6 +56,9 @@ const App: React.FC = () => {
   const isFullscreen = useAppStore(s => s.isFullscreen)
   const [dirToLoad, setDirToLoad] = useState<string | null>(null)
   const [findOpen, setFindOpen] = useState(false)
+  const [findQuery, setFindQuery] = useState('')
+  const [findMatchCount, setFindMatchCount] = useState(0)
+  const [findActiveIndex, setFindActiveIndex] = useState(0)
   const contentContainerRef = useRef<HTMLDivElement>(null)
 
   // Keyboard shortcuts
@@ -318,6 +322,43 @@ const App: React.FC = () => {
     // Tab is already activated in the Tabs component
   }
 
+  // Find bar search and navigation
+  const handleFindSearch = useCallback((query: string) => {
+    setFindQuery(query)
+    if (!query || !activeTab) {
+      setFindMatchCount(0)
+      setFindActiveIndex(0)
+      return
+    }
+    // Count matches in raw text
+    const text = activeTab.content
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(escaped, 'gi')
+    let count = 0
+    while (regex.exec(text) !== null) count++
+    setFindMatchCount(count)
+    setFindActiveIndex(count > 0 ? 1 : 0)
+  }, [activeTab])
+
+  const handleFindNavigate = useCallback((index: number) => {
+    setFindActiveIndex(index)
+  }, [])
+
+  const handleFindClose = useCallback(() => {
+    setFindOpen(false)
+    setFindQuery('')
+    setFindMatchCount(0)
+    setFindActiveIndex(0)
+  }, [])
+
+  // Close find bar on tab switch
+  useEffect(() => {
+    setFindOpen(false)
+    setFindQuery('')
+    setFindMatchCount(0)
+    setFindActiveIndex(0)
+  }, [activeTabId])
+
   const handleExportPDF = async () => {
     if (!activeTab) return
 
@@ -483,8 +524,19 @@ const App: React.FC = () => {
           >
             {findOpen && activeTab && (
               <FindBar
-                onClose={() => setFindOpen(false)}
+                onClose={handleFindClose}
+                onSearch={handleFindSearch}
+                matchCount={findMatchCount}
+                activeIndex={findActiveIndex}
+                onNavigate={handleFindNavigate}
+              />
+            )}
+            {activeTab && (
+              <HighlightLayer
                 containerRef={contentContainerRef}
+                content={activeTab.content}
+                query={findQuery}
+                activeIndex={findActiveIndex}
               />
             )}
             {activeTab ? (

@@ -3,125 +3,48 @@ import { ChevronUp, ChevronDown, X } from 'lucide-react'
 
 interface FindBarProps {
   onClose: () => void
-  containerRef: React.RefObject<HTMLDivElement | null>
+  onSearch: (query: string) => void
+  matchCount: number
+  activeIndex: number
+  onNavigate: (index: number) => void
 }
 
-// Find the DOM position (text node + offset) for a character offset within a container
-function findPositionAtOffset(container: HTMLElement, targetOffset: number): { node: Text; offset: number } | null {
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null)
-  let cumulative = 0
-  while (walker.nextNode()) {
-    const textNode = walker.currentNode as Text
-    const len = textNode.textContent?.length || 0
-    if (cumulative + len >= targetOffset) {
-      return { node: textNode, offset: targetOffset - cumulative }
-    }
-    cumulative += len
-  }
-  return null
-}
-
-export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerRef }) => {
+export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, matchCount, activeIndex, onNavigate }) => {
   const [query, setQuery] = useState('')
-  const [matches, setMatches] = useState(0)
-  const [currentIdx, setCurrentIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Store character offsets of all matches in the raw text
-  const matchOffsets = useRef<number[]>([])
 
-  // Focus input on mount
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 30)
   }, [])
 
-  // Clear selection on unmount
-  useEffect(() => {
-    return () => {
-      matchOffsets.current = []
-      window.getSelection()?.removeAllRanges()
-    }
-  }, [])
-
-  const findMatchOffsets = useCallback((text: string, q: string): number[] => {
-    if (!q) return []
-    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(escaped, 'gi')
-    const offsets: number[] = []
-    let m: RegExpExecArray | null
-    while ((m = regex.exec(text)) !== null) {
-      offsets.push(m.index)
-    }
-    return offsets
-  }, [])
-
-  const selectMatchAtOffset = useCallback((offset: number, length: number) => {
-    if (!containerRef.current) return
-    const pos = findPositionAtOffset(containerRef.current, offset)
-    if (!pos) return
-    const range = document.createRange()
-    range.setStart(pos.node, pos.offset)
-    range.setEnd(pos.node, pos.offset + length)
-    const selection = window.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-    // Scroll into view
-    const rect = range.getBoundingClientRect()
-    if (rect.top !== 0 || rect.left !== 0) {
-      const scrollParent = containerRef.current?.parentElement
-      if (scrollParent) {
-        const containerRect = scrollParent.getBoundingClientRect()
-        if (rect.top < containerRect.top || rect.bottom > containerRect.bottom) {
-          scrollParent.scrollTo({
-            top: scrollParent.scrollTop + rect.top - containerRect.top - containerRect.height / 3,
-            behavior: 'smooth',
-          })
-        }
-      }
-    }
-  }, [containerRef])
-
   const handleSearch = useCallback(() => {
-    if (!query || !containerRef.current) {
-      setMatches(0)
-      setCurrentIdx(0)
-      matchOffsets.current = []
-      window.getSelection()?.removeAllRanges()
-      return
-    }
-    const text = containerRef.current.textContent || ''
-    const offsets = findMatchOffsets(text, query)
-    matchOffsets.current = offsets
-    setMatches(offsets.length)
-    if (offsets.length > 0) {
-      setCurrentIdx(1)
-      selectMatchAtOffset(offsets[0], query.length)
-    } else {
-      setCurrentIdx(0)
-      window.getSelection()?.removeAllRanges()
-    }
-  }, [query, containerRef, findMatchOffsets, selectMatchAtOffset])
+    onSearch(query)
+  }, [query, onSearch])
 
-  const goToMatch = useCallback((idx: number) => {
-    const offsets = matchOffsets.current
-    if (offsets.length === 0 || !query) return
-    const clamped = ((idx - 1) % offsets.length + offsets.length) % offsets.length
-    setCurrentIdx(clamped + 1)
-    selectMatchAtOffset(offsets[clamped], query.length)
-  }, [query, selectMatchAtOffset])
+  const handlePrev = useCallback(() => {
+    if (matchCount === 0) return
+    const prev = activeIndex <= 1 ? matchCount : activeIndex - 1
+    onNavigate(prev)
+  }, [activeIndex, matchCount, onNavigate])
+
+  const handleNext = useCallback(() => {
+    if (matchCount === 0) return
+    const next = activeIndex >= matchCount ? 1 : activeIndex + 1
+    onNavigate(next)
+  }, [activeIndex, matchCount, onNavigate])
 
   const handleClose = useCallback(() => {
-    matchOffsets.current = []
-    window.getSelection()?.removeAllRanges()
+    onSearch('')
     onClose()
-  }, [onClose])
+  }, [onSearch, onClose])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (matches === 0) {
+      if (matchCount === 0) {
         handleSearch()
       } else {
-        e.shiftKey ? goToMatch(currentIdx - 1) : goToMatch(currentIdx + 1)
+        e.shiftKey ? handlePrev() : handleNext()
       }
     }
     if (e.key === 'Escape') {
@@ -138,10 +61,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)
-          setMatches(0)
-          setCurrentIdx(0)
-          matchOffsets.current = []
-          window.getSelection()?.removeAllRanges()
+          if (e.target.value === '') onSearch('')
         }}
         onKeyDown={handleKeyDown}
         placeholder="Find..."
@@ -157,32 +77,18 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
           minWidth: 0,
         }}
       />
-      {matches > 0 && (
+      {matchCount > 0 && (
         <span className="find-bar-count">
-          {currentIdx} / {matches}
+          {activeIndex} / {matchCount}
         </span>
       )}
-      <button
-        className="find-bar-btn"
-        onClick={() => goToMatch(currentIdx - 1)}
-        disabled={matches === 0}
-        title="Previous match (Shift+Enter)"
-      >
+      <button className="find-bar-btn" onClick={handlePrev} disabled={matchCount === 0} title="Previous (Shift+Enter)">
         <ChevronUp size={14} />
       </button>
-      <button
-        className="find-bar-btn"
-        onClick={() => goToMatch(currentIdx + 1)}
-        disabled={matches === 0}
-        title="Next match (Enter)"
-      >
+      <button className="find-bar-btn" onClick={handleNext} disabled={matchCount === 0} title="Next (Enter)">
         <ChevronDown size={14} />
       </button>
-      <button
-        className="find-bar-btn"
-        onClick={handleClose}
-        title="Close (Esc)"
-      >
+      <button className="find-bar-btn" onClick={handleClose} title="Close (Esc)">
         <X size={14} />
       </button>
     </div>
