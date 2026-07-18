@@ -346,7 +346,6 @@ const App: React.FC = () => {
 
   const handleFindClose = useCallback(() => {
     setFindOpen(false)
-    setFindQuery('')
     setFindMatchCount(0)
     setFindActiveIndex(0)
   }, [])
@@ -354,7 +353,6 @@ const App: React.FC = () => {
   // Close find bar on tab switch
   useEffect(() => {
     setFindOpen(false)
-    setFindQuery('')
     setFindMatchCount(0)
     setFindActiveIndex(0)
   }, [activeTabId])
@@ -526,6 +524,8 @@ const App: React.FC = () => {
               <FindBar
                 onClose={handleFindClose}
                 onSearch={handleFindSearch}
+                query={findQuery}
+                onQueryChange={setFindQuery}
                 matchCount={findMatchCount}
                 activeIndex={findActiveIndex}
                 onNavigate={handleFindNavigate}
@@ -536,7 +536,6 @@ const App: React.FC = () => {
                 containerRef={contentContainerRef}
                 query={findQuery}
                 activeIndex={findActiveIndex}
-                matchCount={findMatchCount}
               />
             )}
             {activeTab ? (

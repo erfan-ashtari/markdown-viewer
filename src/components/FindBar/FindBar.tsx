@@ -1,21 +1,26 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useEffect, useCallback } from 'react'
 import { ChevronUp, ChevronDown, X } from 'lucide-react'
 
 interface FindBarProps {
   onClose: () => void
   onSearch: (query: string) => void
+  query: string
+  onQueryChange: (query: string) => void
   matchCount: number
   activeIndex: number
   onNavigate: (index: number) => void
 }
 
-export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, matchCount, activeIndex, onNavigate }) => {
-  const [query, setQuery] = useState('')
+export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, query, onQueryChange, matchCount, activeIndex, onNavigate }) => {
   const inputRef = useRef<HTMLInputElement>(null)
   const lastSearchedRef = useRef('')
 
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 30)
+    // Restore cursor to end of input
+    if (inputRef.current) {
+      inputRef.current.selectionStart = inputRef.current.selectionEnd = query.length
+    }
   }, [])
 
   const handleSearch = useCallback(() => {
@@ -67,7 +72,7 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, onSearch, 
         type="text"
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value)
+          onQueryChange(e.target.value)
           if (e.target.value === '') onSearch('')
         }}
         onKeyDown={handleKeyDown}
