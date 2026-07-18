@@ -33,9 +33,12 @@ export const FindBar: React.FC<FindBarProps> = React.memo(({ onClose, containerR
     }
   }, [containerRef])
 
+  // On unmount, just clear our refs — don't touch the DOM, let React handle it
   useEffect(() => {
-    return () => clearHighlights()
-  }, [clearHighlights])
+    return () => {
+      markEls.current = []
+    }
+  }, [])
 
   // Highlight all matches in the DOM
   const highlightAll = useCallback((q: string) => {
