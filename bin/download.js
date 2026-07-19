@@ -6,9 +6,29 @@ var fs = require('fs');
 var path = require('path');
 
 var VERSION = require('../package.json').version;
-var EXE_NAME = 'Markdown.Viewer-' + VERSION + '-portable.exe';
-var TARGET = path.join(__dirname, 'MarkdownViewer.exe');
-var URL = 'https://github.com/erfan-ashtari/markdown-viewer/releases/download/v' + VERSION + '/' + EXE_NAME;
+var platform = process.platform;
+var arch = process.arch === 'ia32' ? 'x86' : 'x64';
+
+var BINARY_NAME, TARGET, DISPLAY_NAME;
+
+if (platform === 'win32') {
+  BINARY_NAME = 'Markdown.Viewer-' + VERSION + '-portable.exe';
+  TARGET = path.join(__dirname, 'MarkdownViewer.exe');
+  DISPLAY_NAME = 'MarkdownViewer.exe';
+} else if (platform === 'linux') {
+  BINARY_NAME = 'Markdown.Viewer-' + VERSION + '-linux-' + arch + '.AppImage';
+  TARGET = path.join(__dirname, 'MarkdownViewer.AppImage');
+  DISPLAY_NAME = 'MarkdownViewer.AppImage';
+} else if (platform === 'darwin') {
+  BINARY_NAME = 'Markdown.Viewer-' + VERSION + '-mac-' + arch + '.dmg';
+  TARGET = path.join(__dirname, 'MarkdownViewer.dmg');
+  DISPLAY_NAME = 'MarkdownViewer.dmg';
+} else {
+  console.error('Unsupported platform: ' + platform);
+  process.exit(1);
+}
+
+var URL = 'https://github.com/erfan-ashtari/markdown-viewer/releases/download/v' + VERSION + '/' + BINARY_NAME;
 
 function follow(url, dest) {
   return new Promise(function(resolve, reject) {
@@ -42,6 +62,12 @@ function follow(url, dest) {
       res.pipe(file);
       file.on('finish', function() {
         file.close(function() {
+          // Make executable on Unix
+          if (platform !== 'win32') {
+            try {
+              fs.chmodSync(dest, 0o755);
+            } catch (e) {}
+          }
           console.log('\n  Download complete.');
           resolve();
         });
@@ -59,22 +85,22 @@ function follow(url, dest) {
 if (fs.existsSync(TARGET)) {
   var stats = fs.statSync(TARGET);
   if (stats.size > 1000000) {
-    console.log('MarkdownViewer.exe already downloaded (' + (stats.size / 1048576).toFixed(1) + ' MB).');
+    console.log(DISPLAY_NAME + ' already downloaded (' + (stats.size / 1048576).toFixed(1) + ' MB).');
     process.exit(0);
   }
   fs.unlinkSync(TARGET);
 }
 
-console.log('Downloading Markdown Viewer v' + VERSION + '...');
+console.log('Downloading Markdown Viewer v' + VERSION + ' (' + platform + '-' + arch + ')...');
 follow(URL, TARGET).then(function() {
   process.exit(0);
 }).catch(function(err) {
   console.error('');
-  console.error('Failed to download MarkdownViewer.exe.');
+  console.error('Failed to download ' + DISPLAY_NAME + '.');
   console.error('You can download it manually from:');
   console.error('  https://github.com/erfan-ashtari/markdown-viewer/releases/latest');
   console.error('');
-  console.error('Place the portable .exe as: ' + TARGET);
+  console.error('Place the file as: ' + TARGET);
   console.error('Error: ' + err.message);
   process.exit(1);
 });

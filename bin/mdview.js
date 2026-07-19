@@ -6,6 +6,7 @@ var fs = require('fs');
 var execFile = require('child_process').execFile;
 
 var args = process.argv.slice(2);
+var platform = process.platform;
 
 if (args.indexOf('--help') !== -1 || args.indexOf('-h') !== -1) {
   console.log('\n  Markdown Viewer - A lightweight Markdown viewer\n');
@@ -24,20 +25,45 @@ if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
   process.exit(0);
 }
 
-var exePath = path.join(__dirname, 'MarkdownViewer.exe');
+// Resolve binary path based on platform
+var binaryPath;
+if (platform === 'win32') {
+  binaryPath = path.join(__dirname, 'MarkdownViewer.exe');
+} else if (platform === 'linux') {
+  binaryPath = path.join(__dirname, 'MarkdownViewer.AppImage');
+} else if (platform === 'darwin') {
+  binaryPath = path.join(__dirname, 'MarkdownViewer.dmg');
+} else {
+  console.error('Unsupported platform: ' + platform);
+  process.exit(1);
+}
 
 function launchApp() {
-  var exeArgs = [];
   var fileArgs = args.filter(function(a) { return a.charAt(0) !== '-'; });
+  var exeArgs = [];
   for (var i = 0; i < fileArgs.length; i++) {
     exeArgs.push(path.resolve(fileArgs[i]));
   }
 
-  var child = spawn(exePath, exeArgs, {
+  var options = {
     stdio: 'ignore',
-    detached: true,
-    windowsHide: false
-  });
+    detached: true
+  };
+
+  // On macOS, use 'open' command for .dmg
+  if (platform === 'darwin') {
+    exeArgs = [binaryPath].concat(exeArgs);
+    var child = spawn('open', exeArgs, options);
+    child.on('error', function(err) {
+      console.error('Failed to start Markdown Viewer:', err.message);
+      process.exit(1);
+    });
+    child.unref();
+    process.exit(0);
+    return;
+  }
+
+  var child = spawn(binaryPath, exeArgs, options);
 
   child.on('error', function(err) {
     console.error('Failed to start Markdown Viewer:', err.message);
@@ -49,7 +75,8 @@ function launchApp() {
 }
 
 function downloadAndLaunch() {
-  console.log('MarkdownViewer.exe not found. Downloading...');
+  var displayName = path.basename(binaryPath);
+  console.log(displayName + ' not found. Downloading...');
   execFile('node', [path.join(__dirname, 'download.js')], function(err) {
     if (err) {
       console.error('');
@@ -57,19 +84,19 @@ function downloadAndLaunch() {
       console.error('Please download manually from:');
       console.error('  https://github.com/erfan-ashtari/markdown-viewer/releases/latest');
       console.error('');
-      console.error('Place the portable .exe as: ' + exePath);
+      console.error('Place the file as: ' + binaryPath);
       process.exit(1);
     }
     launchApp();
   });
 }
 
-var validExe = fs.existsSync(exePath) && fs.statSync(exePath).size > 1000000;
+var validBinary = fs.existsSync(binaryPath) && fs.statSync(binaryPath).size > 1000000;
 
 if (args.indexOf('--re-download') !== -1) {
-  if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+  if (fs.existsSync(binaryPath)) fs.unlinkSync(binaryPath);
   downloadAndLaunch();
-} else if (validExe) {
+} else if (validBinary) {
   launchApp();
 } else {
   downloadAndLaunch();

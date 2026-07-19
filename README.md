@@ -2,7 +2,7 @@
 
 # Markdown Viewer
 
-A fast, beautiful Markdown viewer for Windows.
+A fast, beautiful Markdown viewer for Windows, Linux, and macOS.
 
 [![npm version](https://img.shields.io/npm/v/mdview-app.svg?color=blue)](https://www.npmjs.com/package/mdview-app)
 [![GitHub release](https://img.shields.io/github/v/release/erfan-ashtari/markdown-viewer?color=green)](https://github.com/erfan-ashtari/markdown-viewer/releases/latest)
@@ -16,7 +16,7 @@ A fast, beautiful Markdown viewer for Windows.
 
 ## What is it?
 
-Markdown Viewer is a lightweight desktop app for reading `.md` files on Windows. It renders Markdown with themes, fonts, math, diagrams, and syntax highlighting — all without an internet connection.
+Markdown Viewer is a lightweight desktop app for reading `.md` files. It renders Markdown with themes, fonts, math, diagrams, and syntax highlighting — all without an internet connection.
 
 ## Install
 
@@ -31,10 +31,13 @@ mdview README.md
 
 **Standalone** — download from [GitHub Releases](https://github.com/erfan-ashtari/markdown-viewer/releases/latest):
 
-| File | Description |
-|---|---|
-| `Markdown.Viewer-1.1.0-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
-| `Markdown.Viewer-1.1.0-portable.exe` | Portable — run directly, no installation needed |
+| Platform | File | Description |
+|---|---|---|
+| Windows | `Markdown.Viewer-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
+| Windows | `Markdown.Viewer-portable.exe` | Portable — run directly, no installation needed |
+| Linux | `Markdown.Viewer.AppImage` | AppImage — run directly, no installation needed |
+| Linux | `Markdown.Viewer.deb` | Debian/Ubuntu package |
+| macOS | `Markdown.Viewer.dmg` | macOS disk image |
 
 ### How npm install works
 
@@ -78,9 +81,13 @@ npm run dev
 |---|---|
 | `npm run dev` | Start Vite dev server + Electron |
 | `npm run build` | Build frontend to `dist/` |
-| `npm run build:win` | Build frontend + Windows executables |
-| `npm run build:portable` | Build portable .exe only |
-| `npm run build:nsis` | Build NSIS installer only |
+| `npm run build:win` | Build Windows: setup.exe + portable.exe |
+| `npm run build:win:portable` | Build Windows portable .exe only |
+| `npm run build:win:nsis` | Build Windows NSIS installer only |
+| `npm run build:linux` | Build Linux: AppImage + deb |
+| `npm run build:linux:appimage` | Build Linux AppImage only |
+| `npm run build:linux:deb` | Build Linux deb only |
+| `npm run build:mac` | Build macOS dmg |
 
 ### Tech Stack
 
@@ -89,11 +96,18 @@ Electron 33 / React 18 / TypeScript 5 / Vite 6 / Zustand 5 / react-markdown / Ka
 ### Publishing
 
 ```bash
-# Build the app
-npm run build:win
+# Build for all platforms (run each on the target OS)
+npm run build:win          # Windows: setup.exe + portable.exe
+npm run build:linux        # Linux: AppImage + deb
+npm run build:mac          # macOS: dmg
 
-# Upload .exe files to GitHub Release
-gh release upload v1.1.0 "release/Markdown.Viewer-1.1.0-setup.exe" "release/Markdown.Viewer-1.1.0-portable.exe"
+# Upload binaries to GitHub Release
+gh release upload v1.2.0 \
+  "release/Markdown.Viewer-1.2.0-setup.exe" \
+  "release/Markdown.Viewer-1.2.0-portable.exe" \
+  "release/Markdown.Viewer-1.2.0-linux-x64.AppImage" \
+  "release/Markdown.Viewer-1.2.0-linux-x64.deb" \
+  "release/Markdown.Viewer-1.2.0-mac-x64.dmg"
 
 # Publish to npm
 npm publish
