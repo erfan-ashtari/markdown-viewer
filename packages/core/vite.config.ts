@@ -10,6 +10,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
       '@mdview/plugin-pdf': path.resolve(__dirname, '../plugin-pdf/src'),
+      '@mdview/plugin-images': path.resolve(__dirname, '../plugin-images/src'),
     },
   },
   build: {

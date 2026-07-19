@@ -19,7 +19,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@mdview/plugin-api": ["../plugin-api/src"],
-      "@mdview/plugin-pdf": ["../plugin-pdf/src"]
+      "@mdview/plugin-pdf": ["../plugin-pdf/src"],
+      "@mdview/plugin-images": ["../plugin-images/src"]
     }
   },
   "include": ["src"],

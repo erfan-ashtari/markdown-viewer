@@ -1,0 +1,11 @@
+{
+  "name": "@mdview/plugin-images",
+  "version": "1.0.0",
+  "description": "Image viewer plugin for Markdown Viewer",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "dependencies": {
+    "@mdview/plugin-api": "workspace:*"
+  },
+  "license": "MIT"
+}

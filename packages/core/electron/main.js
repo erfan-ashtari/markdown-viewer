@@ -320,7 +320,8 @@ ipcMain.handle('get-dark-mode', () => {
 // Plugin list — built-in plugins known at compile time
 ipcMain.handle('get-plugins', () => {
   return [
-    { name: 'pdf-viewer', version: '1.0.0', description: 'Lightweight PDF viewer', builtin: true },
+    { name: 'pdf-viewer', version: '1.0.0', description: 'PDF viewer using Chromium native renderer', builtin: true },
+    { name: 'image-viewer', version: '1.0.0', description: 'Image viewer with zoom and fit controls', builtin: true },
   ];
 });
 
