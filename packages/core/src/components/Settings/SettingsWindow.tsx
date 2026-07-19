@@ -616,7 +616,7 @@ const PluginsSection: React.FC = () => {
       {plugins.length > 0 && (
         <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => window.electronAPI?.reloadMain?.()}
             style={{
               display: 'flex',
               alignItems: 'center',

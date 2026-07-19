@@ -24,7 +24,7 @@ PdfHeader.displayName = 'PdfHeader';
 const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: string }) => {
   const fileName = useMemo(() => filePath.split(/[/\\]/).pop() || '', [filePath]);
   
-  const iframeSrc = useMemo(() => 
+  const embedSrc = useMemo(() => 
     'file:///' + filePath.replace(/\\/g, '/'),
     [filePath]
   );
@@ -32,13 +32,13 @@ const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: st
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <PdfHeader fileName={fileName} />
-      <iframe
-        src={iframeSrc}
+      <embed
+        src={embedSrc}
+        type="application/pdf"
         style={{
           flex: 1,
           width: '100%',
           border: 'none',
-          backgroundColor: 'var(--bg-primary)',
         }}
       />
     </div>
@@ -49,7 +49,7 @@ PdfRenderer.displayName = 'PdfRenderer';
 const PdfPlugin: Plugin = {
   name: 'pdf-viewer',
   version: '1.0.0',
-  description: 'Lightweight PDF viewer with iframe rendering',
+  description: 'Lightweight PDF viewer',
   register(api) {
     api.registerFileType({
       extensions: ['pdf'],

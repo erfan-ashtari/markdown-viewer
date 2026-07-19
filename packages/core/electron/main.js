@@ -306,8 +306,15 @@ ipcMain.handle('get-dark-mode', () => {
 // Plugin list — built-in plugins known at compile time
 ipcMain.handle('get-plugins', () => {
   return [
-    { name: 'pdf-viewer', version: '1.0.0', description: 'Lightweight PDF viewer with iframe rendering', builtin: true },
+    { name: 'pdf-viewer', version: '1.0.0', description: 'Lightweight PDF viewer', builtin: true },
   ];
+});
+
+// Reload main window (from Settings)
+ipcMain.on('reload-main', () => {
+  if (isWindowUsable(mainWindow)) {
+    mainWindow.webContents.reload();
+  }
 });
 
 function buildFileTree(dirPath, relativePath = '') {
