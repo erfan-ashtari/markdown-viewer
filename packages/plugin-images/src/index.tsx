@@ -1,21 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect, memo } from 'react';
 import type { Plugin } from '@mdview/plugin-api';
 
-// Supported image extensions
 const IMAGE_EXTENSIONS = [
   'png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp', 'ico', 'tiff', 'tif', 'avif'
 ];
 
-// Header with zoom controls
-const ImageHeader = memo(({ fileName, width, height, zoom, onZoomIn, onZoomOut, onReset, onFit }: {
+const ImageHeader = memo(({ fileName, width, height, zoom, isFit, onToggleFit, onZoomIn, onZoomOut }: {
   fileName: string;
   width: number;
   height: number;
   zoom: number;
+  isFit: boolean;
+  onToggleFit: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
-  onReset: () => void;
-  onFit: () => void;
 }) => (
   <div style={{
     padding: '6px 12px',
@@ -34,69 +32,45 @@ const ImageHeader = memo(({ fileName, width, height, zoom, onZoomIn, onZoomOut, 
       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{width} × {height}</span>
     )}
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
-      <button onClick={onFit} style={{
-        padding: '2px 6px', border: '1px solid var(--border-color)', borderRadius: '4px',
-        backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px',
-      }}>Fit</button>
+      <button onClick={onToggleFit} style={{
+        padding: '2px 8px', border: '1px solid var(--border-color)', borderRadius: '4px',
+        backgroundColor: isFit ? 'var(--accent-color)' : 'var(--bg-primary)',
+        color: isFit ? 'white' : 'var(--text-primary)',
+        cursor: 'pointer', fontSize: '11px',
+      }}>{isFit ? '1:1' : 'Fit'}</button>
       <button onClick={onZoomOut} style={{
         padding: '2px 6px', border: '1px solid var(--border-color)', borderRadius: '4px',
         backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px',
       }}>−</button>
-      <span style={{ fontSize: '11px', minWidth: '36px', textAlign: 'center' }}>{zoom}%</span>
-      <button onClick={onZoomIn} style={{
+      <span style={{ fontSize: '11px', minWidth: '36px', textAlign: 'center' }}>{isFit ? 'Fit' : zoom + '%'}</span>
+      <button onClick={onZoomIn} disabled={zoom >= 350} style={{
         padding: '2px 6px', border: '1px solid var(--border-color)', borderRadius: '4px',
-        backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '12px',
+        backgroundColor: 'var(--bg-primary)', color: zoom >= 350 ? 'var(--text-muted)' : 'var(--text-primary)',
+        cursor: zoom >= 350 ? 'default' : 'pointer', fontSize: '12px', opacity: zoom >= 350 ? 0.5 : 1,
       }}>+</button>
-      {zoom !== 100 && (
-        <button onClick={onReset} style={{
-          padding: '2px 6px', border: '1px solid var(--border-color)', borderRadius: '4px',
-          backgroundColor: 'var(--bg-primary)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px',
-        }}>1:1</button>
-      )}
     </div>
   </div>
 ));
 ImageHeader.displayName = 'ImageHeader';
 
-// Image renderer
 const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: string }) => {
   const [zoom, setZoom] = useState(100);
+  const [isFit, setIsFit] = useState(true);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
-  const [fitMode, setFitMode] = useState<'fit' | 'zoom'>('fit');
 
   const fileName = useMemo(() => filePath.split(/[/\\]/).pop() || '', [filePath]);
+  const imgSrc = useMemo(() => 'local-file:///' + filePath.replace(/\\/g, '/'), [filePath]);
 
-  const imgSrc = useMemo(() =>
-    'local-file:///' + filePath.replace(/\\/g, '/'),
-    [filePath]
-  );
-
-  const handleZoomIn = useCallback(() => {
-    setFitMode('zoom');
-    setZoom(z => Math.min(z + 10, 500));
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    setFitMode('zoom');
-    setZoom(z => Math.max(z - 10, 10));
-  }, []);
-
-  const handleReset = useCallback(() => {
-    setFitMode('zoom');
-    setZoom(100);
-  }, []);
-
-  const handleFit = useCallback(() => {
-    setFitMode('fit');
-    setZoom(100);
-  }, []);
+  const handleToggleFit = useCallback(() => setIsFit(f => !f), []);
+  const handleZoomIn = useCallback(() => { setIsFit(false); setZoom(z => Math.min(z + 10, 350)); }, []);
+  const handleZoomOut = useCallback(() => { setIsFit(false); setZoom(z => Math.max(z - 10, 10)); }, []);
+  const handleReset = useCallback(() => { setIsFit(false); setZoom(100); }, []);
 
   const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
     setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
   }, []);
 
-  // Keyboard zoom: Ctrl+/- and Ctrl+0
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.ctrlKey && !e.metaKey) return;
@@ -108,22 +82,21 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleZoomIn, handleZoomOut, handleReset]);
 
-  // Touchpad pinch zoom
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      setFitMode('zoom');
+      setIsFit(false);
       const delta = e.deltaY > 0 ? -5 : 5;
-      setZoom(z => Math.max(10, Math.min(500, z + delta)));
+      setZoom(z => Math.max(10, Math.min(350, z + delta)));
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
   }, []);
 
-  const imgStyle: React.CSSProperties = fitMode === 'fit'
+  const imgStyle: React.CSSProperties = isFit
     ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
-    : { width: zoom + '%', height: 'auto' };
+    : { width: zoom + '%', maxWidth: 'none', maxHeight: 'none' };
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
@@ -132,18 +105,17 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
         width={naturalSize.width}
         height={naturalSize.height}
         zoom={zoom}
+        isFit={isFit}
+        onToggleFit={handleToggleFit}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
-        onReset={handleReset}
-        onFit={handleFit}
       />
       <div style={{
         flex: 1,
         overflow: 'auto',
         display: 'flex',
-        alignItems: fitMode === 'fit' ? 'center' : 'flex-start',
-        justifyContent: fitMode === 'fit' ? 'center' : 'flex-start',
-        padding: fitMode === 'fit' ? '0' : '16px',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}>
         <img
           src={imgSrc}
@@ -151,7 +123,8 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
           draggable={false}
           style={{
             ...imgStyle,
-            transition: fitMode === 'zoom' ? 'width 0.15s ease' : 'none',
+            transition: isFit ? 'none' : 'width 0.1s ease',
+            flexShrink: 0,
           }}
         />
       </div>
