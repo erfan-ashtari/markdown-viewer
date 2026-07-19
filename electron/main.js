@@ -19,6 +19,13 @@ const pendingFilesByWebContentsId = new Map();
 function getFileFromArgs(argv) {
   for (let i = 1; i < argv.length; i++) {
     let arg = argv[i];
+    // Handle --open flag (used by CLI wrapper)
+    if (arg === '--open' && i + 1 < argv.length) {
+      let filePath = argv[i + 1];
+      filePath = filePath.replace(/^["']|["']$/g, '');
+      try { filePath = decodeURIComponent(filePath); } catch (_) {}
+      if (/\.(md|markdown)$/i.test(filePath)) return filePath;
+    }
     if (arg.startsWith('--')) continue;
     arg = arg.replace(/^["']|["']$/g, '');
     try { arg = decodeURIComponent(arg); } catch (_) {}

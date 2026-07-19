@@ -1,23 +1,22 @@
 #!/usr/bin/env node
 
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
 const args = process.argv.slice(2);
-const isDev = !fs.existsSync(path.join(__dirname, '..', 'dist'));
 
 if (args.includes('--help') || args.includes('-h')) {
   console.log(`
   Markdown Viewer - A lightweight Markdown viewer
 
   Usage:
-    mdview-app [file]           Open a markdown file
-    mdview-app --help           Show this help message
-    mdview-app --version        Show version
+    mdview [file]               Open a markdown file
+    mdview --help               Show this help message
+    mdview --version            Show version
 
   Examples:
-    mdview-app README.md        Open README.md
+    mdview README.md            Open README.md
   `);
   process.exit(0);
 }
@@ -28,28 +27,36 @@ if (args.includes('--version') || args.includes('-v')) {
   process.exit(0);
 }
 
-let electronPath;
-if (isDev) {
-  electronPath = require('electron');
-} else {
-  electronPath = path.join(__dirname, '..', 'electron');
+// Resolve the packaged Electron app (pre-built .exe)
+const pkgRoot = path.join(__dirname, '..');
+const exePath = path.join(pkgRoot, 'release', 'win-unpacked', 'MarkdownViewer.exe');
+
+if (!fs.existsSync(exePath)) {
+  console.error('Error: MarkdownViewer.exe not found at ' + exePath);
+  console.error('The app may not be installed correctly. Try reinstalling:');
+  console.error('  npm install -g mdview-app');
+  process.exit(1);
 }
 
-const electronArgs = [path.join(__dirname, '..', 'electron')];
-
+// Build arguments — the .exe accepts file paths directly
+const exeArgs = [];
 const fileArgs = args.filter(function(a) { return !a.startsWith('--'); });
 if (fileArgs.length > 0) {
-  const target = path.resolve(fileArgs[0]);
-  electronArgs.push('--open', target);
+  for (const file of fileArgs) {
+    exeArgs.push(path.resolve(file));
+  }
 }
 
-const child = spawn(electronPath, electronArgs, {
-  stdio: 'inherit',
+const child = spawn(exePath, exeArgs, {
+  stdio: 'ignore',
   detached: true,
+  windowsHide: false,
 });
 
-child.on('close', function(code) {
-  process.exit(code || 0);
+child.on('error', function(err) {
+  console.error('Failed to start Markdown Viewer:', err.message);
+  process.exit(1);
 });
 
 child.unref();
+process.exit(0);

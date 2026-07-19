@@ -1,6 +1,9 @@
 node_modules/
 dist/
-release/
+release/*.exe
+release/*.blockmap
+release/*.yml
+release/*.zip
 build/*.ico
 build/*.png
 build/*.svg

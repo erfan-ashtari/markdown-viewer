@@ -2,160 +2,94 @@
 
 # Markdown Viewer
 
-**A beautiful, fast, and feature-rich Markdown viewer for Windows**
+A fast, beautiful Markdown viewer for Windows.
 
-[![Version](https://img.shields.io/badge/version-0.0.2-blue.svg)](https://github.com)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-0078d4.svg)](https://github.com)
+[![npm version](https://img.shields.io/npm/v/mdview-app.svg?color=blue)](https://www.npmjs.com/package/mdview-app)
+[![GitHub release](https://img.shields.io/github/v/release/erfan-ashtari/markdown-viewer?color=green)](https://github.com/erfan-ashtari/markdown-viewer/releases/latest)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-*Native desktop experience. No bloat. Just your markdown, beautifully rendered.*
+[Download for Windows](https://github.com/erfan-ashtari/markdown-viewer/releases/latest) | [npm package](https://www.npmjs.com/package/mdview-app) | [Report a bug](https://github.com/erfan-ashtari/markdown-viewer/issues)
 
 </div>
 
 ---
 
-## Features
+## What is it?
 
-<table>
-<tr>
-<td>
+Markdown Viewer is a lightweight desktop app for reading `.md` files on Windows. It renders Markdown with themes, fonts, math, diagrams, and syntax highlighting — all without an internet connection.
 
-### Theming
-11 carefully crafted themes — from GitHub Dark to Dracula, Nord, Monokai, Solarized, and more.
+## Install
 
-</td>
-<td>
-
-### Fonts
-13 font combinations including Persian support (Vazirmatn, IRANSans, Shabnam) with math/LaTeX rendering.
-
-</td>
-</tr>
-<tr>
-<td>
-
-### Lightning Fast
-Built on Electron + Vite. Opens instantly. Renders complex documents with ease.
-
-</td>
-<td>
-
-### Smart Navigation
-Arrow keys to browse files, Ctrl+Tab for tabs, anchor links, in-text citations — everything just works.
-
-</td>
-</tr>
-</table>
-
-### And so much more...
-
-- **Zoom** — Ctrl+/Ctrl- or mouse wheel (50%–300%)
-- **3 Width Modes** — Full screen, Medium (1100px), A4 (800px)
-- **Fullscreen** — F11 with auto-hide toolbar
-- **Tab Management** — Multiple files, Ctrl+1-9 to switch
-- **Context Menus** — Right-click for file options, tab management
-- **Export** — Save as PDF or HTML
-- **Settings Window** — Dedicated preferences with live preview
-- **Math Rendering** — KaTeX-powered LaTeX support
-- **Code Highlighting** — Syntax highlighting for 100+ languages
-- **Mermaid Diagrams** — Render diagrams directly in markdown
-- **Table of Contents** — Clickable anchor links with smooth scrolling
-
----
-
-## Quick Start
-
-### Download
-
-Download the latest release from [Releases](https://github.com/yourusername/markdown-viewer/releases) — no installation required for the portable version.
-
-### Install via npm
+**npm** (requires [Node.js](https://nodejs.org/)):
 
 ```bash
-npm install -g mdview
+npm install -g mdview-app
 mdview README.md
 ```
 
-### Build from source
+**Standalone** — download from [GitHub Releases](https://github.com/erfan-ashtari/markdown-viewer/releases/latest):
+
+| File | Description |
+|---|---|
+| `Markdown Viewer-1.1.0-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
+| `Markdown Viewer-1.1.0-portable.exe` | Portable — run directly, no installation needed |
+
+## Features
+
+- **11 Themes** — GitHub Dark, Dracula, Nord, Monokai, Solarized, One Dark, Material, Light, Paper, Newsprint
+- **13 Fonts** — 10 English + 3 Persian (Vazirmatn, IRANSans, Shabnam)
+- **Tab Management** — Multi-tab, drag-and-drop, detach to new window
+- **File Explorer** — Sidebar with tree view, search, sort by name/date/type
+- **Find & Replace** — Ctrl+F with persistent search across tabs
+- **Math & Diagrams** — KaTeX LaTeX rendering and Mermaid diagrams
+- **Code Highlighting** — Syntax highlighting for 100+ languages
+- **Export** — PDF and HTML export with configurable margins
+- **Text Viewer** — Syntax-highlighted viewer for 100+ file types
+- **File Association** — Double-click `.md` files to open directly
+- **CLI** — `mdview` command for quick file opening from terminal
+
+## Keyboard Shortcuts
+
+| Shortcut | Action | Shortcut | Action |
+|---|---|---|---|
+| `Ctrl+Tab` | Next tab | `Ctrl+=` | Zoom in |
+| `Ctrl+Shift+Tab` | Previous tab | `Ctrl+-` | Zoom out |
+| `Ctrl+1-9` | Switch tab | `Ctrl+0` | Reset zoom |
+| `Ctrl+W` | Close tab | `Ctrl+Shift+W` | Toggle width |
+| `Ctrl+F` | Find in document | `Ctrl+Shift+B` | Toggle sidebar |
+| `Left/Right` | Prev/next file | `Ctrl+Shift+F` | Toggle fullscreen |
+
+## For Developers
 
 ```bash
-git clone https://github.com/yourusername/markdown-viewer.git
+git clone https://github.com/erfan-ashtari/markdown-viewer.git
 cd markdown-viewer
 npm install
 npm run dev
 ```
 
----
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Vite dev server + Electron |
+| `npm run build` | Build frontend to `dist/` |
+| `npm run build:win` | Build frontend + Windows executables |
 
-## Keyboard Shortcuts
+### Tech Stack
 
-| Shortcut | Action | | Shortcut | Action |
-|---|---|---|---|---|
-| `Ctrl+Tab` | Next tab | | `Ctrl+=` | Zoom in |
-| `Ctrl+Shift+Tab` | Previous tab | | `Ctrl+-` | Zoom out |
-| `Ctrl+1-9` | Switch tab | | `Ctrl+0` | Reset zoom |
-| `Ctrl+W` | Close tab | | `Ctrl+Shift+W` | Toggle width |
-| `Left/Right` | Prev/next file | | `Ctrl+Shift+B` | Toggle sidebar |
-| `F11` | Fullscreen | | `Ctrl+Shift+F` | Toggle fullscreen |
-
----
-
-## Themes
-
-| Theme | Style | | Theme | Style |
-|---|---|---|---|---|
-| GitHub Dark | Clean & modern | | Monokai | Vibrant code editor |
-| Dracula | Purple accents | | Nord | Arctic blue |
-| Solarized | Precision colors | | One Dark | Atom-inspired |
-| Material | Material Design | | Light | Clean & minimal |
-| Paper | Soft white | | Newsprint | Vintage newspaper |
-
----
-
-## Screenshots
-
-> *Coming soon — screenshots of themes, settings window, and fullscreen mode*
-
----
-
-## Why Markdown Viewer?
-
-| Feature | Markdown Viewer | Typical Editors |
-|---|---|---|
-| Native desktop app | ✅ | ❌ |
-| No telemetry | ✅ | ❌ |
-| Persian/Farsi support | ✅ | ❌ |
-| Math/LaTeX rendering | ✅ | ⚠️ |
-| Mermaid diagrams | ✅ | ⚠️ |
-| 11 built-in themes | ✅ | ❌ |
-| 13 font combinations | ✅ | ❌ |
-| Portable (.exe) | ✅ | ❌ |
-| Free & open source | ✅ | Varies |
-
----
+Electron 33 / React 18 / TypeScript 5 / Vite 6 / Zustand 5 / react-markdown / KaTeX / Mermaid / electron-builder
 
 ## Contributing
 
-Contributions are welcome! Feel free to open issues or submit pull requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
+Contributions are welcome! Open an issue or submit a pull request.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
 
-**Made with care for the markdown community**
-
-[Download Latest Release](https://github.com/yourusername/markdown-viewer/releases)
+[Download Latest Release](https://github.com/erfan-ashtari/markdown-viewer/releases/latest) · [View on npm](https://www.npmjs.com/package/mdview-app)
 
 </div>

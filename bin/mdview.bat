@@ -5,11 +5,13 @@ rem Usage: mdview.bat [file]
 setlocal
 
 set SCRIPT_DIR=%~dp0
-set ELECTRON_PATH=%SCRIPT_DIR%..\node_modules\.bin\electron.cmd
+set EXE_PATH=%SCRIPT_DIR%..\release\win-unpacked\MarkdownViewer.exe
 
-if exist "%ELECTRON_PATH%" (
-    "%ELECTRON_PATH%" "%SCRIPT_DIR%..\electron" %*
+if exist "%EXE_PATH%" (
+    start "" "%EXE_PATH%" %*
 ) else (
-    echo [ERROR] Electron not found. Run 'npm install' first.
+    echo [ERROR] MarkdownViewer.exe not found.
+    echo The app may not be installed correctly. Try reinstalling:
+    echo   npm install -g mdview-app
     exit /b 1
 )

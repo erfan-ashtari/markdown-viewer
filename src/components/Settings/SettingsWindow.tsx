@@ -513,7 +513,7 @@ const AboutSection: React.FC<{
       marginBottom: '24px',
     }}>
       <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>Markdown Viewer</h3>
-      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Version 0.0.1</p>
+      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Version 1.1.0</p>
       <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
         A lightweight Markdown file viewer with themes, fonts, zoom, and local file support.
       </p>
