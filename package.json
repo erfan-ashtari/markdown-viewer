@@ -1,6 +1,6 @@
 {
   "name": "mdview-app",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "A lightweight Markdown viewer with themes, fonts, zoom, and local file support",
   "main": "electron/main.js",
   "bin": "./bin/mdview.js",
@@ -52,6 +52,7 @@
     "appId": "com.markdown-viewer.app",
     "productName": "Markdown Viewer",
     "executableName": "MarkdownViewer",
+    "electronDist": "node_modules/electron/dist",
     "copyright": "Copyright © 2026",
     "files": [
       "dist/**/*",
