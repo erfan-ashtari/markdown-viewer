@@ -104,4 +104,4 @@ const PdfPlugin: Plugin = {
   }
 };
 
-export default PdfPlugin;
+export { PdfPlugin };

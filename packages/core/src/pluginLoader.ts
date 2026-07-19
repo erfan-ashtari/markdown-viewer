@@ -2,7 +2,7 @@ import { PluginManager } from '@mdview/plugin-api';
 import { useAppStore } from './store/appStore';
 
 // Built-in plugins
-import PdfPlugin from '@mdview/plugin-pdf';
+import { PdfPlugin } from '@mdview/plugin-pdf';
 
 const builtinPlugins = [PdfPlugin];
 
