@@ -9,6 +9,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
+      '@mdview/plugin-pdf': path.resolve(__dirname, '../plugin-pdf/src'),
     },
   },
   build: {

@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@mdview/plugin-api": ["../plugin-api/src"]
+      "@mdview/plugin-api": ["../plugin-api/src"],
+      "@mdview/plugin-pdf": ["../plugin-pdf/src"]
     }
   },
   "include": ["src"],
