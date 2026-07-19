@@ -30,6 +30,9 @@ interface AppState {
   currentFont: string
   isFullscreen: boolean
 
+  // Plugin state
+  enabledPlugins: string[]
+
   // Actions
   addTab: (filePath: string, content: string, fileName: string, type?: 'markdown' | 'other') => void
   removeTab: (tabId: string) => void
@@ -46,6 +49,8 @@ interface AppState {
   setIsFullscreen: (value: boolean) => void
   setDirFiles: (files: DirFile[]) => void
   navigateToAdjacentFile: (direction: 'prev' | 'next') => Promise<void>
+  enablePlugin: (name: string) => void
+  disablePlugin: (name: string) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -56,6 +61,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // UI state
   sidebarOpen: true,
+  enabledPlugins: JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('mdview-enabled-plugins') || '[]' : '[]'),
   sidebarWidth: 260,
   zoomLevel: 100,
   contentWidth: 'full',
@@ -157,6 +163,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsFullscreen: (value) => set({ isFullscreen: value }),
 
   setDirFiles: (files) => set({ dirFiles: files }),
+
+  enablePlugin: (name) => {
+    const current = get().enabledPlugins
+    if (!current.includes(name)) {
+      const updated = [...current, name]
+      localStorage.setItem('mdview-enabled-plugins', JSON.stringify(updated))
+      set({ enabledPlugins: updated })
+    }
+  },
+
+  disablePlugin: (name) => {
+    const updated = get().enabledPlugins.filter(n => n !== name)
+    localStorage.setItem('mdview-enabled-plugins', JSON.stringify(updated))
+    set({ enabledPlugins: updated })
+  },
 
   navigateToAdjacentFile: async (direction) => {
     const state = get()

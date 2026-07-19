@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { Monitor, Palette, Type, Sliders, Info, RotateCcw, Download, Upload } from 'lucide-react'
+import { Monitor, Palette, Type, Sliders, Info, RotateCcw, Download, Upload, Puzzle } from 'lucide-react'
 import { useAppStore, Theme } from '../../store/appStore'
 import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
 
-type SettingsSection = 'general' | 'appearance' | 'preferences' | 'shortcuts' | 'about'
+type SettingsSection = 'general' | 'appearance' | 'preferences' | 'shortcuts' | 'plugins' | 'about'
 
 const sections: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
   { id: 'general', label: 'General', icon: <Monitor size={16} /> },
   { id: 'appearance', label: 'Appearance', icon: <Palette size={16} /> },
   { id: 'preferences', label: 'Preferences', icon: <Sliders size={16} /> },
   { id: 'shortcuts', label: 'Shortcuts', icon: <Type size={16} /> },
+  { id: 'plugins', label: 'Plugins', icon: <Puzzle size={16} /> },
   { id: 'about', label: 'About', icon: <Info size={16} /> },
 ]
 
@@ -197,6 +198,7 @@ export const SettingsWindow: React.FC = () => {
           />
         )}
         {activeSection === 'shortcuts' && <ShortcutsSection />}
+        {activeSection === 'plugins' && <PluginsSection />}
         {activeSection === 'about' && (
           <AboutSection
             handleExportSettings={handleExportSettings}
@@ -497,6 +499,127 @@ const ShortcutsSection: React.FC = () => (
 )
 
 // ===== About Section =====
+
+// ===== Plugins Section =====
+const PluginsSection: React.FC = () => {
+  const enabledPlugins = useAppStore(s => s.enabledPlugins);
+  const enablePlugin = useAppStore(s => s.enablePlugin);
+  const disablePlugin = useAppStore(s => s.disablePlugin);
+  
+  // Get available plugins (imported dynamically)
+  const plugins = React.useMemo(() => {
+    try {
+      // @ts-ignore - dynamic import at runtime
+      const { getAvailablePlugins } = require('../../pluginLoader');
+      return getAvailablePlugins();
+    } catch {
+      return [];
+    }
+  }, []);
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>Plugins</h2>
+      
+      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+        Manage installed plugins. Disable a plugin and reload the app to apply changes.
+      </p>
+
+      {plugins.length === 0 ? (
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          backgroundColor: 'var(--bg-secondary)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+        }}>
+          No plugins installed
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {plugins.map((plugin: any) => {
+            const isEnabled = enabledPlugins.includes(plugin.name);
+            return (
+              <div
+                key={plugin.name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{plugin.name}</span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-muted)',
+                    }}>
+                      v{plugin.version}
+                    </span>
+                    {plugin.builtin && (
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--accent-color)',
+                        color: 'white',
+                        opacity: 0.8,
+                      }}>
+                        Built-in
+                      </span>
+                    )}
+                  </div>
+                  {plugin.description && (
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
+                      {plugin.description}
+                    </p>
+                  )}
+                </div>
+                <div
+                  onClick={() => {
+                    if (isEnabled) disablePlugin(plugin.name);
+                    else enablePlugin(plugin.name);
+                  }}
+                  style={{
+                    width: '36px',
+                    height: '20px',
+                    borderRadius: '10px',
+                    backgroundColor: isEnabled ? 'var(--accent-color)' : 'var(--bg-tertiary)',
+                    position: 'relative',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: 'white',
+                    position: 'absolute',
+                    top: '2px',
+                    left: isEnabled ? '18px' : '2px',
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AboutSection: React.FC<{
   handleExportSettings: () => void
   handleImportSettings: () => void
