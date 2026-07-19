@@ -9,13 +9,15 @@ const builtinPlugins = [PdfPlugin];
 export const pluginManager = new PluginManager();
 
 export function loadPlugins() {
-  const enabledPlugins = useAppStore.getState().enabledPlugins;
-
-  if (enabledPlugins.length === 0) {
-    enabledPlugins = builtinPlugins.map(p => p.name);
-    useAppStore.setState({ enabledPlugins });
-    localStorage.setItem('mdview-enabled-plugins', JSON.stringify(enabledPlugins));
+  // First run: no localStorage key means enable all plugins by default
+  const saved = localStorage.getItem('mdview-enabled-plugins');
+  if (saved === null) {
+    const allNames = builtinPlugins.map(p => p.name);
+    useAppStore.setState({ enabledPlugins: allNames });
+    localStorage.setItem('mdview-enabled-plugins', JSON.stringify(allNames));
   }
+
+  const enabledPlugins = useAppStore.getState().enabledPlugins;
 
   for (const plugin of builtinPlugins) {
     if (enabledPlugins.includes(plugin.name)) {
