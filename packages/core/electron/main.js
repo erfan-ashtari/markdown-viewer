@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -390,6 +390,12 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
+  // Register custom protocol for loading local files (used by plugins)
+  protocol.registerFileProtocol('local-file', (request, callback) => {
+    const filePath = decodeURIComponent(request.url.replace('local-file://', ''));
+    callback({ path: filePath });
+  });
+
   app.setAsDefaultProtocolClient('mdview');
 
   app.on('open-file', (event, filePath) => {
