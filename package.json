@@ -4,13 +4,15 @@
   "description": "Markdown Viewer",
   "main": "electron/main.js",
   "bin": {
-    "mdview": "./bin/mdview.js"
+    "mdview": "bin/mdview.js"
   },
   "files": [
-    "bin/**/*",
-    "release/win-unpacked/**/*"
+    "bin/mdview.js",
+    "bin/mdview.bat",
+    "bin/download.js"
   ],
   "scripts": {
+    "postinstall": "node bin/download.js",
     "dev": "concurrently \"vite\" \"wait-on tcp:3000 -t 10000 && electron .\"",
     "build": "vite build",
     "build:win": "vite build && electron-builder --win",

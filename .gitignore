@@ -4,6 +4,7 @@ release/*.exe
 release/*.blockmap
 release/*.yml
 release/*.zip
+bin/MarkdownViewer.exe
 build/*.ico
 build/*.png
 build/*.svg

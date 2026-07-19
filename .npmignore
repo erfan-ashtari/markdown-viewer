@@ -1,0 +1,11 @@
+bin/MarkdownViewer.exe
+release/
+dist/
+src/
+build/
+icons/
+electron/
+.mimocode/
+*.log
+.env
+.env.*

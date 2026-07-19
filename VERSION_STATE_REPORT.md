@@ -130,8 +130,10 @@ app.whenReady()
 - **npm CLI rework**: CLI (`bin/mdview.js`) now launches pre-built `MarkdownViewer.exe` directly instead of spawning Electron binary — eliminates dependency on `electron` npm package at runtime
 - **`--open` argument handling**: `getFileFromArgs()` in main.js now supports `--open <file>` flag from CLI wrapper
 - **Package cleanup**: Removed redundant files (tailwind.config.js, postcss.config.mjs, install.ps1, task_plan.md)
-- **npm package optimization**: Package ships only `bin/` + `release/win-unpacked/` — no source code, no node_modules, no dependencies
+- **npm package optimization**: Package is now ~8 KB — ships only `bin/mdview.js`, `bin/mdview.bat`, `bin/download.js`. The ~84 MB binary is downloaded from GitHub Releases during `postinstall`
+- **postinstall download**: `bin/download.js` fetches `Markdown.Viewer-{version}-portable.exe` from GitHub Releases on first install, with progress reporting
 - **Version consistency**: All version references updated to 1.1.0 (package.json, package-lock.json, Settings UI)
+- **README**: Updated with `--foreground-scripts` flag for install progress visibility, publishing instructions, and how npm install works
 
 ---
 
@@ -705,11 +707,13 @@ npm install -g mdview-app
 
 #### v1.1.0
 
-- **CLI rewrite**: `bin/mdview.js` now launches pre-built `release/win-unpacked/MarkdownViewer.exe` directly — no longer depends on `electron` npm package at runtime
+- **CLI rewrite**: `bin/mdview.js` now launches `bin/MarkdownViewer.exe` directly — no longer depends on `electron` npm package at runtime
+- **postinstall download**: `bin/download.js` fetches portable .exe from GitHub Releases during `npm install`, with progress reporting (10% intervals)
 - **CLI rewrite**: `bin/mdview.bat` updated to launch .exe directly via `start ""`
 - **Package cleanup**: Removed `install.ps1`, `tailwind.config.js`, `postcss.config.mjs`, `task_plan.md`
-- **npm package**: Ships only `bin/` + `release/win-unpacked/` (no source, no node_modules, no dependencies)
-- **bin mapping**: `"bin": { "mdview": "./bin/mdview.js" }` — creates `mdview` command correctly
+- **npm package**: ~8 KB total — ships only `bin/mdview.js`, `bin/mdview.bat`, `bin/download.js` (no source, no node_modules, no binary)
+- **bin mapping**: `"bin": { "mdview": "bin/mdview.js" }` — creates `mdview` command correctly
+- **Install with progress**: `npm install -g mdview-app --foreground-scripts` shows download progress
 
 ---
 
@@ -879,7 +883,8 @@ typora-clone/
 ├── tsconfig.node.json               # Vite TypeScript config
 ├── bin/
 │   ├── mdview.js                    # CLI wrapper (Node.js)
-│   └── mdview.bat                   # CLI wrapper (Windows)
+│   ├── mdview.bat                   # CLI wrapper (Windows)
+│   └── download.js                  # postinstall script — downloads .exe from GitHub Releases
 ├── build/
 │   ├── mdview.ico                   # App icon
 │   ├── installer.ico                # Installer icon

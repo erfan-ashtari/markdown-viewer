@@ -1,62 +1,76 @@
 #!/usr/bin/env node
 
-const { spawn, execFile } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+var spawn = require('child_process').spawn;
+var path = require('path');
+var fs = require('fs');
+var execFile = require('child_process').execFile;
 
-const args = process.argv.slice(2);
+var args = process.argv.slice(2);
 
-if (args.includes('--help') || args.includes('-h')) {
-  console.log(`
-  Markdown Viewer - A lightweight Markdown viewer
-
-  Usage:
-    mdview [file]               Open a markdown file
-    mdview --help               Show this help message
-    mdview --version            Show version
-
-  Examples:
-    mdview README.md            Open README.md
-  `);
+if (args.indexOf('--help') !== -1 || args.indexOf('-h') !== -1) {
+  console.log('\n  Markdown Viewer - A lightweight Markdown viewer\n');
+  console.log('  Usage:');
+  console.log('    mdview [file]               Open a markdown file');
+  console.log('    mdview --help               Show this help message');
+  console.log('    mdview --version            Show version');
+  console.log('    mdview --re-download        Re-download the app binary');
+  console.log('');
   process.exit(0);
 }
 
-if (args.includes('--version') || args.includes('-v')) {
-  const pkg = require('../package.json');
+if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
+  var pkg = require('../package.json');
   console.log('mdview-app v' + pkg.version);
   process.exit(0);
 }
 
-// Resolve the packaged Electron app (pre-built .exe)
-const pkgRoot = path.join(__dirname, '..');
-const exePath = path.join(pkgRoot, 'release', 'win-unpacked', 'MarkdownViewer.exe');
+var exePath = path.join(__dirname, 'MarkdownViewer.exe');
 
-if (!fs.existsSync(exePath)) {
-  console.error('Error: MarkdownViewer.exe not found at ' + exePath);
-  console.error('The app may not be installed correctly. Try reinstalling:');
-  console.error('  npm install -g mdview-app');
-  process.exit(1);
-}
-
-// Build arguments — the .exe accepts file paths directly
-const exeArgs = [];
-const fileArgs = args.filter(function(a) { return !a.startsWith('--'); });
-if (fileArgs.length > 0) {
-  for (const file of fileArgs) {
-    exeArgs.push(path.resolve(file));
+function launchApp() {
+  var exeArgs = [];
+  var fileArgs = args.filter(function(a) { return a.charAt(0) !== '-'; });
+  for (var i = 0; i < fileArgs.length; i++) {
+    exeArgs.push(path.resolve(fileArgs[i]));
   }
+
+  var child = spawn(exePath, exeArgs, {
+    stdio: 'ignore',
+    detached: true,
+    windowsHide: false
+  });
+
+  child.on('error', function(err) {
+    console.error('Failed to start Markdown Viewer:', err.message);
+    process.exit(1);
+  });
+
+  child.unref();
+  process.exit(0);
 }
 
-const child = spawn(exePath, exeArgs, {
-  stdio: 'ignore',
-  detached: true,
-  windowsHide: false,
-});
+function downloadAndLaunch() {
+  console.log('MarkdownViewer.exe not found. Downloading...');
+  execFile('node', [path.join(__dirname, 'download.js')], function(err) {
+    if (err) {
+      console.error('');
+      console.error('Automatic download failed.');
+      console.error('Please download manually from:');
+      console.error('  https://github.com/erfan-ashtari/markdown-viewer/releases/latest');
+      console.error('');
+      console.error('Place the portable .exe as: ' + exePath);
+      process.exit(1);
+    }
+    launchApp();
+  });
+}
 
-child.on('error', function(err) {
-  console.error('Failed to start Markdown Viewer:', err.message);
-  process.exit(1);
-});
+var validExe = fs.existsSync(exePath) && fs.statSync(exePath).size > 1000000;
 
-child.unref();
-process.exit(0);
+if (args.indexOf('--re-download') !== -1) {
+  if (fs.existsSync(exePath)) fs.unlinkSync(exePath);
+  downloadAndLaunch();
+} else if (validExe) {
+  launchApp();
+} else {
+  downloadAndLaunch();
+}

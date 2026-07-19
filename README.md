@@ -23,16 +23,22 @@ Markdown Viewer is a lightweight desktop app for reading `.md` files on Windows.
 **npm** (requires [Node.js](https://nodejs.org/)):
 
 ```bash
-npm install -g mdview-app
+npm install -g mdview-app --foreground-scripts
 mdview README.md
 ```
+
+> The `--foreground-scripts` flag shows the download progress during installation. Without it, npm hides the progress bar by default.
 
 **Standalone** — download from [GitHub Releases](https://github.com/erfan-ashtari/markdown-viewer/releases/latest):
 
 | File | Description |
 |---|---|
-| `Markdown Viewer-1.1.0-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
-| `Markdown Viewer-1.1.0-portable.exe` | Portable — run directly, no installation needed |
+| `Markdown.Viewer-1.1.0-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
+| `Markdown.Viewer-1.1.0-portable.exe` | Portable — run directly, no installation needed |
+
+### How npm install works
+
+The npm package is lightweight (~8 KB). It contains only the CLI wrapper. During `npm install`, the app binary (~84 MB) is automatically downloaded from [GitHub Releases](https://github.com/erfan-ashtari/markdown-viewer/releases/latest). You only download it once — subsequent installs reuse the cached binary.
 
 ## Features
 
@@ -73,10 +79,25 @@ npm run dev
 | `npm run dev` | Start Vite dev server + Electron |
 | `npm run build` | Build frontend to `dist/` |
 | `npm run build:win` | Build frontend + Windows executables |
+| `npm run build:portable` | Build portable .exe only |
+| `npm run build:nsis` | Build NSIS installer only |
 
 ### Tech Stack
 
 Electron 33 / React 18 / TypeScript 5 / Vite 6 / Zustand 5 / react-markdown / KaTeX / Mermaid / electron-builder
+
+### Publishing
+
+```bash
+# Build the app
+npm run build:win
+
+# Upload .exe files to GitHub Release
+gh release upload v1.1.0 "release/Markdown.Viewer-1.1.0-setup.exe" "release/Markdown.Viewer-1.1.0-portable.exe"
+
+# Publish to npm
+npm publish
+```
 
 ## Contributing
 
