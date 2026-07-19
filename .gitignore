@@ -2,10 +2,7 @@ node_modules/
 dist/
 packages/*/dist/
 packages/*/node_modules/
-release/*.exe
-release/*.blockmap
-release/*.yml
-release/*.zip
+release/
 bin/MarkdownViewer.exe
 build/*.ico
 build/*.png
