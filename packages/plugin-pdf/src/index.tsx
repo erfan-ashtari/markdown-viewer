@@ -20,18 +20,15 @@ const PdfHeader = memo(({ fileName }: { fileName: string }) => (
 ));
 PdfHeader.displayName = 'PdfHeader';
 
-// Main renderer — memoized
+// Main renderer
 const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: string }) => {
   const fileName = useMemo(() => filePath.split(/[/\\]/).pop() || '', [filePath]);
   
   const embedSrc = useMemo(() => {
     const src = 'file:///' + filePath.replace(/\\/g, '/');
-    console.log('[PDF Plugin] Rendering PDF:', { filePath, fileName, embedSrc });
-    console.log('[PDF Plugin] Content length:', content?.length || 0);
+    console.log('[PDF Plugin] Embed src:', src);
     return src;
-  }, [filePath, fileName, content]);
-
-  console.log('[PDF Plugin] PdfRenderer mounted with:', { filePath, contentLength: content?.length });
+  }, [filePath]);
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -55,14 +52,12 @@ const PdfPlugin: Plugin = {
   version: '1.0.0',
   description: 'Lightweight PDF viewer',
   register(api) {
-    console.log('[PDF Plugin] Registering PDF file type');
     api.registerFileType({
       extensions: ['pdf'],
       name: 'PDF Document',
       icon: null,
       renderer: PdfRenderer,
     });
-    console.log('[PDF Plugin] Registration complete');
   }
 };
 
