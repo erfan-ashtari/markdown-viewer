@@ -9,13 +9,22 @@ const builtinPlugins = [PdfPlugin];
 export const pluginManager = new PluginManager();
 
 export function loadPlugins() {
+  console.log('[PluginLoader] Loading plugins...');
+  console.log('[PluginLoader] Available built-in plugins:', builtinPlugins.map(p => p.name));
+  
   const enabledPlugins = useAppStore.getState().enabledPlugins;
+  console.log('[PluginLoader] Enabled plugins from store:', enabledPlugins);
   
   for (const plugin of builtinPlugins) {
-    if (enabledPlugins.includes(plugin.name)) {
+    const isEnabled = enabledPlugins.includes(plugin.name);
+    console.log('[PluginLoader] Plugin', plugin.name, isEnabled ? 'ENABLED' : 'DISABLED');
+    if (isEnabled) {
       pluginManager.register(plugin);
     }
   }
+  
+  console.log('[PluginLoader] Loaded plugins:', pluginManager.getPlugins().map(p => p.name));
+  console.log('[PluginLoader] Registered file types:', pluginManager.getFileType('test.pdf') ? 'pdf found' : 'pdf NOT found');
 }
 
 export function getAvailablePlugins() {

@@ -457,6 +457,12 @@ const App: React.FC = () => {
 
   // Check if a plugin handles this file type
   const pluginFileType = activeTab ? pluginManager.getFileType(activeTab.fileName) : undefined
+  
+  // Debug logging
+  if (activeTab) {
+    console.log('[App] Active tab:', activeTab.fileName, 'type:', activeTab.type)
+    console.log('[App] Plugin file type found:', pluginFileType ? pluginFileType.name : 'NONE')
+  }
 
   return (
     <div
