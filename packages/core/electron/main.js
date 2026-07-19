@@ -47,6 +47,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true,
     },
   });
 
@@ -84,6 +85,7 @@ function createFileWindow(filePath) {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true,
     },
   });
 
@@ -295,6 +297,7 @@ ipcMain.handle('open-file-new-window', async (event, filePath) => {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true,
     },
   });
   const isDev = !app.isPackaged;

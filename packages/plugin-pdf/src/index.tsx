@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, memo } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
 import type { Plugin } from '@mdview/plugin-api';
 
 // Memoized header with zoom controls
@@ -46,6 +46,7 @@ PdfHeader.displayName = 'PdfHeader';
 // Main renderer
 const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: string }) => {
   const [zoom, setZoom] = useState(100);
+  const webviewRef = useRef<any>(null);
 
   const fileName = useMemo(() => filePath.split(/[/\\]/).pop() || '', [filePath]);
   
@@ -57,6 +58,14 @@ const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: st
   const handleZoomIn = useCallback(() => setZoom(z => Math.min(z + 10, 300)), []);
   const handleZoomOut = useCallback(() => setZoom(z => Math.max(z - 10, 30)), []);
   const handleReset = useCallback(() => setZoom(100), []);
+
+  // Apply zoom to webview via IPC
+  useEffect(() => {
+    const webview = webviewRef.current;
+    if (webview && webview.setZoom) {
+      webview.setZoom(zoom / 100);
+    }
+  }, [zoom]);
 
   // Keyboard zoom: Ctrl+/- and Ctrl+0
   useEffect(() => {
@@ -91,19 +100,11 @@ const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: st
         onZoomOut={handleZoomOut}
         onReset={handleReset}
       />
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center' }}>
-        <embed
-          src={embedSrc}
-          type="application/pdf"
-          style={{
-            width: zoom + '%',
-            height: zoom + '%',
-            minHeight: '100%',
-            border: 'none',
-            transformOrigin: 'top center',
-          }}
-        />
-      </div>
+      <webview
+        ref={webviewRef}
+        src={embedSrc}
+        style={{ flex: 1, width: '100%', border: 'none' }}
+      />
     </div>
   );
 });
@@ -112,7 +113,7 @@ PdfRenderer.displayName = 'PdfRenderer';
 const PdfPlugin: Plugin = {
   name: 'pdf-viewer',
   version: '1.0.0',
-  description: 'PDF viewer with zoom controls',
+  description: 'PDF viewer using Chromium native renderer',
   register(api) {
     api.registerFileType({
       extensions: ['pdf'],
