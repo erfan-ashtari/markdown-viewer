@@ -612,6 +612,28 @@ const PluginsSection: React.FC = () => {
           })}
         </div>
       )}
+
+      {plugins.length > 0 && (
+        <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              fontSize: '13px',
+            }}
+          >
+            Reload App
+          </button>
+        </div>
+      )}
     </div>
   );
 };
