@@ -20,9 +20,15 @@ import { fontCombos } from '../Themes/fontDefinitions'
 interface HeaderProps {
   onExportPDF: () => void
   onExportHTML: () => void
+  pluginToolbarItems?: Array<{
+    id: string
+    icon: any
+    tooltip: string
+    onClick: () => void
+  }>
 }
 
-export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExportHTML }) => {
+export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExportHTML, pluginToolbarItems = [] }) => {
   const sidebarOpen = useAppStore(s => s.sidebarOpen)
   const toggleSidebar = useAppStore(s => s.toggleSidebar)
   const zoomLevel = useAppStore(s => s.zoomLevel)
@@ -206,6 +212,34 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
             <span>{activeTab.fileName}</span>
           </div>
         )}
+
+        {/* Plugin toolbar items */}
+        {pluginToolbarItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={item.onClick}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            title={item.tooltip}
+          >
+            <item.icon size={16} />
+          </button>
+        ))}
       </div>
 
       {/* Center: Zoom controls */}

@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
     },
   },
   build: {

@@ -17,7 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@mdview/plugin-api": ["../plugin-api/src"]
     }
   },
   "include": ["src"],

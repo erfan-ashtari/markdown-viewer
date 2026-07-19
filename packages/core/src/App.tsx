@@ -11,6 +11,7 @@ import { FontLoader } from './components/FontLoader'
 import { HighlightThemeLoader } from './components/HighlightThemeLoader'
 import { ExportManager } from './export/ExportManager'
 import { ExportFormat } from './export/types/ExportOptions'
+import { pluginManager } from './pluginLoader'
 import {
   File, FileText, FileCode, FileImage, FileJson, FileCog, FileArchive
 } from 'lucide-react'
@@ -198,17 +199,14 @@ const App: React.FC = () => {
   }, [])
 
   // Handle file opening from OS (double-click, right-click Open with)
-  // Reuses existing buildFileTree + readFile methods — same flow as clicking in sidebar
   useEffect(() => {
     window.electronAPI?.onFileAssociationOpen?.((data: { filePath: string; dirPath: string }) => {
       const state = useAppStore.getState()
-      // 1. Open sidebar and load folder tree (same as user selecting a folder)
       if (!state.sidebarOpen) useAppStore.setState({ sidebarOpen: true })
       setDirToLoad(data.dirPath)
       window.electronAPI?.listMdFiles(data.dirPath).then((files) => {
         if (files) useAppStore.getState().setDirFiles(files)
       })
-      // 2. Read the file and open it as a tab (same as user clicking a file in sidebar)
       window.electronAPI?.readFile(data.filePath).then((result) => {
         if (result) {
           useAppStore.getState().addTab(result.filePath, result.content, result.fileName, 'markdown')
@@ -251,7 +249,6 @@ const App: React.FC = () => {
     window.electronAPI?.onLoadFile?.((data: { content: string; fileName: string; filePath: string; dirPath?: string }) => {
       const isMd = /\.(md|markdown)$/i.test(data.fileName)
       addTab(data.filePath, data.content, data.fileName, isMd ? 'markdown' : 'other')
-      // If dirPath is provided (new window from file association or tab detach), open sidebar and load folder
       if (data.dirPath) {
         if (!useAppStore.getState().sidebarOpen) useAppStore.setState({ sidebarOpen: true })
         setDirToLoad(data.dirPath)
@@ -268,7 +265,6 @@ const App: React.FC = () => {
     if (savedTheme) {
       setTheme(savedTheme)
     } else {
-      // Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       setTheme(prefersDark ? 'github-dark' : 'light')
     }
@@ -318,9 +314,7 @@ const App: React.FC = () => {
     addTab(path, content, name, 'other')
   }
 
-  const handleTabSelect = () => {
-    // Tab is already activated in the Tabs component
-  }
+  const handleTabSelect = () => {}
 
   // Find bar search and navigation
   const handleFindSearch = useCallback((query: string) => {
@@ -330,7 +324,6 @@ const App: React.FC = () => {
       setFindActiveIndex(0)
       return
     }
-    // Count matches in raw text
     const text = activeTab.content
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const regex = new RegExp(escaped, 'gi')
@@ -350,7 +343,7 @@ const App: React.FC = () => {
     setFindActiveIndex(0)
   }, [])
 
-  // Re-run search when switching tabs (find bar stays open)
+  // Re-run search when switching tabs
   useEffect(() => {
     if (!findQuery || !activeTab) {
       setFindMatchCount(0)
@@ -410,7 +403,7 @@ const App: React.FC = () => {
     }
   }
 
-  // Handle drag and drop for .md files — read content via FileReader, get real path via webUtils
+  // Handle drag and drop for .md files
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault()
@@ -428,7 +421,6 @@ const App: React.FC = () => {
 
       for (const file of files) {
         if (/\.(md|markdown)$/i.test(file.name)) {
-          // Get real file path via webUtils (works in packaged Electron apps)
           let realPath: string | null = null
           try {
             realPath = window.electronAPI?.getPathForFile?.(file) || null
@@ -443,7 +435,6 @@ const App: React.FC = () => {
             if (!state.sidebarOpen) {
               state.toggleSidebar()
             }
-            // Load directory listing for arrow-key navigation
             if (realPath) {
               const dir = realPath.replace(/[\\/][^\\/]+$/, '')
               window.electronAPI?.listMdFiles(dir).then((files) => {
@@ -456,7 +447,6 @@ const App: React.FC = () => {
       }
     }
 
-    // Use capture phase to ensure our handler runs before any inner element handlers
     window.addEventListener('dragover', handleDragOver, true)
     window.addEventListener('drop', handleDrop, true)
     return () => {
@@ -464,6 +454,9 @@ const App: React.FC = () => {
       window.removeEventListener('drop', handleDrop, true)
     }
   }, [])
+
+  // Check if a plugin handles this file type
+  const pluginFileType = activeTab ? pluginManager.getFileType(activeTab.fileName) : undefined
 
   return (
     <div
@@ -476,12 +469,10 @@ const App: React.FC = () => {
     }}>
       <FontLoader />
       <HighlightThemeLoader />
-      {/* Fullscreen hover trigger zone */}
       {isFullscreen && (
         <div
           onMouseEnter={() => {
             useAppStore.getState().setIsFullscreen(true)
-            // Trigger header visibility via a custom event
             window.dispatchEvent(new CustomEvent('fullscreen-hover-top'))
           }}
           style={{
@@ -498,6 +489,7 @@ const App: React.FC = () => {
       <Header
         onExportPDF={handleExportPDF}
         onExportHTML={handleExportHTML}
+        pluginToolbarItems={pluginManager.getToolbarItems()}
       />
       
       <div style={{ 
@@ -549,7 +541,13 @@ const App: React.FC = () => {
               />
             )}
             {activeTab ? (
-              activeTab.type === 'markdown' ? (
+              pluginFileType ? (
+                // Plugin handles this file type
+                <pluginFileType.renderer
+                  content={activeTab.content}
+                  filePath={activeTab.filePath}
+                />
+              ) : activeTab.type === 'markdown' ? (
                 <MarkdownRenderer
                   content={activeTab.content}
                   zoomLevel={zoomLevel}

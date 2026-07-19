@@ -1,0 +1,11 @@
+{
+  "name": "@mdview/plugin-pdf",
+  "version": "1.0.0",
+  "description": "PDF file viewer plugin for Markdown Viewer",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "dependencies": {
+    "@mdview/plugin-api": "workspace:*"
+  },
+  "license": "MIT"
+}
