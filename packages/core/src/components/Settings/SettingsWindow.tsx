@@ -505,16 +505,12 @@ const PluginsSection: React.FC = () => {
   const enabledPlugins = useAppStore(s => s.enabledPlugins);
   const enablePlugin = useAppStore(s => s.enablePlugin);
   const disablePlugin = useAppStore(s => s.disablePlugin);
-  
-  // Get available plugins (imported dynamically)
-  const plugins = React.useMemo(() => {
-    try {
-      // @ts-ignore - dynamic import at runtime
-      const { getAvailablePlugins } = require('../../pluginLoader');
-      return getAvailablePlugins();
-    } catch {
-      return [];
-    }
+  const [plugins, setPlugins] = useState<any[]>([]);
+
+  useEffect(() => {
+    window.electronAPI?.getPlugins?.().then((list: any[]) => {
+      setPlugins(list || []);
+    });
   }, []);
 
   return (

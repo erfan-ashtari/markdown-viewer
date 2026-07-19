@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (event, data) => callback(data)),
   rendererReady: () => ipcRenderer.send('renderer-ready'),
   exportPdf: (htmlContent, margins) => ipcRenderer.invoke('export-pdf', htmlContent, margins),
+  getPlugins: () => ipcRenderer.invoke('get-plugins'),
   getPathForFile: (file) => {
     try {
       return webUtils.getPathForFile(file);

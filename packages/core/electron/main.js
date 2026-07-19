@@ -303,6 +303,13 @@ ipcMain.handle('get-dark-mode', () => {
   return nativeTheme.shouldUseDarkColors;
 });
 
+// Plugin list — built-in plugins known at compile time
+ipcMain.handle('get-plugins', () => {
+  return [
+    { name: 'pdf-viewer', version: '1.0.0', description: 'Lightweight PDF viewer with iframe rendering', builtin: true },
+  ];
+});
+
 function buildFileTree(dirPath, relativePath = '') {
   const entries = [];
   try {
