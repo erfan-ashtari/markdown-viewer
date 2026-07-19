@@ -215,6 +215,17 @@ ipcMain.handle('read-file', async (event, filePath) => {
   }
 });
 
+// Read binary file as base64 — general utility for plugins
+ipcMain.handle('read-file-binary', async (event, filePath) => {
+  try {
+    const buffer = fs.readFileSync(filePath);
+    return buffer.toString('base64');
+  } catch (error) {
+    console.error('Error reading binary file:', error);
+    return null;
+  }
+});
+
 ipcMain.handle('list-md-files', async (event, dirPath) => {
   try {
     const items = fs.readdirSync(dirPath);
