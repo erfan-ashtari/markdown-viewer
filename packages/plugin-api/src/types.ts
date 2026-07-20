@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface Plugin {
   name: string;
   version: string;
@@ -16,21 +18,20 @@ export interface PluginAPI {
 
 export interface ContentOverrideConfig {
   canOverride: (tab: { filePath: string; fileName: string; content: string }) => boolean;
-  component: any;
+  component: React.ComponentType<{ content: string; filePath: string; fileName: string; onSave: (newContent: string) => void }>;
 }
 
 export interface SlotConfig {
   slot: string;
   id: string;
-  component: any;
+  component: React.ComponentType<any>;
   order?: number;
 }
 
 export interface FileTypeConfig {
   extensions: string[];
   name: string;
-  icon: any;
-  renderer: any;
+  renderer: React.ComponentType<{ content: string; filePath: string }>;
 }
 
 export interface ToolbarItemConfig {
@@ -38,7 +39,6 @@ export interface ToolbarItemConfig {
   icon: any;
   tooltip: string;
   onClick: () => void;
-  position?: 'left' | 'center' | 'right';
 }
 
 export interface FileFilterConfig {

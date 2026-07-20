@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Plugin } from '@mdview/plugin-api';
+import { buttonBase, injectPluginStyles } from '@mdview/plugin-api';
 import { Editor } from './Editor';
 import { Pencil, Eye } from 'lucide-react';
 
@@ -14,7 +15,7 @@ const TEXT_EXTENSIONS = new Set([
   'c', 'h', 'cpp', 'cxx', 'cc', 'hpp', 'hxx',
   'cs', 'fs', 'fsx', 'fsi',
   'scala', 'sc', 'clj', 'cljs', 'cljc',
-  'r', 'R', 'm', 'mm',
+  'r', 'm', 'mm',
   'dart', 'jl', 'nim', 'v', 'vhd',
   'lua', 'hs', 'ml', 'ex', 'exs',
   'zig', 'cr', 'sol',
@@ -53,7 +54,6 @@ const TEXT_EXTENSIONS = new Set([
   'prettierrc', 'eslintrc', 'babelrc',
   'license', 'licence', 'authors', 'changelog',
   'passwd', 'shadow', 'hosts',
-  'vue', 'svelte',
 ]);
 
 // Full filename matches (no extension)
@@ -112,11 +112,15 @@ const EditToggleButton: React.FC<{
       var detail = (e as CustomEvent).detail;
       if (detail && typeof detail.editMode === 'boolean') {
         setEditMode(detail.editMode);
+        // Clear override when edit mode is turned off (e.g. Cancel button)
+        if (!detail.editMode && isContentOverrideActive && isContentOverrideActive() && activeTab && toggleContentOverride) {
+          toggleContentOverride({ filePath: activeTab.filePath, fileName: activeTab.fileName, content: activeTab.content });
+        }
       }
     };
     window.addEventListener('editor-edit-mode-change', handler);
     return function() { window.removeEventListener('editor-edit-mode-change', handler); };
-  }, []);
+  }, [activeTab, toggleContentOverride, isContentOverrideActive]);
 
   if (!activeTab || !isEditableFile(activeTab.fileName)) return null;
 
@@ -124,30 +128,22 @@ const EditToggleButton: React.FC<{
 
   return (
     <button
+      className="mdview-plugin-btn"
       onClick={() => {
         setEditMode(!isActive);
         if (toggleContentOverride) {
           toggleContentOverride({ filePath: activeTab.filePath, fileName: activeTab.fileName, content: activeTab.content });
         }
       }}
+      aria-pressed={isActive}
+      aria-label="Toggle edit mode"
+      title={isActive ? 'Preview (switch back)' : 'Edit file'}
       style={{
+        ...buttonBase,
         padding: '6px',
-        borderRadius: '4px',
-        border: 'none',
         backgroundColor: isActive ? 'var(--accent-color)' : 'transparent',
         color: isActive ? 'white' : 'var(--text-secondary)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
       }}
-      onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-      }}
-      title={isActive ? 'Preview' : 'Edit'}
     >
       {isActive ? <Eye size={16} /> : <Pencil size={16} />}
     </button>
@@ -159,6 +155,7 @@ const EditorPlugin: Plugin = {
   version: '1.0.0',
   description: 'Text editor with save functionality',
   register(api) {
+    injectPluginStyles();
     api.registerSlot({
       slot: 'header-right',
       id: 'editor-toggle',
@@ -169,7 +166,6 @@ const EditorPlugin: Plugin = {
       canOverride: function(tab) { return isEditableFile(tab.fileName) && editMode; },
       component: Editor,
     });
-
   }
 };
 
