@@ -5,50 +5,30 @@ interface EditorProps {
   content: string
   filePath: string
   fileName: string
+  onSave: (newContent: string) => void
 }
 
-const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName }) => {
+const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSave }) => {
   const [text, setText] = useState(content);
   const [dirty, setDirty] = useState(false);
 
   // Ctrl+S handler via custom event
   useEffect(() => {
-    const handleSave = async () => {
-      if (!dirty) return;
-      const success = await (window as any).electronAPI?.writeFile(filePath, text);
-      if (success) {
-        // Update tab content in store
-        const state = (await import('../../store/appStore')).useAppStore.getState();
-        (await import('../../store/appStore')).useAppStore.setState({
-          tabs: state.tabs.map(t =>
-            t.filePath === filePath ? { ...t, content: text } : t
-          )
-        });
-        setEditMode(false);
-      }
+    const handleSave = () => {
+      if (dirty) onSave(text);
     };
     window.addEventListener('editor-save', handleSave);
     return () => window.removeEventListener('editor-save', handleSave);
-  }, [text, filePath, dirty]);
+  }, [text, dirty, onSave]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     setDirty(true);
   }, []);
 
-  const handleSaveClick = useCallback(async () => {
-    if (!dirty) return;
-    const success = await (window as any).electronAPI?.writeFile(filePath, text);
-    if (success) {
-      const state = (await import('../../store/appStore')).useAppStore.getState();
-      (await import('../../store/appStore')).useAppStore.setState({
-        tabs: state.tabs.map(t =>
-          t.filePath === filePath ? { ...t, content: text } : t
-        )
-      });
-      setEditMode(false);
-    }
-  }, [text, filePath, dirty]);
+  const handleSaveClick = useCallback(() => {
+    if (dirty) onSave(text);
+  }, [text, dirty, onSave]);
 
   const handleCancel = useCallback(() => {
     setEditMode(false);

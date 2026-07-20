@@ -550,7 +550,18 @@ const App: React.FC = () => {
               pluginManager.getActiveContentOverride() ? (
                 (() => {
                   const override = pluginManager.getActiveContentOverride()!;
-                  return <override.component content={activeTab.content} filePath={activeTab.filePath} fileName={activeTab.fileName} />;
+                  const handleOverrideSave = async (newContent: string) => {
+                    const success = await (window as any).electronAPI?.writeFile(activeTab.filePath, newContent)
+                    if (success) {
+                      useAppStore.setState({
+                        tabs: useAppStore.getState().tabs.map(t =>
+                          t.id === activeTab.id ? { ...t, content: newContent } : t
+                        )
+                      })
+                      pluginManager.toggleContentOverride({ filePath: activeTab.filePath, fileName: activeTab.fileName, content: newContent })
+                    }
+                  }
+                  return <override.component content={activeTab.content} filePath={activeTab.filePath} fileName={activeTab.fileName} onSave={handleOverrideSave} />;
                 })()
               ) : pluginFileType ? (
                 // Plugin handles this file type
