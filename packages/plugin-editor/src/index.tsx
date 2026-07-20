@@ -3,7 +3,7 @@ import type { Plugin } from '@mdview/plugin-api';
 import { Editor } from './Editor';
 import { Pencil, Eye } from 'lucide-react';
 
-// Text file extensions — mirrors isTextFile() from core's languageMap.ts
+// Text file extensions the editor can handle
 const TEXT_EXTENSIONS = new Set([
   // Code — languages
   'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts',
@@ -165,15 +165,11 @@ const EditorPlugin: Plugin = {
       component: EditToggleButton,
       order: 50,
     });
-
     api.registerContentOverride({
       canOverride: function(tab) { return isEditableFile(tab.fileName) && editMode; },
       component: Editor,
     });
 
-    api.registerShortcut('Ctrl+S', function() {
-      window.dispatchEvent(new CustomEvent('editor-save'));
-    });
   }
 };
 

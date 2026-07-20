@@ -62,13 +62,36 @@ const App: React.FC = () => {
   const [findActiveIndex, setFindActiveIndex] = useState(0)
   const contentContainerRef = useRef<HTMLDivElement>(null)
 
+  // Send plugin-registered file filters to main process on mount
+  useEffect(() => {
+    const filters = pluginManager.getFileFilters();
+    if (filters.length > 0) {
+      window.electronAPI?.setFileFilters?.(filters);
+    }
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept if typing in an input
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return
 
+      // Check plugin shortcuts first
       const ctrl = e.ctrlKey || e.metaKey
+      const keyParts: string[] = []
+      if (ctrl) keyParts.push('Ctrl')
+      if (e.shiftKey) keyParts.push('Shift')
+      if (e.altKey) keyParts.push('Alt')
+      keyParts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key)
+      const shortcutKey = keyParts.join('+')
+
+      const pluginHandler = pluginManager.getShortcut(shortcutKey)
+      if (pluginHandler) {
+        e.preventDefault()
+        pluginHandler()
+        return
+      }
+
       const state = useAppStore.getState()
 
       // Ctrl+Tab / Ctrl+Shift+Tab — navigate between tabs
@@ -84,25 +107,29 @@ const App: React.FC = () => {
         return
       }
 
-      // Ctrl+=/Ctrl++ — zoom in
-      if (ctrl && (e.key === '=' || e.key === '+')) {
-        e.preventDefault()
-        state.setZoomLevel(state.zoomLevel + 10)
-        return
-      }
+      // Skip core zoom shortcuts when a plugin content override is active
+      // (plugins like PDF/image viewer handle their own zoom)
+      if (ctrl && !pluginManager.isContentOverrideActive()) {
+        // Ctrl+=/Ctrl++ — zoom in
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault()
+          state.setZoomLevel(state.zoomLevel + 10)
+          return
+        }
 
-      // Ctrl+- — zoom out
-      if (ctrl && e.key === '-') {
-        e.preventDefault()
-        state.setZoomLevel(state.zoomLevel - 10)
-        return
-      }
+        // Ctrl+- — zoom out
+        if (e.key === '-') {
+          e.preventDefault()
+          state.setZoomLevel(state.zoomLevel - 10)
+          return
+        }
 
-      // Ctrl+0 — reset zoom
-      if (ctrl && e.key === '0') {
-        e.preventDefault()
-        state.setZoomLevel(100)
-        return
+        // Ctrl+0 — reset zoom
+        if (e.key === '0') {
+          e.preventDefault()
+          state.setZoomLevel(100)
+          return
+        }
       }
 
       // Ctrl+Shift+W — toggle width mode

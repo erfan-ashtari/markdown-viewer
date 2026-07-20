@@ -8,10 +8,10 @@ export interface Plugin {
 export interface PluginAPI {
   registerFileType(config: FileTypeConfig): void;
   registerToolbarItem(config: ToolbarItemConfig): void;
-  registerEditor(config: EditorConfig): void;
   registerShortcut(keys: string, handler: () => void): void;
   registerContentOverride(config: ContentOverrideConfig): void;
   registerSlot(config: SlotConfig): void;
+  registerFileFilter(config: FileFilterConfig): void;
 }
 
 export interface ContentOverrideConfig {
@@ -31,7 +31,6 @@ export interface FileTypeConfig {
   name: string;
   icon: any;
   renderer: any;
-  canHandle?: (filePath: string) => boolean;
 }
 
 export interface ToolbarItemConfig {
@@ -42,10 +41,7 @@ export interface ToolbarItemConfig {
   position?: 'left' | 'center' | 'right';
 }
 
-export interface EditorConfig {
-  id: string;
+export interface FileFilterConfig {
   name: string;
-  canEdit: (filePath: string) => boolean;
-  editor: any;
-  shortcut?: string;
+  extensions: string[];
 }

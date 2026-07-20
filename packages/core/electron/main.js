@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, protocol 
 const path = require('path');
 const fs = require('fs');
 
+// Plugin-registered file filters (set from renderer)
+let pluginFileFilters = [];
+
 // Error logging to file
 const logFile = path.join(app.getPath('userData'), 'crash.log');
 function logError(err) {
@@ -170,12 +173,13 @@ ipcMain.on('settings-changed', (event, data) => {
 })
 
 ipcMain.handle('open-file', async () => {
+  const filters = [
+    ...pluginFileFilters,
+    { name: 'All Files', extensions: ['*'] },
+  ];
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
-    filters: [
-      { name: 'Markdown Files', extensions: ['md', 'markdown'] },
-      { name: 'All Files', extensions: ['*'] },
-    ],
+    filters,
   });
   if (!result.canceled && result.filePaths.length > 0) {
     const filePath = result.filePaths[0];
@@ -217,7 +221,7 @@ ipcMain.handle('read-file', async (event, filePath) => {
   }
 });
 
-// Read binary file as base64 — general utility for plugins
+// Read binary file as base64
 ipcMain.handle('read-file-binary', async (event, filePath) => {
   try {
     const buffer = fs.readFileSync(filePath);
@@ -228,7 +232,7 @@ ipcMain.handle('read-file-binary', async (event, filePath) => {
   }
 });
 
-// Write file content — used by editor plugin
+// Write file content
 ipcMain.handle('write-file', async (event, filePath, content) => {
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
@@ -328,13 +332,18 @@ ipcMain.handle('get-dark-mode', () => {
   return nativeTheme.shouldUseDarkColors;
 });
 
-// Plugin list — built-in plugins known at compile time
+ipcMain.handle('set-file-filters', (event, filters) => {
+  pluginFileFilters = filters;
+});
+
+// Plugin registry — reads from plugins.json (single source of truth)
 ipcMain.handle('get-plugins', () => {
-  return [
-    { name: 'pdf-viewer', version: '1.0.0', description: 'PDF viewer using Chromium native renderer', builtin: true },
-    { name: 'image-viewer', version: '1.0.0', description: 'Image viewer with zoom and fit controls', builtin: true },
-    { name: 'editor', version: '1.0.0', description: 'Text editor with save functionality', builtin: true },
-  ];
+  const pluginsJsonPath = path.join(__dirname, '../../plugins.json');
+  try {
+    return JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8'));
+  } catch {
+    return [];
+  }
 });
 
 // Reload main window (from Settings)

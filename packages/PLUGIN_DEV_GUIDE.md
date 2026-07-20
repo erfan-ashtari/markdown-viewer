@@ -2,13 +2,17 @@
 
 ## Core Principle: Self-Contained Plugins
 
-**Plugins must NEVER require changes to core code.** Every plugin is fully self-contained — it registers capabilities through the Plugin API, receives context through Slot props, and communicates via custom events. If you think core needs a change, you probably need to extend the plugin API instead.
+**Plugins are self-contained at runtime — they never import from core or modify core behavior.** Plugins register capabilities through the Plugin API, receive context through Slot props, and communicate via custom events. If you think core needs a change, you probably need to extend the plugin API instead.
+
+Adding a new plugin requires minimal build configuration (one entry in `packages/plugins.json` + running the config generator). These are wiring changes, not logic changes.
 
 What plugins can do through the API alone:
-- Render any file type
-- Inject UI into named slots (toolbar, header, etc.)
-- Replace the content area (content override)
-- Register keyboard shortcuts
+- Render any file type (`registerFileType`)
+- Inject UI into named slots (`registerSlot`)
+- Replace the content area (`registerContentOverride`)
+- Register keyboard shortcuts (`registerShortcut`)
+- Register file dialog filters (`registerFileFilter`)
+- Add toolbar buttons (`registerToolbarItem`)
 - Write files (save) via IPC
 - Access local files via `local-file://` protocol
 
@@ -32,6 +36,9 @@ What plugins must NEVER do:
 │  │   → pluginFileType ? <FileType.renderer />   │──→ Plugin renders file type
 │  │   → default renderers (markdown, text)       │
 │                                                 │
+│  Keyboard handler checks pluginManager           │
+│  .getShortcut() BEFORE hardcoded shortcuts       │
+│                                                 │
 │  Listens to: pluginManager.onOverrideChange()   │
 │  Passes through Slot context:                   │
 │    - activeTab                                  │
@@ -43,7 +50,7 @@ What plugins must NEVER do:
 
 ---
 
-## The Five Plugin APIs
+## The Six Plugin APIs
 
 ### 1. `registerFileType` — Render any file type
 
@@ -205,13 +212,26 @@ const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSav
 
 ### 4. `registerShortcut` — Keyboard shortcuts
 
+Shortcuts are matched by the keyboard handler in `App.tsx` **before** hardcoded shortcuts. Plugin shortcuts take priority.
+
 ```tsx
 api.registerShortcut('Ctrl+S', function() {
   window.dispatchEvent(new CustomEvent('editor-save'));
 });
 ```
 
-Shortcuts are matched by the PluginManager when the user presses keys. The shortcut string format is `Ctrl+Shift+Key` (e.g., `Ctrl+S`, `Ctrl+Shift+F`).
+**How it works:**
+
+1. User presses keys → `App.tsx` `handleKeyDown` fires
+2. Constructs shortcut string: `Ctrl+Shift+F`, `Ctrl+S`, etc.
+3. Checks `pluginManager.getShortcut(shortcutKey)` first
+4. If a plugin handler exists, calls it and returns (skips hardcoded shortcuts)
+5. If no plugin handler, falls through to built-in shortcuts
+
+**Shortcut string format:** `Modifier+Key` where modifiers are `Ctrl`, `Shift`, `Alt` and the key is the uppercase letter:
+- `Ctrl+S`
+- `Ctrl+Shift+F`
+- `Alt+X`
 
 ---
 
@@ -228,6 +248,32 @@ api.registerToolbarItem({
 ```
 
 Toolbar items are always visible (unlike slot components which can conditionally render).
+
+---
+
+### 6. `registerFileFilter` — File dialog filters
+
+Register file types that appear in the Open File dialog.
+
+```tsx
+api.registerFileFilter({
+  name: 'Text Files',
+  extensions: ['txt', 'md', 'json', 'py', 'js', 'ts'],
+});
+```
+
+**How it works:**
+
+1. Plugin calls `api.registerFileFilter(...)` during registration
+2. On mount, `App.tsx` collects all registered filters and sends them to main via `window.electronAPI.setFileFilters(filters)`
+3. `main.js` uses the registered filters in the open-file dialog
+4. Users see your file types in the filter dropdown
+
+**Multiple filters:** Register once per category:
+```tsx
+api.registerFileFilter({ name: 'Mermaid Diagrams', extensions: ['mmd', 'mermaid'] });
+api.registerFileFilter({ name: 'Diagrams', extensions: ['puml', 'plantuml', 'drawio'] });
+```
 
 ---
 
@@ -354,11 +400,6 @@ const EditorPlugin: Plugin = {
       canOverride: (tab) => isEditableFile(tab.fileName) && editMode,
       component: Editor,
     });
-
-    // 3. Register Ctrl+S shortcut
-    api.registerShortcut('Ctrl+S', () => {
-      window.dispatchEvent(new CustomEvent('editor-save'));
-    });
   }
 };
 ```
@@ -393,14 +434,17 @@ const EditorPlugin: Plugin = {
    └→ EditToggleButton re-renders → shows pencil icon
 ```
 
-### Flow: User clicks Cancel
+### Flow: User clicks Cancel (pencil icon again)
 
 ```
-1. Editor calls setEditMode(false)
+1. EditToggleButton calls setEditMode(false)
    └→ editMode = false
    └→ editModeListeners notified → EditToggleButton re-renders (pencil icon)
-   └→ But override is still active! canOverride returns false on next toggle.
-   └→ User must click toggle again to clear the override.
+
+2. EditToggleButton calls toggleContentOverride(tab)
+   └→ PluginManager evaluates canOverride(tab)
+       └→ isEditableFile(tab.fileName) && editMode → false (editMode is false)
+   └→ Active override cleared → back to normal renderer
 ```
 
 ---
@@ -453,7 +497,9 @@ const src = 'local-file:///' + filePath.replace(/\\/g, '/');
 
 ---
 
-## Adding a New Built-in Plugin
+## Adding a New Plugin
+
+### For workspace plugins (packages/)
 
 1. Create `packages/plugin-xxx/`:
    ```
@@ -477,35 +523,48 @@ const src = 'local-file:///' + filePath.replace(/\\/g, '/');
    }
    ```
 
-3. **Vite alias** (`packages/core/vite.config.ts`):
-   ```ts
-   '@mdview/plugin-xxx': path.resolve(__dirname, '../plugin-xxx/src'),
-   ```
-
-4. **TypeScript path** (`packages/core/tsconfig.json`):
+3. **Add to plugin registry** (`packages/plugins.json`):
    ```json
-   "@mdview/plugin-xxx": ["../plugin-xxx/src"]
+   {
+     "name": "xxx",
+     "package": "@mdview/plugin-xxx",
+     "entry": "../plugin-xxx/src",
+     "version": "1.0.0",
+     "description": "Your plugin description",
+     "builtin": true
+   }
    ```
 
-5. **Register** (`packages/core/src/pluginLoader.ts`):
+4. **Run the config generator:**
+   ```bash
+   node packages/core/scripts/generate-plugin-config.js
+   ```
+   This auto-generates Vite aliases and TypeScript paths.
+
+5. **Add static import** (`packages/core/src/pluginLoader.ts`):
    ```ts
    import { XPlugin } from '@mdview/plugin-xxx';
-   const builtinPlugins = [PdfPlugin, ImagesPlugin, EditorPlugin, XPlugin];
+   // Add to builtinModules:
+   const builtinModules = {
+     'pdf-viewer': PdfPlugin,
+     'image-viewer': ImagesPlugin,
+     'editor': EditorPlugin,
+     'xxx': XPlugin,
+   };
    ```
 
-6. **Settings IPC** (`packages/core/electron/main.js`):
-   ```js
-   ipcMain.handle('get-plugins', () => {
-     return [
-       { name: 'pdf-viewer', version: '1.0.0', description: '...', builtin: true },
-       { name: 'image-viewer', version: '1.0.0', description: '...', builtin: true },
-       { name: 'editor', version: '1.0.0', description: '...', builtin: true },
-       { name: 'xxx', version: '1.0.0', description: '...', builtin: true },
-     ];
-   });
-   ```
+6. Done — appears in Settings → Plugins after reload.
 
-7. Done — appears in Settings → Plugins.
+### For npm-installed plugins
+
+Third-party plugins installed via npm use dynamic imports. Just:
+
+1. `npm install @someone/plugin-xxx`
+2. Add entry to `packages/plugins.json`
+3. Run `node packages/core/scripts/generate-plugin-config.js`
+4. Enable in Settings → Plugins
+
+No core code changes needed — the plugin loads dynamically at startup.
 
 ---
 
@@ -639,35 +698,40 @@ useEffect(() => {
 
 ```
 packages/
-├── core/                          # The main app
-│   ├── electron/                  # Main process (main.js, preload.js)
+├── plugins.json                       # Plugin manifest (single source of truth)
+│
+├── core/                              # The main app
+│   ├── electron/                      # Main process (main.js, preload.js)
+│   ├── scripts/
+│   │   └── generate-plugin-config.js  # Auto-generates aliases + paths from plugins.json
 │   ├── src/
-│   │   ├── App.tsx                # Root component, content override logic
-│   │   ├── pluginLoader.ts        # Creates PluginManager, loads plugins
-│   │   ├── store/appStore.ts      # enabledPlugins state (Zustand)
+│   │   ├── App.tsx                    # Root component, shortcut dispatch, content override logic
+│   │   ├── pluginLoader.ts            # Creates PluginManager, loads plugins from manifest
+│   │   ├── generated-plugin-aliases.ts # Auto-generated Vite alias paths
+│   │   ├── store/appStore.ts          # enabledPlugins state (Zustand)
 │   │   └── components/
-│   │       ├── Slot.tsx           # Generic Slot component
-│   │       ├── Layout/Header.tsx  # Has <Slot name="header-right" />
-│   │       └── Settings/          # Plugins tab in Settings
-│   ├── vite.config.ts             # Plugin aliases
-│   └── tsconfig.json              # Plugin paths
+│   │       ├── Slot.tsx               # Generic Slot component
+│   │       ├── Layout/Header.tsx      # Has <Slot name="header-right" />
+│   │       └── Settings/              # Plugins tab in Settings
+│   ├── vite.config.ts                 # Uses generated plugin aliases
+│   └── tsconfig.json                  # Auto-generated plugin paths
 │
-├── plugin-api/                    # Shared types and PluginManager
+├── plugin-api/                        # Shared types and PluginManager
 │   └── src/
-│       ├── types.ts               # Plugin, PluginAPI, all config interfaces
-│       ├── PluginManager.ts       # Registry + toggleContentOverride
-│       └── index.ts               # Exports
+│       ├── types.ts                   # Plugin, PluginAPI, all config interfaces
+│       ├── PluginManager.ts           # Registry + toggleContentOverride + fileFilters
+│       └── index.ts                   # Exports
 │
-├── plugin-pdf/                    # Built-in: PDF viewer
-│   └── src/index.tsx              # registerFileType (extensions: ['pdf'])
+├── plugin-pdf/                        # Built-in: PDF viewer
+│   └── src/index.tsx                  # registerFileType (extensions: ['pdf'])
 │
-├── plugin-images/                 # Built-in: Image viewer
-│   └── src/index.tsx              # registerFileType (extensions: ['png', 'jpg', ...])
+├── plugin-images/                     # Built-in: Image viewer
+│   └── src/index.tsx                  # registerFileType (extensions: ['png', 'jpg', ...])
 │
-└── plugin-editor/                 # Built-in: Text editor
+└── plugin-editor/                     # Built-in: Text editor
     ├── src/
-    │   ├── index.tsx              # registerSlot + registerContentOverride + registerShortcut
-    │   └── Editor.tsx             # Editor component with save/cancel
+    │   ├── index.tsx                  # registerSlot + registerContentOverride
+    │   └── Editor.tsx                 # Editor component with save/cancel
     └── package.json
 ```
 

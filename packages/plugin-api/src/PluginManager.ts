@@ -1,14 +1,14 @@
-import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, EditorConfig, ContentOverrideConfig, SlotConfig } from './types';
+import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, ContentOverrideConfig, SlotConfig, FileFilterConfig } from './types';
 
 export class PluginManager implements PluginAPI {
   private plugins: Plugin[] = [];
   private fileTypes: FileTypeConfig[] = [];
   private toolbarItems: ToolbarItemConfig[] = [];
-  private editors: EditorConfig[] = [];
   private shortcuts: Map<string, () => void> = new Map();
   private contentOverrides: ContentOverrideConfig[] = [];
   private activeContentOverride: ContentOverrideConfig | null = null;
   private slots: SlotConfig[] = [];
+  private fileFilters: FileFilterConfig[] = [];
   private overrideListeners: (() => void)[] = [];
 
   register(plugin: Plugin): void {
@@ -24,10 +24,6 @@ export class PluginManager implements PluginAPI {
     this.toolbarItems.push(config);
   }
 
-  registerEditor(config: EditorConfig): void {
-    this.editors.push(config);
-  }
-
   registerShortcut(keys: string, handler: () => void): void {
     this.shortcuts.set(keys, handler);
   }
@@ -38,6 +34,10 @@ export class PluginManager implements PluginAPI {
 
   registerSlot(config: SlotConfig): void {
     this.slots.push(config);
+  }
+
+  registerFileFilter(config: FileFilterConfig): void {
+    this.fileFilters.push(config);
   }
 
   // Subscription for override changes (general-purpose)
@@ -62,10 +62,6 @@ export class PluginManager implements PluginAPI {
     return this.toolbarItems.slice();
   }
 
-  getEditor(filePath: string): EditorConfig | undefined {
-    return this.editors.find(function(e) { return e.canEdit(filePath); });
-  }
-
   getShortcut(keys: string): (() => void) | undefined {
     return this.shortcuts.get(keys);
   }
@@ -78,6 +74,10 @@ export class PluginManager implements PluginAPI {
     return this.slots
       .filter(function(s) { return s.slot === slotName; })
       .sort(function(a, b) { return (a.order || 100) - (b.order || 100); });
+  }
+
+  getFileFilters(): FileFilterConfig[] {
+    return this.fileFilters.slice();
   }
 
   // Content override methods

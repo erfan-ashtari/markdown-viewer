@@ -1,0 +1,26 @@
+[
+  {
+    "name": "pdf-viewer",
+    "package": "@mdview/plugin-pdf",
+    "entry": "../plugin-pdf/src",
+    "version": "1.0.0",
+    "description": "PDF viewer using Chromium native renderer",
+    "builtin": true
+  },
+  {
+    "name": "image-viewer",
+    "package": "@mdview/plugin-images",
+    "entry": "../plugin-images/src",
+    "version": "1.0.0",
+    "description": "Image viewer with zoom and fit controls",
+    "builtin": true
+  },
+  {
+    "name": "editor",
+    "package": "@mdview/plugin-editor",
+    "entry": "../plugin-editor/src",
+    "version": "1.0.0",
+    "description": "Text editor with save functionality",
+    "builtin": true
+  }
+]

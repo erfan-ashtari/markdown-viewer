@@ -1,6 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+// @ts-ignore — auto-generated
+import { pluginAliasPaths } from './src/generated-plugin-aliases'
+
+// Resolve relative paths from core/ directory
+const pluginAliases: Record<string, string> = {}
+for (const [key, relativePath] of Object.entries(pluginAliasPaths)) {
+  pluginAliases[key] = path.resolve(__dirname, relativePath)
+}
 
 export default defineConfig({
   plugins: [react()],
@@ -9,9 +17,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
-      '@mdview/plugin-pdf': path.resolve(__dirname, '../plugin-pdf/src'),
-      '@mdview/plugin-images': path.resolve(__dirname, '../plugin-images/src'),
-      '@mdview/plugin-editor': path.resolve(__dirname, '../plugin-editor/src'),
+      ...pluginAliases,
     },
   },
   build: {

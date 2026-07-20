@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSettingsChanged: (callback) => ipcRenderer.on('settings-changed', (event, data) => callback(data)),
   rendererReady: () => ipcRenderer.send('renderer-ready'),
   exportPdf: (htmlContent, margins) => ipcRenderer.invoke('export-pdf', htmlContent, margins),
+  setFileFilters: (filters) => ipcRenderer.invoke('set-file-filters', filters),
   getPlugins: () => ipcRenderer.invoke('get-plugins'),
   reloadMain: () => ipcRenderer.send('reload-main'),
   getPathForFile: (file) => {
