@@ -214,6 +214,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
           </div>
         )}
 
+        {/* Plugin slot for header-right */}
+        <Slot name="header-right" />
 
         {/* Plugin toolbar items */}
         {pluginToolbarItems.map((item) => (
