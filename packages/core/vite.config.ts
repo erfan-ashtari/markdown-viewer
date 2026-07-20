@@ -11,6 +11,7 @@ export default defineConfig({
       '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
       '@mdview/plugin-pdf': path.resolve(__dirname, '../plugin-pdf/src'),
       '@mdview/plugin-images': path.resolve(__dirname, '../plugin-images/src'),
+      '@mdview/plugin-editor': path.resolve(__dirname, '../plugin-editor/src'),
     },
   },
   build: {

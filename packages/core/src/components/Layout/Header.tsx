@@ -11,11 +11,14 @@ import {
   Settings,
   Maximize2,
   FileOutput,
-  Type
+  Type,
+  Pencil,
+  Eye
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
+import { isEditableFile } from '@mdview/plugin-editor'
 
 interface HeaderProps {
   onExportPDF: () => void
@@ -42,6 +45,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
   const tabs = useAppStore(s => s.tabs)
   const activeTabId = useAppStore(s => s.activeTabId)
   const isFullscreen = useAppStore(s => s.isFullscreen)
+  const isEditMode = useAppStore(s => s.isEditMode)
+  const setEditMode = useAppStore(s => s.setEditMode)
 
   const [showThemeMenu, setShowThemeMenu] = useState(false)
   const [showFontMenu, setShowFontMenu] = useState(false)

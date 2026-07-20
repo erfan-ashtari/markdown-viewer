@@ -20,7 +20,8 @@
       "@/*": ["src/*"],
       "@mdview/plugin-api": ["../plugin-api/src"],
       "@mdview/plugin-pdf": ["../plugin-pdf/src"],
-      "@mdview/plugin-images": ["../plugin-images/src"]
+      "@mdview/plugin-images": ["../plugin-images/src"],
+      "@mdview/plugin-editor": ["../plugin-editor/src"]
     }
   },
   "include": ["src"],

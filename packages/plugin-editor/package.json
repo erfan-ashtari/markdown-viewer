@@ -1,0 +1,11 @@
+{
+  "name": "@mdview/plugin-editor",
+  "version": "1.0.0",
+  "description": "Text editor plugin for Markdown Viewer",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@mdview/plugin-api": "workspace:*"
+  },
+  "license": "MIT"
+}

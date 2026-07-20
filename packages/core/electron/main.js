@@ -228,6 +228,17 @@ ipcMain.handle('read-file-binary', async (event, filePath) => {
   }
 });
 
+// Write file content — used by editor plugin
+ipcMain.handle('write-file', async (event, filePath, content) => {
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('Error writing file:', error);
+    return false;
+  }
+});
+
 ipcMain.handle('list-md-files', async (event, dirPath) => {
   try {
     const items = fs.readdirSync(dirPath);
@@ -322,6 +333,7 @@ ipcMain.handle('get-plugins', () => {
   return [
     { name: 'pdf-viewer', version: '1.0.0', description: 'PDF viewer using Chromium native renderer', builtin: true },
     { name: 'image-viewer', version: '1.0.0', description: 'Image viewer with zoom and fit controls', builtin: true },
+    { name: 'editor', version: '1.0.0', description: 'Text editor with save functionality', builtin: true },
   ];
 });
 

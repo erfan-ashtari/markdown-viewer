@@ -4,8 +4,9 @@ import { useAppStore } from './store/appStore';
 // Built-in plugins
 import { PdfPlugin } from '@mdview/plugin-pdf';
 import { ImagesPlugin } from '@mdview/plugin-images';
+import { EditorPlugin } from '@mdview/plugin-editor';
 
-const builtinPlugins = [PdfPlugin, ImagesPlugin];
+const builtinPlugins = [PdfPlugin, ImagesPlugin, EditorPlugin];
 
 export const pluginManager = new PluginManager();
 

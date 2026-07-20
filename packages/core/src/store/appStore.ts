@@ -33,6 +33,9 @@ interface AppState {
   // Plugin state
   enabledPlugins: string[]
 
+  // Editor state
+  isEditMode: boolean
+
   // Actions
   addTab: (filePath: string, content: string, fileName: string, type?: 'markdown' | 'other') => void
   removeTab: (tabId: string) => void
@@ -51,6 +54,7 @@ interface AppState {
   navigateToAdjacentFile: (direction: 'prev' | 'next') => Promise<void>
   enablePlugin: (name: string) => void
   disablePlugin: (name: string) => void
+  setEditMode: (value: boolean) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -61,6 +65,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // UI state
   sidebarOpen: true,
+  isEditMode: false,
   enabledPlugins: JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('mdview-enabled-plugins') || '[]' : '[]'),
   sidebarWidth: 260,
   zoomLevel: 100,
@@ -172,6 +177,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ enabledPlugins: updated })
     }
   },
+
+  setEditMode: (value) => set({ isEditMode: value }),
 
   disablePlugin: (name) => {
     const updated = get().enabledPlugins.filter(n => n !== name)
