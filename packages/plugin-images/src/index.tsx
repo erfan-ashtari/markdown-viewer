@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect, memo } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
 import type { Plugin } from '@mdview/plugin-api';
 import { buttonBase, buttonDisabled, headerBar, injectPluginStyles } from '@mdview/plugin-api';
 
@@ -62,6 +62,7 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Reset zoom when switching tabs
   useEffect(() => {
@@ -86,32 +87,50 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
     setLoaded(true);
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key === '=' || e.key === '+') { e.preventDefault(); handleZoomIn(); }
-      else if (e.key === '-') { e.preventDefault(); handleZoomOut(); }
-      else if (e.key === '0') { e.preventDefault(); handleReset(); }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleZoomIn, handleZoomOut, handleReset]);
+  // Note: Keyboard zoom (Ctrl+/-) and wheel zoom are handled by core's App.tsx.
+  // We do NOT add duplicate handlers here — that would cause double-zoom and jank.
 
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) return;
-      e.preventDefault();
-      setIsFit(false);
-      const delta = e.deltaY > 0 ? -5 : 5;
-      setZoom(z => Math.max(10, Math.min(350, z + delta)));
-    };
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, []);
+  // Calculate scaled dimensions and dynamic margins for centering
+  const { scaledWidth, scaledHeight, marginTop, marginLeft } = useMemo(() => {
+    if (!loaded || naturalSize.width === 0) {
+      return { scaledWidth: 0, scaledHeight: 0, marginTop: 0, marginLeft: 0 };
+    }
 
+    const container = containerRef.current;
+    if (!container) {
+      return { scaledWidth: naturalSize.width, scaledHeight: naturalSize.height, marginTop: 0, marginLeft: 0 };
+    }
+
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    if (isFit) {
+      // Fit mode: let CSS handle sizing via maxWidth/maxHeight, center with flex
+      return { scaledWidth: 0, scaledHeight: 0, marginTop: 0, marginLeft: 0 };
+    }
+
+    // Zoom mode: calculate scaled dimensions
+    const sw = naturalSize.width * (zoom / 100);
+    const sh = naturalSize.height * (zoom / 100);
+
+    // Center when smaller than container, scroll when larger
+    const ml = sw < containerWidth ? (containerWidth - sw) / 2 : 0;
+    const mt = sh < containerHeight ? (containerHeight - sh) / 2 : 0;
+
+    return { scaledWidth: sw, scaledHeight: sh, marginTop: mt, marginLeft: ml };
+  }, [zoom, isFit, loaded, naturalSize]);
+
+  // Image style: fit mode uses CSS constraints, zoom mode uses explicit dimensions
   const imgStyle: React.CSSProperties = isFit
-    ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
-    : { width: zoom + '%', maxWidth: 'none', maxHeight: 'none' };
+    ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' as const }
+    : {
+        width: scaledWidth || 'auto',
+        height: scaledHeight || 'auto',
+        maxWidth: 'none',
+        maxHeight: 'none',
+        marginTop: marginTop,
+        marginLeft: marginLeft,
+      };
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)' }}>
@@ -125,17 +144,25 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
       />
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}>
-        {!loaded && (
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          // Fit mode: flex centers the image; Zoom mode: block layout allows scroll
+          display: isFit ? 'flex' : 'block',
+          alignItems: isFit ? 'center' : undefined,
+          justifyContent: isFit ? 'center' : undefined,
+          position: 'relative',
+        }}
+      >
+        {!loaded && !error && (
           <div style={{
             position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: 'var(--text-muted)',
             fontSize: '14px',
           }}>
@@ -145,6 +172,10 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
         {error && (
           <div style={{
             position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: 'var(--text-muted)',
             fontSize: '14px',
           }}>
@@ -159,7 +190,7 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
           alt={fileName}
           style={{
             ...imgStyle,
-            transition: isFit ? 'none' : 'width 0.1s ease',
+            display: 'block',
             flexShrink: 0,
             opacity: loaded ? 1 : 0,
           }}
