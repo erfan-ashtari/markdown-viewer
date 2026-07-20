@@ -9,6 +9,7 @@ export class PluginManager implements PluginAPI {
   private contentOverrides: ContentOverrideConfig[] = [];
   private activeContentOverride: ContentOverrideConfig | null = null;
   private slots: SlotConfig[] = [];
+  private overrideListeners: (() => void)[] = [];
 
   register(plugin: Plugin): void {
     plugin.register(this);
@@ -37,6 +38,19 @@ export class PluginManager implements PluginAPI {
 
   registerSlot(config: SlotConfig): void {
     this.slots.push(config);
+  }
+
+  // Subscription for override changes (general-purpose)
+  onOverrideChange(callback: () => void): void {
+    this.overrideListeners.push(callback);
+  }
+
+  offOverrideChange(callback: () => void): void {
+    this.overrideListeners = this.overrideListeners.filter(function(fn) { return fn !== callback; });
+  }
+
+  private notifyOverrideChange(): void {
+    this.overrideListeners.forEach(function(fn) { fn(); });
   }
 
   getFileType(fileName: string): FileTypeConfig | undefined {
@@ -73,6 +87,7 @@ export class PluginManager implements PluginAPI {
     } else {
       this.activeContentOverride = this.contentOverrides.find(c => c.canOverride(tab)) || null;
     }
+    this.notifyOverrideChange();
   }
 
   isContentOverrideActive(): boolean {

@@ -459,6 +459,14 @@ const App: React.FC = () => {
 
 
 
+  // Re-render when content override changes (general-purpose subscription)
+  const [, setOverrideTick] = useState(0);
+  useEffect(() => {
+    var handler = function() { setOverrideTick(function(n) { return n + 1; }); };
+    pluginManager.onOverrideChange(handler);
+    return function() { pluginManager.offOverrideChange(handler); };
+  }, []);
+
   // Check if a plugin handles this file type
   const pluginFileType = activeTab ? pluginManager.getFileType(activeTab.fileName) : undefined
   
