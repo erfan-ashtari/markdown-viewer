@@ -17,6 +17,7 @@ import { useAppStore } from '../../store/appStore'
 import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
 import { Slot } from '../Slot'
+import { pluginManager } from '../../pluginLoader'
 
 interface HeaderProps {
   onExportPDF: () => void
@@ -215,7 +216,12 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
         )}
 
         {/* Plugin slot for header-right */}
-        <Slot name="header-right" context={{ activeTab }} />
+        <Slot name="header-right" context={{
+          activeTab,
+          toggleContentOverride: (tab: { filePath: string; fileName: string; content: string }) => pluginManager.toggleContentOverride(tab),
+          hasContentOverride: (tab: { filePath: string; fileName: string; content: string }) => pluginManager.hasContentOverride(tab),
+          isContentOverrideActive: () => pluginManager.isContentOverrideActive(),
+        }} />
 
         {/* Plugin toolbar items */}
         {pluginToolbarItems.map((item) => (

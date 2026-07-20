@@ -3,21 +3,73 @@ import type { Plugin } from '@mdview/plugin-api';
 import { Editor } from './Editor';
 import { Pencil, Eye } from 'lucide-react';
 
-// File extensions that can be edited
-const EDITABLE_EXTENSIONS = [
-  'md', 'markdown', 'txt', 'log', 'csv',
-  'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',
-  'py', 'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'cs',
-  'html', 'css', 'scss', 'less', 'sass',
-  'json', 'yaml', 'yml', 'toml', 'ini', 'env',
-  'sh', 'bash', 'zsh', 'bat', 'ps1',
-  'xml', 'svg', 'sql', 'graphql',
+// Text file extensions — mirrors isTextFile() from core's languageMap.ts
+const TEXT_EXTENSIONS = new Set([
+  // Code — languages
+  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts',
+  'py', 'pyw', 'pyi', 'pyx',
+  'rb', 'erb',
+  'php',
+  'go', 'rs', 'java', 'kt', 'kts', 'swift',
+  'c', 'h', 'cpp', 'cxx', 'cc', 'hpp', 'hxx',
+  'cs', 'fs', 'fsx', 'fsi',
+  'scala', 'sc', 'clj', 'cljs', 'cljc',
+  'r', 'R', 'm', 'mm',
+  'dart', 'jl', 'nim', 'v', 'vhd',
+  'lua', 'hs', 'ml', 'ex', 'exs',
+  'zig', 'cr', 'sol',
+
+  // Scripting / Shell
+  'sh', 'bash', 'zsh', 'fish', 'ksh',
+  'bat', 'cmd', 'ps1', 'psm1', 'psd1',
+  'bashrc', 'zshrc', 'profile',
+
+  // SQL
+  'sql', 'psql', 'mysql', 'sqlite',
+
+  // Web
+  'html', 'htm', 'xhtml', 'vue', 'svelte',
+  'css', 'scss', 'sass', 'less', 'styl',
+  'xml', 'xsl', 'xslt', 'xsd', 'dtd',
+
+  // Data / Config
+  'json', 'jsonc', 'jsonl', 'json5',
+  'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
+  'env', 'properties', 'prop',
+  'csv', 'tsv', 'psv',
+
+  // Build / Infra
+  'dockerfile', 'makefile', 'cmake', 'gradle',
+  'tf', 'hcl', 'nomad', 'pkr',
+
+  // Docs / Text
+  'txt', 'text', 'log', 'md', 'markdown', 'rst',
+  'tex', 'latex', 'bib', 'sty', 'cls',
+  'diff', 'patch',
+  'adoc', 'asciidoc',
+
+  // Misc text
+  'gitignore', 'gitattributes', 'editorconfig',
+  'prettierrc', 'eslintrc', 'babelrc',
+  'license', 'licence', 'authors', 'changelog',
+  'passwd', 'shadow', 'hosts',
   'vue', 'svelte',
-];
+]);
+
+// Full filename matches (no extension)
+const TEXT_FILE_NAMES = new Set([
+  'dockerfile', 'makefile', 'gnumakefile', 'cmakelists.txt',
+  '.gitignore', '.gitattributes', '.editorconfig', '.eslintignore',
+  '.prettierignore', '.npmignore', '.dockerignore',
+  'license', 'licence', 'readme', 'changelog', 'authors',
+  'contributing', 'copying', 'todo',
+]);
 
 export function isEditableFile(fileName: string): boolean {
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
-  return EDITABLE_EXTENSIONS.includes(ext);
+  if (TEXT_EXTENSIONS.has(ext)) return true;
+  const fullLower = fileName.toLowerCase();
+  return TEXT_FILE_NAMES.has(fullLower);
 }
 
 // Edit mode state (managed internally by plugin)
@@ -42,44 +94,62 @@ export function offEditModeChange(callback: () => void): void {
 }
 
 // Edit toggle button component (for slot)
-// Receives activeTab from Slot context
-const EditToggleButton: React.FC<{ activeTab?: any }> = ({ activeTab }) => {
+const EditToggleButton: React.FC<{
+  activeTab?: any;
+  toggleContentOverride?: (tab: { filePath: string; fileName: string; content: string }) => void;
+  isContentOverrideActive?: () => boolean;
+}> = ({ activeTab, toggleContentOverride, isContentOverrideActive }) => {
   const [, forceUpdate] = React.useState(0);
 
-  // Subscribe to edit mode changes
   React.useEffect(function() {
     var handler = function() { forceUpdate(function(n) { return n + 1; }); };
     onEditModeChange(handler);
     return function() { offEditModeChange(handler); };
   }, []);
 
+  React.useEffect(function() {
+    var handler = function(e: Event) {
+      var detail = (e as CustomEvent).detail;
+      if (detail && typeof detail.editMode === 'boolean') {
+        setEditMode(detail.editMode);
+      }
+    };
+    window.addEventListener('editor-edit-mode-change', handler);
+    return function() { window.removeEventListener('editor-edit-mode-change', handler); };
+  }, []);
+
   if (!activeTab || !isEditableFile(activeTab.fileName)) return null;
 
-  var currentEditMode = isEditMode();
+  var isActive = isContentOverrideActive ? isContentOverrideActive() : false;
 
   return (
     <button
-      onClick={() => setEditMode(!currentEditMode)}
+      onClick={() => {
+        setEditMode(!isActive);
+        if (toggleContentOverride) {
+          toggleContentOverride({ filePath: activeTab.filePath, fileName: activeTab.fileName, content: activeTab.content });
+        }
+      }}
       style={{
         padding: '6px',
         borderRadius: '4px',
         border: 'none',
-        backgroundColor: currentEditMode ? 'var(--accent-color)' : 'transparent',
-        color: currentEditMode ? 'white' : 'var(--text-secondary)',
+        backgroundColor: isActive ? 'var(--accent-color)' : 'transparent',
+        color: isActive ? 'white' : 'var(--text-secondary)',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}
       onMouseEnter={(e) => {
-        if (!currentEditMode) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+        if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
       }}
       onMouseLeave={(e) => {
-        if (!currentEditMode) e.currentTarget.style.backgroundColor = 'transparent';
+        if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
       }}
-      title={currentEditMode ? 'Preview' : 'Edit'}
+      title={isActive ? 'Preview' : 'Edit'}
     >
-      {currentEditMode ? <Eye size={16} /> : <Pencil size={16} />}
+      {isActive ? <Eye size={16} /> : <Pencil size={16} />}
     </button>
   );
 };
@@ -89,7 +159,6 @@ const EditorPlugin: Plugin = {
   version: '1.0.0',
   description: 'Text editor with save functionality',
   register(api) {
-    // Register slot for edit toggle button
     api.registerSlot({
       slot: 'header-right',
       id: 'editor-toggle',
@@ -97,13 +166,11 @@ const EditorPlugin: Plugin = {
       order: 50,
     });
 
-    // Register content override
     api.registerContentOverride({
       canOverride: function(tab) { return isEditableFile(tab.fileName) && editMode; },
       component: Editor,
     });
 
-    // Register Ctrl+S shortcut
     api.registerShortcut('Ctrl+S', function() {
       window.dispatchEvent(new CustomEvent('editor-save'));
     });
