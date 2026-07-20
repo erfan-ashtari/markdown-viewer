@@ -10,6 +10,12 @@ export interface PluginAPI {
   registerToolbarItem(config: ToolbarItemConfig): void;
   registerEditor(config: EditorConfig): void;
   registerShortcut(keys: string, handler: () => void): void;
+  registerContentOverride(config: ContentOverrideConfig): void;
+}
+
+export interface ContentOverrideConfig {
+  canOverride: (tab: { filePath: string; fileName: string; content: string }) => boolean;
+  component: any;
 }
 
 export interface FileTypeConfig {

@@ -1,28 +1,58 @@
 import React, { useState, useCallback, useEffect, memo } from 'react';
+import { setEditMode } from './index';
 
 interface EditorProps {
   content: string
   filePath: string
   fileName: string
-  onSave: (newContent: string) => void
-  onCancel: () => void
 }
 
-const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSave, onCancel }) => {
-  const [text, setText] = useState(content)
-  const [dirty, setDirty] = useState(false)
+const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName }) => {
+  const [text, setText] = useState(content);
+  const [dirty, setDirty] = useState(false);
 
   // Ctrl+S handler via custom event
   useEffect(() => {
-    const handleSave = () => onSave(text)
-    window.addEventListener('editor-save', handleSave)
-    return () => window.removeEventListener('editor-save', handleSave)
-  }, [text, onSave])
+    const handleSave = async () => {
+      if (!dirty) return;
+      const success = await (window as any).electronAPI?.writeFile(filePath, text);
+      if (success) {
+        // Update tab content in store
+        const state = (await import('../../store/appStore')).useAppStore.getState();
+        (await import('../../store/appStore')).useAppStore.setState({
+          tabs: state.tabs.map(t =>
+            t.filePath === filePath ? { ...t, content: text } : t
+          )
+        });
+        setEditMode(false);
+      }
+    };
+    window.addEventListener('editor-save', handleSave);
+    return () => window.removeEventListener('editor-save', handleSave);
+  }, [text, filePath, dirty]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value)
-    setDirty(true)
-  }, [])
+    setText(e.target.value);
+    setDirty(true);
+  }, []);
+
+  const handleSaveClick = useCallback(async () => {
+    if (!dirty) return;
+    const success = await (window as any).electronAPI?.writeFile(filePath, text);
+    if (success) {
+      const state = (await import('../../store/appStore')).useAppStore.getState();
+      (await import('../../store/appStore')).useAppStore.setState({
+        tabs: state.tabs.map(t =>
+          t.filePath === filePath ? { ...t, content: text } : t
+        )
+      });
+      setEditMode(false);
+    }
+  }, [text, filePath, dirty]);
+
+  const handleCancel = useCallback(() => {
+    setEditMode(false);
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -44,7 +74,7 @@ const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSav
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
           <button
-            onClick={() => onSave(text)}
+            onClick={handleSaveClick}
             disabled={!dirty}
             style={{
               padding: '4px 10px',
@@ -60,7 +90,7 @@ const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSav
             Save
           </button>
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             style={{
               padding: '4px 10px',
               borderRadius: '4px',
@@ -96,9 +126,9 @@ const Editor: React.FC<EditorProps> = memo(({ content, filePath, fileName, onSav
         }}
       />
     </div>
-  )
-})
+  );
+});
 
-Editor.displayName = 'Editor'
+Editor.displayName = 'Editor';
 
-export { Editor }
+export { Editor };

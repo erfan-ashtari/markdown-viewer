@@ -12,7 +12,6 @@ import { HighlightThemeLoader } from './components/HighlightThemeLoader'
 import { ExportManager } from './export/ExportManager'
 import { ExportFormat } from './export/types/ExportOptions'
 import { pluginManager } from './pluginLoader'
-import { Editor } from '@mdview/plugin-editor/Editor'
 import {
   File, FileText, FileCode, FileImage, FileJson, FileCog, FileArchive
 } from 'lucide-react'
@@ -53,8 +52,6 @@ const App: React.FC = () => {
   const setTheme = useAppStore(s => s.setTheme)
   const currentTheme = useAppStore(s => s.currentTheme)
   const currentFont = useAppStore(s => s.currentFont)
-  const isEditMode = useAppStore(s => s.isEditMode)
-  const setEditMode = useAppStore(s => s.setEditMode)
 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
   const isFullscreen = useAppStore(s => s.isFullscreen)
@@ -155,12 +152,7 @@ const App: React.FC = () => {
         return
       }
 
-      // Ctrl+S — save file (handled by Editor component via custom event)
-      if (ctrl && e.key === 's') {
-        e.preventDefault()
-        window.dispatchEvent(new CustomEvent('editor-save'))
-        return
-      }
+
 
       // ArrowLeft / ArrowRight — navigate between .md files in directory
       if (e.key === 'ArrowLeft' && !ctrl) {
@@ -465,22 +457,7 @@ const App: React.FC = () => {
     }
   }, [])
 
-  // Save handler for editor
-  const handleEditorSave = useCallback(async (newContent: string) => {
-    if (!activeTab) return
-    const success = await (window as any).electronAPI?.writeFile(activeTab.filePath, newContent)
-    if (success) {
-      const state = useAppStore.getState()
-      useAppStore.setState({
-        tabs: state.tabs.map(t => t.id === activeTab.id ? { ...t, content: newContent } : t)
-      })
-      setEditMode(false)
-    }
-  }, [activeTab, setEditMode])
 
-  const handleEditorCancel = useCallback(() => {
-    setEditMode(false)
-  }, [setEditMode])
 
   // Check if a plugin handles this file type
   const pluginFileType = activeTab ? pluginManager.getFileType(activeTab.fileName) : undefined
@@ -570,14 +547,11 @@ const App: React.FC = () => {
               />
             )}
             {activeTab ? (
-              isEditMode ? (
-                <Editor
-                  content={activeTab.content}
-                  filePath={activeTab.filePath}
-                  fileName={activeTab.fileName}
-                  onSave={handleEditorSave}
-                  onCancel={handleEditorCancel}
-                />
+              pluginManager.getActiveContentOverride() ? (
+                (() => {
+                  const override = pluginManager.getActiveContentOverride()!;
+                  return <override.component content={activeTab.content} filePath={activeTab.filePath} fileName={activeTab.fileName} />;
+                })()
               ) : pluginFileType ? (
                 // Plugin handles this file type
                 <pluginFileType.renderer

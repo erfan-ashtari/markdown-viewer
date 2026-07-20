@@ -1,4 +1,4 @@
-import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, EditorConfig } from './types';
+import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, EditorConfig, ContentOverrideConfig } from './types';
 
 export class PluginManager implements PluginAPI {
   private plugins: Plugin[] = [];
@@ -6,6 +6,8 @@ export class PluginManager implements PluginAPI {
   private toolbarItems: ToolbarItemConfig[] = [];
   private editors: EditorConfig[] = [];
   private shortcuts: Map<string, () => void> = new Map();
+  private contentOverrides: ContentOverrideConfig[] = [];
+  private activeContentOverride: ContentOverrideConfig | null = null;
 
   register(plugin: Plugin): void {
     plugin.register(this);
@@ -28,6 +30,10 @@ export class PluginManager implements PluginAPI {
     this.shortcuts.set(keys, handler);
   }
 
+  registerContentOverride(config: ContentOverrideConfig): void {
+    this.contentOverrides.push(config);
+  }
+
   getFileType(fileName: string): FileTypeConfig | undefined {
     var ext = fileName.split('.').pop()?.toLowerCase() || '';
     return this.fileTypes.find(function(ft) { return ft.extensions.includes(ext); });
@@ -47,5 +53,26 @@ export class PluginManager implements PluginAPI {
 
   getPlugins(): Plugin[] {
     return this.plugins.slice();
+  }
+
+  // Content override methods
+  toggleContentOverride(tab: { filePath: string; fileName: string; content: string }): void {
+    if (this.activeContentOverride) {
+      this.activeContentOverride = null;
+    } else {
+      this.activeContentOverride = this.contentOverrides.find(c => c.canOverride(tab)) || null;
+    }
+  }
+
+  isContentOverrideActive(): boolean {
+    return this.activeContentOverride !== null;
+  }
+
+  getActiveContentOverride(): ContentOverrideConfig | null {
+    return this.activeContentOverride;
+  }
+
+  hasContentOverride(tab: { filePath: string; fileName: string; content: string }): boolean {
+    return this.contentOverrides.some(c => c.canOverride(tab));
   }
 }

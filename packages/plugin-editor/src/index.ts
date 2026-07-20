@@ -1,4 +1,5 @@
 import type { Plugin } from '@mdview/plugin-api';
+import { Editor } from './Editor';
 
 // File extensions that can be edited
 const EDITABLE_EXTENSIONS = [
@@ -17,13 +18,38 @@ export function isEditableFile(fileName: string): boolean {
   return EDITABLE_EXTENSIONS.includes(ext);
 }
 
+// Edit mode state (managed internally by plugin)
+let editMode = false;
+let onModeChange: (() => void) | null = null;
+
+export function isEditMode(): boolean {
+  return editMode;
+}
+
+export function setEditMode(value: boolean): void {
+  editMode = value;
+  if (onModeChange) onModeChange();
+}
+
+export function onEditModeChange(callback: () => void): void {
+  onModeChange = callback;
+}
+
 const EditorPlugin: Plugin = {
   name: 'editor',
   version: '1.0.0',
   description: 'Text editor with save functionality',
   register(api) {
-    // Editor is a mode toggle, not a file type renderer
-    // Core app checks isEditableFile() to show/hide edit button
+    // Register content override — replaces content area when editing
+    api.registerContentOverride({
+      canOverride: (tab) => isEditableFile(tab.fileName) && editMode,
+      component: Editor,
+    });
+
+    // Register Ctrl+S shortcut
+    api.registerShortcut('Ctrl+S', () => {
+      window.dispatchEvent(new CustomEvent('editor-save'));
+    });
   }
 };
 
