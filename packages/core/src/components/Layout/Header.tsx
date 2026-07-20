@@ -218,6 +218,33 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
           </div>
         )}
 
+        {/* Edit toggle button */}
+        {activeTab && isEditableFile(activeTab.fileName) && (
+          <button
+            onClick={() => setEditMode(!isEditMode)}
+            style={{
+              padding: '6px',
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: isEditMode ? 'var(--accent-color)' : 'transparent',
+              color: isEditMode ? 'white' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            onMouseEnter={(e) => {
+              if (!isEditMode) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'
+            }}
+            onMouseLeave={(e) => {
+              if (!isEditMode) e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+            title={isEditMode ? 'Preview' : 'Edit'}
+          >
+            {isEditMode ? <Eye size={16} /> : <Pencil size={16} />}
+          </button>
+        )}
+
         {/* Plugin toolbar items */}
         {pluginToolbarItems.map((item) => (
           <button
