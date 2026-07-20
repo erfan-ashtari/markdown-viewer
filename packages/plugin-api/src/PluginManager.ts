@@ -1,4 +1,4 @@
-import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, EditorConfig, ContentOverrideConfig } from './types';
+import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, EditorConfig, ContentOverrideConfig, SlotConfig } from './types';
 
 export class PluginManager implements PluginAPI {
   private plugins: Plugin[] = [];
@@ -8,6 +8,7 @@ export class PluginManager implements PluginAPI {
   private shortcuts: Map<string, () => void> = new Map();
   private contentOverrides: ContentOverrideConfig[] = [];
   private activeContentOverride: ContentOverrideConfig | null = null;
+  private slots: SlotConfig[] = [];
 
   register(plugin: Plugin): void {
     plugin.register(this);
@@ -34,6 +35,10 @@ export class PluginManager implements PluginAPI {
     this.contentOverrides.push(config);
   }
 
+  registerSlot(config: SlotConfig): void {
+    this.slots.push(config);
+  }
+
   getFileType(fileName: string): FileTypeConfig | undefined {
     var ext = fileName.split('.').pop()?.toLowerCase() || '';
     return this.fileTypes.find(function(ft) { return ft.extensions.includes(ext); });
@@ -53,6 +58,12 @@ export class PluginManager implements PluginAPI {
 
   getPlugins(): Plugin[] {
     return this.plugins.slice();
+  }
+
+  getSlotItems(slotName: string): SlotConfig[] {
+    return this.slots
+      .filter(function(s) { return s.slot === slotName; })
+      .sort(function(a, b) { return (a.order || 100) - (b.order || 100); });
   }
 
   // Content override methods

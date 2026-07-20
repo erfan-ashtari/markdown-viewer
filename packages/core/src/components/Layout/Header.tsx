@@ -11,15 +11,12 @@ import {
   Settings,
   Maximize2,
   FileOutput,
-  Type,
-  Pencil,
-  Eye
+  Type
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { themeList } from '../Themes/themeDefinitions'
 import { fontCombos } from '../Themes/fontDefinitions'
-import { pluginManager } from '../../pluginLoader'
-import { isEditableFile } from '@mdview/plugin-editor'
+import { Slot } from '../Slot'
 
 interface HeaderProps {
   onExportPDF: () => void

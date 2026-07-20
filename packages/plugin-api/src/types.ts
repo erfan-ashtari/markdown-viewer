@@ -11,11 +11,19 @@ export interface PluginAPI {
   registerEditor(config: EditorConfig): void;
   registerShortcut(keys: string, handler: () => void): void;
   registerContentOverride(config: ContentOverrideConfig): void;
+  registerSlot(config: SlotConfig): void;
 }
 
 export interface ContentOverrideConfig {
   canOverride: (tab: { filePath: string; fileName: string; content: string }) => boolean;
   component: any;
+}
+
+export interface SlotConfig {
+  slot: string;
+  id: string;
+  component: any;
+  order?: number;
 }
 
 export interface FileTypeConfig {
