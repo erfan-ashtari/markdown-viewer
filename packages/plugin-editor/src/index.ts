@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Plugin } from '@mdview/plugin-api';
 import { Editor } from './Editor';
-import { useAppStore } from '../../store/appStore';
 import { Pencil, Eye } from 'lucide-react';
 
 // File extensions that can be edited
@@ -43,7 +42,8 @@ export function offEditModeChange(callback: () => void): void {
 }
 
 // Edit toggle button component (for slot)
-const EditToggleButton: React.FC = () => {
+// Receives activeTab from Slot context
+const EditToggleButton: React.FC<{ activeTab?: any }> = ({ activeTab }) => {
   const [, forceUpdate] = React.useState(0);
 
   // Subscribe to edit mode changes
@@ -52,11 +52,6 @@ const EditToggleButton: React.FC = () => {
     onEditModeChange(handler);
     return function() { offEditModeChange(handler); };
   }, []);
-
-  // Get active tab from store
-  var tabs = useAppStore(function(s) { return s.tabs; });
-  var activeTabId = useAppStore(function(s) { return s.activeTabId; });
-  var activeTab = tabs.find(function(t) { return t.id === activeTabId; });
 
   if (!activeTab || !isEditableFile(activeTab.fileName)) return null;
 

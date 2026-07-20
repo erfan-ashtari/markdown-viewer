@@ -215,7 +215,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
         )}
 
         {/* Plugin slot for header-right */}
-        <Slot name="header-right" />
+        <Slot name="header-right" context={{ activeTab }} />
 
         {/* Plugin toolbar items */}
         {pluginToolbarItems.map((item) => (
