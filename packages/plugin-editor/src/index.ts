@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Plugin } from '@mdview/plugin-api';
 import { Editor } from './Editor';
+import { useAppStore } from '../../store/appStore';
+import { Pencil, Eye } from 'lucide-react';
 
 // File extensions that can be edited
 const EDITABLE_EXTENSIONS = [
@@ -52,38 +54,38 @@ const EditToggleButton: React.FC = () => {
   }, []);
 
   // Get active tab from store
-  var useAppStore = require('../../store/appStore').useAppStore;
-  var tabs = useAppStore(function(s: any) { return s.tabs; });
-  var activeTabId = useAppStore(function(s: any) { return s.activeTabId; });
-  var activeTab = tabs.find(function(t: any) { return t.id === activeTabId; });
+  var tabs = useAppStore(function(s) { return s.tabs; });
+  var activeTabId = useAppStore(function(s) { return s.activeTabId; });
+  var activeTab = tabs.find(function(t) { return t.id === activeTabId; });
 
   if (!activeTab || !isEditableFile(activeTab.fileName)) return null;
 
   var currentEditMode = isEditMode();
 
-  return React.createElement('button', {
-    onClick: function() { setEditMode(!currentEditMode); },
-    style: {
-      padding: '6px',
-      borderRadius: '4px',
-      border: 'none',
-      backgroundColor: currentEditMode ? 'var(--accent-color)' : 'transparent',
-      color: currentEditMode ? 'white' : 'var(--text-secondary)',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    onMouseEnter: function(e: any) {
-      if (!currentEditMode) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-    },
-    onMouseLeave: function(e: any) {
-      if (!currentEditMode) e.currentTarget.style.backgroundColor = 'transparent';
-    },
-    title: currentEditMode ? 'Preview' : 'Edit',
-  }, currentEditMode
-    ? React.createElement(require('lucide-react').Eye, { size: 16 })
-    : React.createElement(require('lucide-react').Pencil, { size: 16 })
+  return (
+    <button
+      onClick={() => setEditMode(!currentEditMode)}
+      style={{
+        padding: '6px',
+        borderRadius: '4px',
+        border: 'none',
+        backgroundColor: currentEditMode ? 'var(--accent-color)' : 'transparent',
+        color: currentEditMode ? 'white' : 'var(--text-secondary)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      onMouseEnter={(e) => {
+        if (!currentEditMode) e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+      }}
+      onMouseLeave={(e) => {
+        if (!currentEditMode) e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+      title={currentEditMode ? 'Preview' : 'Edit'}
+    >
+      {currentEditMode ? <Eye size={16} /> : <Pencil size={16} />}
+    </button>
   );
 };
 
