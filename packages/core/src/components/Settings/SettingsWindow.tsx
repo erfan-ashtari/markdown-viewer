@@ -506,105 +506,87 @@ const PluginsSection: React.FC = () => {
   const disablePlugin = useAppStore(s => s.disablePlugin);
   const [plugins, setPlugins] = useState<any[]>([]);
 
-  useEffect(() => {
+  const loadPluginsList = () => {
     window.electronAPI?.getPlugins?.().then((list: any[]) => {
       setPlugins(list || []);
     });
-  }, []);
+  };
+
+  useEffect(() => { loadPluginsList(); }, []);
+
+  const handleInstall = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.setAttribute("webkitdirectory", "");
+    input.onchange = async (e: Event) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (!files || files.length === 0) return;
+      const dirPath = (files[0] as any).path;
+      if (dirPath) {
+        const result = await (window as any).electronAPI?.installPlugin?.(dirPath);
+        if (result?.success) loadPluginsList();
+      }
+    };
+    input.click();
+  };
+
+  const handleUninstall = async (name: string) => {
+    const result = await (window as any).electronAPI?.uninstallPlugin?.(name);
+    if (result?.success) loadPluginsList();
+  };
+
+  const getContributorSummary = (contributes: any) => {
+    if (!contributes) return null;
+    const parts: string[] = [];
+    if (contributes.fileTypes) {
+      const exts = contributes.fileTypes.flatMap((ft: any) => ft.extensions);
+      parts.push("File types: " + exts.join(", "));
+    }
+    if (contributes.slots) {
+      parts.push("UI slots: " + contributes.slots.map((s: any) => s.slot).join(", "));
+    }
+    return parts.length > 0 ? parts.join(" | ") : null;
+  };
 
   return (
     <div>
-      <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>Plugins</h2>
-      
-      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+      <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "24px" }}>Plugins</h2>
+      <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px" }}>
         Manage installed plugins. Disable a plugin and reload the app to apply changes.
       </p>
 
       {plugins.length === 0 ? (
         <div style={{
-          padding: '20px',
-          textAlign: 'center',
-          color: 'var(--text-muted)',
-          backgroundColor: 'var(--bg-secondary)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-color)',
-        }}>
-          No plugins installed
-        </div>
+          padding: "20px", textAlign: "center", color: "var(--text-muted)",
+          backgroundColor: "var(--bg-secondary)", borderRadius: "8px",
+          border: "1px solid var(--border-color)",
+        }}>No plugins installed</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {plugins.map((plugin: any) => {
             const isEnabled = enabledPlugins.includes(plugin.name);
+            const summary = getContributorSummary(plugin.contributes);
             return (
-              <div
-                key={plugin.name}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{plugin.name}</span>
-                    <span style={{
-                      fontSize: '11px',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      color: 'var(--text-muted)',
-                    }}>
-                      v{plugin.version}
-                    </span>
-                    {plugin.builtin && (
-                      <span style={{
-                        fontSize: '11px',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--accent-color)',
-                        color: 'white',
-                        opacity: 0.8,
-                      }}>
-                        Built-in
-                      </span>
-                    )}
+              <div key={plugin.name} style={{
+                padding: "12px 16px", borderRadius: "8px",
+                backgroundColor: "var(--bg-secondary)",
+                border: "1px solid var(--border-color)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "14px", fontWeight: 500 }}>{plugin.displayName || plugin.name}</span>
+                      <span style={{ fontSize: "11px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "var(--bg-tertiary)", color: "var(--text-muted)" }}>v{plugin.version}</span>
+                    </div>
+                    {plugin.description && <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px", marginBottom: 0 }}>{plugin.description}</p>}
+                    {summary && <p style={{ fontSize: "11px", color: "var(--accent-color)", marginTop: "4px", marginBottom: 0 }}>{summary}</p>}
                   </div>
-                  {plugin.description && (
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', marginBottom: 0 }}>
-                      {plugin.description}
-                    </p>
-                  )}
-                </div>
-                <div
-                  onClick={() => {
-                    if (isEnabled) disablePlugin(plugin.name);
-                    else enablePlugin(plugin.name);
-                  }}
-                  style={{
-                    width: '36px',
-                    height: '20px',
-                    borderRadius: '10px',
-                    backgroundColor: isEnabled ? 'var(--accent-color)' : 'var(--bg-tertiary)',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    backgroundColor: 'white',
-                    position: 'absolute',
-                    top: '2px',
-                    left: isEnabled ? '18px' : '2px',
-                    transition: 'left 0.2s',
-                  }} />
+                  <div
+                    onClick={() => { if (isEnabled) disablePlugin(plugin.name); else enablePlugin(plugin.name); }}
+                    style={{ width: "36px", height: "20px", borderRadius: "10px", backgroundColor: isEnabled ? "var(--accent-color)" : "var(--bg-tertiary)", position: "relative", cursor: "pointer", transition: "background-color 0.2s", flexShrink: 0 }}
+                  >
+                    <div style={{ width: "16px", height: "16px", borderRadius: "50%", backgroundColor: "white", position: "absolute", top: "2px", left: isEnabled ? "18px" : "2px", transition: "left 0.2s" }} />
+                  </div>
                 </div>
               </div>
             );
@@ -612,27 +594,11 @@ const PluginsSection: React.FC = () => {
         </div>
       )}
 
-      {plugins.length > 0 && (
-        <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => window.electronAPI?.reloadMain?.()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              fontSize: '13px',
-            }}
-          >
-            Reload App
-          </button>
-        </div>
-      )}
+      <div style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+        <button onClick={handleInstall} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", cursor: "pointer", fontSize: "13px" }}>Install Plugin</button>
+        <button onClick={() => (window as any).electronAPI?.openPluginsFolder?.()} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", cursor: "pointer", fontSize: "13px" }}>Open Plugins Folder</button>
+        {plugins.length > 0 && <button onClick={() => (window as any).electronAPI?.reloadMain?.()} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", cursor: "pointer", fontSize: "13px" }}>Reload App</button>}
+      </div>
     </div>
   );
 };
