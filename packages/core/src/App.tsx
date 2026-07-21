@@ -197,6 +197,26 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Send current file info to main process for runtime plugins
+  useEffect(() => {
+    if (activeTab) {
+      window.electronAPI?.setCurrentFile?.({
+        filePath: activeTab.filePath,
+        fileName: activeTab.fileName,
+        content: activeTab.content,
+      })
+    }
+  }, [activeTab?.id])
+
+  // Send sidebar directory to main process when dirFiles changes
+  useEffect(() => {
+    const dirFiles = useAppStore.getState().dirFiles
+    if (dirFiles.length > 0) {
+      const dirPath = dirFiles[0].path.replace(/[\\/][^\\/]+$/, '')
+      window.electronAPI?.setCurrentDirectory?.(dirPath)
+    }
+  }, [useAppStore.getState().dirFiles])
+
   // Fetch directory .md files when active tab changes
   useEffect(() => {
     if (!activeTab || activeTab.type !== 'markdown') return

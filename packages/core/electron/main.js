@@ -456,6 +456,11 @@ ipcMain.handle('set-current-file', (event, fileInfo) => {
   runtimePluginManager.updateCurrentFile(fileInfo);
 });
 
+ipcMain.handle('set-current-directory', (event, dirPath) => {
+  runtimePluginManager.currentFile = { filePath: dirPath + '/.current-dir', fileName: path.basename(dirPath), content: '' };
+  console.log('[runtimePlugin] Current directory set:', dirPath);
+});
+
 ipcMain.handle('get-plugin-state', () => {
   return runtimePluginManager.getPluginState();
 });
