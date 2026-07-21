@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPluginState: () => ipcRenderer.invoke('get-plugin-state'),
   setPluginState: (name, enabled) => ipcRenderer.invoke('set-plugin-state', name, enabled),
   getExporters: () => ipcRenderer.invoke('get-exporters'),
+  getCommands: () => ipcRenderer.invoke('get-commands'),
   executeExport: (name, content, meta) => ipcRenderer.invoke('execute-export', name, content, meta),
   executeCommand: (name, args) => ipcRenderer.invoke('execute-command', name, args),
   reloadMain: () => ipcRenderer.send('reload-main'),

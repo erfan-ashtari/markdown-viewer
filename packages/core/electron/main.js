@@ -448,6 +448,10 @@ ipcMain.handle('get-exporters', () => {
   return runtimePluginManager.getExporters();
 });
 
+ipcMain.handle('get-commands', () => {
+  return runtimePluginManager.getCommands();
+});
+
 ipcMain.handle('execute-export', (event, name, content, meta) => {
   try {
     return runtimePluginManager.executeExport(name, content, meta);
