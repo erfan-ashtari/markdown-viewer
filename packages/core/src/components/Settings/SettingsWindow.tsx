@@ -646,9 +646,14 @@ const PluginsSection: React.FC = () => {
 };
 
 const RuntimePluginDebug: React.FC = () => {
-  const runtimeExporters = useAppStore((s: any) => s.runtimeExporters);
-  const runtimeCommands = useAppStore((s: any) => s.runtimeCommands);
+  const [exporters, setExporters] = useState<any[]>([]);
+  const [commands, setCommands] = useState<any[]>([]);
   const [testResult, setTestResult] = useState<string>('');
+
+  useEffect(() => {
+    (window as any).electronAPI?.getExporters?.().then((list: any[]) => setExporters(list || []));
+    (window as any).electronAPI?.getCommands?.().then((list: any[]) => setCommands(list || []));
+  }, []);
 
   const testExporter = async (name: string) => {
     const result = await (window as any).electronAPI?.executeExport?.(name, '# Hello World\n\nThis is a test.', { fileName: 'test.md' });
@@ -662,7 +667,7 @@ const RuntimePluginDebug: React.FC = () => {
     console.log('[Debug] Command result:', result);
   };
 
-  if ((!runtimeExporters || runtimeExporters.length === 0) && (!runtimeCommands || runtimeCommands.length === 0)) {
+  if (exporters.length === 0 && commands.length === 0) {
     return <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No runtime plugins registered.</p>;
   }
 
@@ -671,7 +676,7 @@ const RuntimePluginDebug: React.FC = () => {
       {runtimeExporters && runtimeExporters.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Exporters:</p>
-          {runtimeExporters.map((exp: any) => (
+          {exporters.map((exp: any) => (
             <div key={exp.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{ fontSize: '12px', flex: 1 }}>{exp.name}</span>
               <button onClick={() => testExporter(exp.name)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '11px' }}>Test</button>
@@ -682,7 +687,7 @@ const RuntimePluginDebug: React.FC = () => {
       {runtimeCommands && runtimeCommands.length > 0 && (
         <div>
           <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Commands:</p>
-          {runtimeCommands.map((cmd: any) => (
+          {commands.map((cmd: any) => (
             <div key={cmd.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span style={{ fontSize: '12px', flex: 1 }}>{cmd.name}</span>
               <button onClick={() => testCommand(cmd.name)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '11px' }}>Test</button>

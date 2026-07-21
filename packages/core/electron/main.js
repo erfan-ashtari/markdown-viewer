@@ -456,7 +456,9 @@ ipcMain.handle('set-plugin-state', (event, name, enabled) => {
 });
 
 ipcMain.handle('get-exporters', () => {
-  return runtimePluginManager.getExporters();
+  const exporters = runtimePluginManager.getExporters();
+  console.log('[main] get-exporters called, returning:', exporters.length, 'exporters');
+  return exporters;
 });
 
 ipcMain.handle('get-commands', () => {
