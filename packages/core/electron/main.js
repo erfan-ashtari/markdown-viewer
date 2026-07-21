@@ -1,6 +1,16 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, protocol } = require('electron');
+const RuntimePluginManager = require('./runtimePluginManager');
+const runtimePluginManager = new RuntimePluginManager();
 const path = require('path');
 const fs = require('fs');
+
+// Resource path helper for dev/prod
+function getResourcePath(relativePath) {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, relativePath);
+  }
+  return path.join(__dirname, relativePath);
+}
 
 // Plugin-registered file filters (set from renderer)
 let pluginFileFilters = [];
@@ -425,6 +435,35 @@ ipcMain.handle('open-plugins-folder', () => {
   shell.openPath(pluginsDir);
 });
 
+// Runtime plugin state management
+ipcMain.handle('get-plugin-state', () => {
+  return runtimePluginManager.getPluginState();
+});
+
+ipcMain.handle('set-plugin-state', (event, name, enabled) => {
+  return runtimePluginManager.setPluginState(name, enabled);
+});
+
+ipcMain.handle('get-exporters', () => {
+  return runtimePluginManager.getExporters();
+});
+
+ipcMain.handle('execute-export', (event, name, content, meta) => {
+  try {
+    return runtimePluginManager.executeExport(name, content, meta);
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('execute-command', (event, name, args) => {
+  try {
+    return runtimePluginManager.executeCommand(name, args);
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 // Reload main window (from Settings)
 ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
@@ -495,7 +534,10 @@ if (!gotTheLock) {
 
 app.whenReady().then(() => {
   // Register custom protocol for loading local files (used by plugins)
-  protocol.registerFileProtocol('local-file', (request, callback) => {
+  runtimePluginManager.init();
+runtimePluginManager.loadAllEnabled();
+
+protocol.registerFileProtocol('local-file', (request, callback) => {
     const filePath = decodeURIComponent(request.url.replace('local-file://', ''));
     callback({ path: filePath });
   });

@@ -163,6 +163,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setIsFullscreen: (value) => set({ isFullscreen: value }),
 
   setDirFiles: (files) => set({ dirFiles: files }),
+  setRuntimeExporters: (items) => set({ runtimeExporters: items }),
+  setRuntimeCommands: (items) => set({ runtimeCommands: items }),
 
   enablePlugin: (name) => {
     const current = get().enabledPlugins

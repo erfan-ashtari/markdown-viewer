@@ -51,6 +51,16 @@ export async function loadPlugins() {
     }
   }
 
+  // Fetch runtime plugin data from main process
+  try {
+    const exporters = await window.electronAPI.getExporters();
+    useAppStore.setState({ runtimeExporters: exporters || [] });
+    const commands = await window.electronAPI.getCommands?.() || [];
+    useAppStore.setState({ runtimeCommands: commands || [] });
+  } catch (err) {
+    console.warn('[pluginLoader] Failed to fetch runtime plugin state:', err);
+  }
+
   // Phase 3: Activate enabled runtime plugins
   for (const entry of runtimeEntries) {
     if (!currentEnabled.includes(entry.name)) continue;
