@@ -197,7 +197,7 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Send current file info to main process for runtime plugins
+  // Send active tab file info to main process
   useEffect(() => {
     if (activeTab) {
       window.electronAPI?.setCurrentFile?.({

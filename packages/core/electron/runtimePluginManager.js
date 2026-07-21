@@ -330,8 +330,9 @@ class RuntimePluginManager {
 
   updateCurrentFile(fileInfo) {
     this.currentFile = fileInfo || null;
+    const name = fileInfo ? fileInfo.fileName : '(none)';
     const dir = fileInfo && fileInfo.filePath ? path.dirname(fileInfo.filePath) : '(none)';
-    console.log('[runtimePlugin] Current file updated:', fileInfo ? fileInfo.fileName : 'none', '-> directory:', dir);
+    console.log('[Active Tab]', name, '->', dir);
   }
 
   // --- Event System ---
