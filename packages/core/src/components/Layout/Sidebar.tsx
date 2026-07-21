@@ -303,6 +303,14 @@ const TreeItem: React.FC<{
 export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFile, isOpen, dirToLoad }) => {
   const [fileTree, setFileTree] = useState<FileNode[]>([])
   const [rootPath, setRootPath] = useState<string | null>(null)
+
+  // Send sidebar directory to main process for runtime plugins
+  useEffect(() => {
+    if (rootPath) {
+      window.electronAPI?.setCurrentDirectory?.(rootPath)
+    }
+  }, [rootPath])
+
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [sortAsc, setSortAsc] = useState(true)
