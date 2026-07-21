@@ -195,7 +195,8 @@ ipcMain.handle('open-file', async () => {
     const filePath = result.filePaths[0];
     const content = fs.readFileSync(filePath, 'utf-8');
     const fileName = path.basename(filePath);
-    // Emit fileOpened event to runtime plugins
+    // Update runtime plugins with current file info
+    runtimePluginManager.updateCurrentFile({ filePath, fileName, content });
     runtimePluginManager.emitEvent('fileOpened', { filePath, fileName, content });
 
     return { filePath, content, fileName };
@@ -336,7 +337,8 @@ ipcMain.handle('open-file-new-window', async (event, filePath) => {
   }
   newWindow.webContents.on('did-finish-load', () => {
     if (isWindowUsable(newWindow)) {
-      newWindow.webContents.send('load-file', { content, fileName, filePath: targetPath, dirPath });
+      runtimePluginManager.updateCurrentFile({ filePath: targetPath, fileName, content });
+    newWindow.webContents.send('load-file', { content, fileName, filePath: targetPath, dirPath });
     }
   });
 });

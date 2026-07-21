@@ -11,6 +11,8 @@ class RuntimePluginManager {
     this.stateFile = null;
     this.watcher = null;
     this._lastScan = 0;
+    this.currentFile = null;  // { filePath, fileName, content }
+    this.pluginContexts = new Map();  // name -> context (for updating currentFile)
   }
 
   init() {
@@ -124,18 +126,27 @@ class RuntimePluginManager {
   // --- Restricted File System ---
 
   createFsWrapper(pluginName) {
+    const self = this;
     const userDataPath = app.getPath('userData');
     const workspaceDir = path.join(userDataPath, 'workspace');
-    const allowedDirs = [
-      path.join(userDataPath, 'plugins'),
-      workspaceDir,
-    ];
+
+    function getAllowedDirs() {
+      const dirs = [
+        path.join(userDataPath, 'plugins'),
+        workspaceDir,
+      ];
+      // Add current file's directory if available
+      if (self.currentFile && self.currentFile.filePath) {
+        dirs.push(path.dirname(self.currentFile.filePath));
+      }
+      return dirs;
+    }
 
     function validatePath(filePath) {
-      // Relative paths resolve against workspace directory
-      const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(workspaceDir, filePath);
+      const allowedDirs = getAllowedDirs();
+      const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(allowedDirs[1], filePath);
       if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
-        throw new Error('Access denied: path "' + filePath + '" is outside allowed directories');
+        throw new Error('Access denied: path outside allowed directories');
       }
       return resolved;
     }
@@ -167,6 +178,8 @@ class RuntimePluginManager {
     const pluginFs = this.createFsWrapper(pluginName);
 
     return {
+      // Current file info (from sidebar) — updated dynamically
+      get currentFile() { return self.currentFile; },
       // Registration
       registerExporter(name, handler, description) {
         self.exporters.set(name, { handler, description: description || name, plugin: pluginName });
@@ -207,6 +220,7 @@ class RuntimePluginManager {
 
       if (mod.activate) {
         const context = this.createContext(name);
+        this.pluginContexts.set(name, context);
         mod.activate(context);
         const mtime = this.getPluginMtime(plugin.path);
         this.loadedPlugins.set(name, { mod, dir: plugin.path, mtime });
@@ -244,6 +258,7 @@ class RuntimePluginManager {
     } catch {}
 
     this.loadedPlugins.delete(name);
+    this.pluginContexts.delete(name);
     console.log('[runtimePlugin] Unloaded:', name);
   }
 
@@ -308,6 +323,27 @@ class RuntimePluginManager {
     for (const [name, config] of Object.entries(state.plugins)) {
       if (config.enabled && !this.loadedPlugins.has(name)) {
         this.loadPlugin(name);
+      }
+    }
+  }
+
+  // --- Current File Tracking ---
+
+  updateCurrentFile(fileInfo) {
+    this.currentFile = fileInfo || null;
+    for (const [, context] of this.pluginContexts) {
+      context.currentFile = this.currentFile;
+      // Update fs wrapper to resolve relative paths against current file's directory
+      if (this.currentFile && this.currentFile.filePath) {
+        const fileDir = path.dirname(this.currentFile.filePath);
+        const userDataPath = app.getPath('userData');
+        const allowedDirs = [
+          path.join(userDataPath, 'plugins'),
+          path.join(userDataPath, 'workspace'),
+          fileDir,
+        ];
+        context.fs._currentDir = fileDir;
+        context.fs._allowedDirs = allowedDirs;
       }
     }
   }
