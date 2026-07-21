@@ -55,7 +55,7 @@ export async function loadPlugins() {
   try {
     const exporters = await window.electronAPI.getExporters();
     useAppStore.setState({ runtimeExporters: exporters || [] });
-    console.log('[pluginLoader] Runtime exporters:', (exporters || []).length);
+    console.log('[pluginLoader] Runtime plugins loaded. Exporters:', (exporters || []).length, '| Commands:', (commands || []).length);
     const commands = await window.electronAPI.getCommands() || [];
     useAppStore.setState({ runtimeCommands: commands || [] });
   } catch (err) {

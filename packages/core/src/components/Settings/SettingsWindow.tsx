@@ -508,6 +508,8 @@ const PluginsSection: React.FC = () => {
 
   const loadPluginsList = () => {
     window.electronAPI?.getPlugins?.().then((list: any[]) => {
+      console.log('[Settings] getPlugins returned:', list?.length, 'plugins');
+      if (list) list.forEach((p: any) => console.log('  -', p.name, p.runtime ? '(runtime)' : '(built-in)'));
       setPlugins(list || []);
     });
   };
@@ -593,9 +595,11 @@ const PluginsSection: React.FC = () => {
                   <div
                     onClick={async () => {
                       if (plugin.runtime) {
-                        // Runtime plugin: toggle via main process
-                        await (window as any).electronAPI?.setPluginState?.(plugin.name, !isEnabled);
-                        loadPluginsList();
+                        // Runtime plugin: toggle via main process, then refresh
+                        const result = await (window as any).electronAPI?.setPluginState?.(plugin.name, !isEnabled);
+                        console.log('[Settings] toggle result:', result);
+                        // Small delay to let main process finish loading/unloading
+                        setTimeout(() => loadPluginsList(), 200);
                       } else {
                         // Built-in plugin: toggle via Zustand
                         if (isEnabled) disablePlugin(plugin.name);

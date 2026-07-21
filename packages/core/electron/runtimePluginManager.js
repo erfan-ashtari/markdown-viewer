@@ -254,6 +254,8 @@ class RuntimePluginManager {
 
     this.watcher = fs.watch(pluginsDir, { recursive: false }, (eventType, filename) => {
       if (!filename) return;
+      // Ignore state file changes (prevents feedback loop)
+      if (filename === 'plugins-state.json') return;
 
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
