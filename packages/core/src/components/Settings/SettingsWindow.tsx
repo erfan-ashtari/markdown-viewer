@@ -673,7 +673,7 @@ const RuntimePluginDebug: React.FC = () => {
 
   return (
     <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', padding: '12px' }}>
-      {runtimeExporters && runtimeExporters.length > 0 && (
+      {exporters.length > 0 && (
         <div style={{ marginBottom: '12px' }}>
           <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Exporters:</p>
           {exporters.map((exp: any) => (
@@ -684,7 +684,7 @@ const RuntimePluginDebug: React.FC = () => {
           ))}
         </div>
       )}
-      {runtimeCommands && runtimeCommands.length > 0 && (
+      {commands.length > 0 && (
         <div>
           <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Commands:</p>
           {commands.map((cmd: any) => (
