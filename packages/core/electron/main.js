@@ -346,14 +346,25 @@ ipcMain.handle('set-file-filters', (event, filters) => {
   pluginFileFilters = filters;
 });
 
-// Plugin registry — reads from plugins.json (single source of truth)
+// Plugin registry — built-in from plugins.json + runtime from userData
 ipcMain.handle('get-plugins', () => {
+  // Built-in plugins from plugins.json
   const pluginsJsonPath = path.join(__dirname, '../../plugins.json');
+  let builtin = [];
   try {
-    return JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8'));
-  } catch {
-    return [];
-  }
+    builtin = JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8'));
+  } catch {}
+
+  // Runtime plugins from userData
+  const runtime = runtimePluginManager.discoverPlugins().map(p => ({
+    name: p.name,
+    displayName: p.displayName,
+    version: p.version,
+    description: p.description,
+    runtime: true,
+  }));
+
+  return [...builtin, ...runtime];
 });
 
 // Discover runtime plugins from {userData}/plugins/

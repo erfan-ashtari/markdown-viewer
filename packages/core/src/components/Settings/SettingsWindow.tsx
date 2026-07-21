@@ -591,7 +591,17 @@ const PluginsSection: React.FC = () => {
                     {summary && <p style={{ fontSize: "11px", color: "var(--accent-color)", marginTop: "4px", marginBottom: 0 }}>{summary}</p>}
                   </div>
                   <div
-                    onClick={() => { if (isEnabled) disablePlugin(plugin.name); else enablePlugin(plugin.name); }}
+                    onClick={async () => {
+                      if (plugin.runtime) {
+                        // Runtime plugin: toggle via main process
+                        await (window as any).electronAPI?.setPluginState?.(plugin.name, !isEnabled);
+                        loadPluginsList();
+                      } else {
+                        // Built-in plugin: toggle via Zustand
+                        if (isEnabled) disablePlugin(plugin.name);
+                        else enablePlugin(plugin.name);
+                      }
+                    }}
                     style={{ width: "36px", height: "20px", borderRadius: "10px", backgroundColor: isEnabled ? "var(--accent-color)" : "var(--bg-tertiary)", position: "relative", cursor: "pointer", transition: "background-color 0.2s", flexShrink: 0 }}
                   >
                     <div style={{ width: "16px", height: "16px", borderRadius: "50%", backgroundColor: "white", position: "absolute", top: "2px", left: isEnabled ? "18px" : "2px", transition: "left 0.2s" }} />
