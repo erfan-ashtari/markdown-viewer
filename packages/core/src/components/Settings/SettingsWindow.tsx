@@ -633,6 +633,69 @@ const PluginsSection: React.FC = () => {
         <button onClick={() => (window as any).electronAPI?.openPluginsFolder?.()} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", cursor: "pointer", fontSize: "13px" }}>Open Plugins Folder</button>
         {plugins.length > 0 && <button onClick={() => (window as any).electronAPI?.reloadMain?.()} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "8px 14px", borderRadius: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", cursor: "pointer", fontSize: "13px" }}>Reload App</button>}
       </div>
+
+      {/* Debug: Runtime Plugin Activity */}
+      <div style={{ marginTop: '24px' }}>
+        <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px' }}>
+          Runtime Plugin Activity
+        </h3>
+        <RuntimePluginDebug />
+      </div>
+    </div>
+  );
+};
+
+const RuntimePluginDebug: React.FC = () => {
+  const runtimeExporters = useAppStore((s: any) => s.runtimeExporters);
+  const runtimeCommands = useAppStore((s: any) => s.runtimeCommands);
+  const [testResult, setTestResult] = useState<string>('');
+
+  const testExporter = async (name: string) => {
+    const result = await (window as any).electronAPI?.executeExport?.(name, '# Hello World\n\nThis is a test.', { fileName: 'test.md' });
+    setTestResult(JSON.stringify(result, null, 2));
+    console.log('[Debug] Export result:', result);
+  };
+
+  const testCommand = async (name: string) => {
+    const result = await (window as any).electronAPI?.executeCommand?.(name, { text: 'hello world' });
+    setTestResult(JSON.stringify(result, null, 2));
+    console.log('[Debug] Command result:', result);
+  };
+
+  if ((!runtimeExporters || runtimeExporters.length === 0) && (!runtimeCommands || runtimeCommands.length === 0)) {
+    return <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No runtime plugins registered.</p>;
+  }
+
+  return (
+    <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', padding: '12px' }}>
+      {runtimeExporters && runtimeExporters.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Exporters:</p>
+          {runtimeExporters.map((exp: any) => (
+            <div key={exp.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '12px', flex: 1 }}>{exp.name}</span>
+              <button onClick={() => testExporter(exp.name)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '11px' }}>Test</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {runtimeCommands && runtimeCommands.length > 0 && (
+        <div>
+          <p style={{ fontSize: '12px', fontWeight: 500, marginBottom: '8px' }}>Commands:</p>
+          {runtimeCommands.map((cmd: any) => (
+            <div key={cmd.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <span style={{ fontSize: '12px', flex: 1 }}>{cmd.name}</span>
+              <button onClick={() => testCommand(cmd.name)} style={{ padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '11px' }}>Test</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {testResult && (
+        <div style={{ marginTop: '8px', padding: '8px', borderRadius: '4px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)' }}>
+          <p style={{ fontSize: '11px', fontWeight: 500, marginBottom: '4px' }}>Result:</p>
+          <pre style={{ fontSize: '11px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>{testResult}</pre>
+        </div>
+      )}
     </div>
   );
 };
