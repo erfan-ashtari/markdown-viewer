@@ -125,13 +125,15 @@ class RuntimePluginManager {
 
   createFsWrapper(pluginName) {
     const userDataPath = app.getPath('userData');
+    const workspaceDir = path.join(userDataPath, 'workspace');
     const allowedDirs = [
       path.join(userDataPath, 'plugins'),
-      path.join(userDataPath, 'workspace'),
+      workspaceDir,
     ];
 
     function validatePath(filePath) {
-      const resolved = path.resolve(filePath);
+      // Relative paths resolve against workspace directory
+      const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(workspaceDir, filePath);
       if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
         throw new Error('Access denied: path "' + filePath + '" is outside allowed directories');
       }
