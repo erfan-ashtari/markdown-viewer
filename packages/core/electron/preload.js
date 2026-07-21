@@ -23,6 +23,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   exportPdf: (htmlContent, margins) => ipcRenderer.invoke('export-pdf', htmlContent, margins),
   setFileFilters: (filters) => ipcRenderer.invoke('set-file-filters', filters),
   getPlugins: () => ipcRenderer.invoke('get-plugins'),
+  discoverPlugins: () => ipcRenderer.invoke('discover-plugins'),
+  installPlugin: (sourcePath) => ipcRenderer.invoke('install-plugin', sourcePath),
+  uninstallPlugin: (name) => ipcRenderer.invoke('uninstall-plugin', name),
+  openPluginsFolder: () => ipcRenderer.invoke('open-plugins-folder'),
   reloadMain: () => ipcRenderer.send('reload-main'),
   getPathForFile: (file) => {
     try {

@@ -346,6 +346,85 @@ ipcMain.handle('get-plugins', () => {
   }
 });
 
+// Discover runtime plugins from {userData}/plugins/
+ipcMain.handle('discover-plugins', () => {
+  const pluginsDir = path.join(app.getPath('userData'), 'plugins');
+  if (!fs.existsSync(pluginsDir)) {
+    fs.mkdirSync(pluginsDir, { recursive: true });
+    return [];
+  }
+
+  const dirs = fs.readdirSync(pluginsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => path.join(pluginsDir, d.name));
+
+  const plugins = [];
+  for (const dir of dirs) {
+    try {
+      const pkgPath = path.join(dir, 'package.json');
+      if (!fs.existsSync(pkgPath)) continue;
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      if (!pkg.name || !pkg.main || !pkg.contributes) continue;
+      plugins.push({
+        name: pkg.name,
+        displayName: pkg.displayName || pkg.name,
+        version: pkg.version,
+        description: pkg.description || '',
+        publisher: pkg.publisher || '',
+        main: pkg.main,
+        activationEvents: pkg.activationEvents || ['onStartup'],
+        contributes: pkg.contributes,
+        path: dir,
+      });
+    } catch (e) {
+      console.warn('Invalid plugin at ' + dir + ':', e.message);
+    }
+  }
+
+  // Sort: newest first
+  plugins.sort((a, b) => {
+    try {
+      const aTime = fs.statSync(path.join(pluginsDir, a.name)).mtimeMs;
+      const bTime = fs.statSync(path.join(pluginsDir, b.name)).mtimeMs;
+      return bTime - aTime;
+    } catch { return 0; }
+  });
+
+  return plugins;
+});
+
+// Install a plugin from a source directory
+ipcMain.handle('install-plugin', async (event, sourcePath) => {
+  try {
+    const pluginsDir = path.join(app.getPath('userData'), 'plugins');
+    if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
+    const pkg = JSON.parse(fs.readFileSync(path.join(sourcePath, 'package.json'), 'utf-8'));
+    const targetDir = path.join(pluginsDir, pkg.name);
+    fs.cpSync(sourcePath, targetDir, { recursive: true });
+    return { success: true, name: pkg.name };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// Uninstall a plugin
+ipcMain.handle('uninstall-plugin', (event, pluginName) => {
+  const pluginsDir = path.join(app.getPath('userData'), 'plugins');
+  const targetDir = path.join(pluginsDir, pluginName);
+  if (fs.existsSync(targetDir)) {
+    fs.rmSync(targetDir, { recursive: true });
+    return { success: true };
+  }
+  return { success: false, error: 'Plugin not found' };
+});
+
+// Open plugins folder in file explorer
+ipcMain.handle('open-plugins-folder', () => {
+  const pluginsDir = path.join(app.getPath('userData'), 'plugins');
+  if (!fs.existsSync(pluginsDir)) fs.mkdirSync(pluginsDir, { recursive: true });
+  shell.openPath(pluginsDir);
+});
+
 // Reload main window (from Settings)
 ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
