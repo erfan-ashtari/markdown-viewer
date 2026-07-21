@@ -182,7 +182,9 @@ class RuntimePluginManager {
   loadAllEnabled() {
     const state = this.loadState();
     const plugins = this.discoverPlugins();
+    const discoveredNames = new Set(plugins.map(p => p.name));
 
+    // Auto-enable new plugins
     let changed = false;
     for (const plugin of plugins) {
       if (!state.plugins[plugin.name]) {
@@ -191,10 +193,22 @@ class RuntimePluginManager {
         console.log('[runtimePlugin] Auto-enabled new plugin:', plugin.name);
       }
     }
+
+    // Unload plugins that were removed from disk
+    for (const name of this.loadedPlugins.keys()) {
+      if (!discoveredNames.has(name)) {
+        console.log('[runtimePlugin] Plugin removed from disk, unloading:', name);
+        this.unloadPlugin(name);
+        delete state.plugins[name];
+        changed = true;
+      }
+    }
+
     if (changed) this.saveState(state);
 
+    // Load all enabled plugins
     for (const [name, config] of Object.entries(state.plugins)) {
-      if (config.enabled) {
+      if (config.enabled && !this.loadedPlugins.has(name)) {
         this.loadPlugin(name);
       }
     }
