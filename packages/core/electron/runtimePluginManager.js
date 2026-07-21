@@ -130,21 +130,20 @@ class RuntimePluginManager {
     const userDataPath = app.getPath('userData');
     const workspaceDir = path.join(userDataPath, 'workspace');
 
-    function getAllowedDirs() {
-      const dirs = [
+    function validatePath(filePath) {
+      // Get current file directory dynamically (always fresh)
+      const fileDir = self.currentFile && self.currentFile.filePath
+        ? path.dirname(self.currentFile.filePath)
+        : workspaceDir;
+
+      const allowedDirs = [
         path.join(userDataPath, 'plugins'),
         workspaceDir,
+        fileDir,
       ];
-      // Add current file's directory if available
-      if (self.currentFile && self.currentFile.filePath) {
-        dirs.push(path.dirname(self.currentFile.filePath));
-      }
-      return dirs;
-    }
 
-    function validatePath(filePath) {
-      const allowedDirs = getAllowedDirs();
-      const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(allowedDirs[1], filePath);
+      const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(fileDir, filePath);
+      console.log('[runtimePlugin] fs.validatePath:', filePath, '->', resolved, '(fileDir:', fileDir + ')');
       if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
         throw new Error('Access denied: path outside allowed directories');
       }
@@ -331,8 +330,8 @@ class RuntimePluginManager {
 
   updateCurrentFile(fileInfo) {
     this.currentFile = fileInfo || null;
-    // No need to update contexts — they use self.currentFile via getter
-    console.log('[runtimePlugin] Current file updated:', fileInfo ? fileInfo.fileName : 'none');
+    const dir = fileInfo && fileInfo.filePath ? path.dirname(fileInfo.filePath) : '(none)';
+    console.log('[runtimePlugin] Current file updated:', fileInfo ? fileInfo.fileName : 'none', '-> directory:', dir);
   }
 
   // --- Event System ---
