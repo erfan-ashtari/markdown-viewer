@@ -1,6 +1,6 @@
 [
   {
-    "name": "plugin-pdf",
+    "name": "pdf-viewer",
     "package": "@mdview/plugin-pdf",
     "entry": "../plugin-pdf/src/index.tsx",
     "version": "1.0.0",
@@ -17,11 +17,12 @@
           ],
           "name": "PDF Document"
         }
-      ]
+      ],
+      "name": "pdf-viewer"
     }
   },
   {
-    "name": "plugin-images",
+    "name": "image-viewer",
     "package": "@mdview/plugin-images",
     "entry": "../plugin-images/src/index.tsx",
     "version": "1.0.0",
@@ -54,11 +55,12 @@
           ],
           "name": "Image"
         }
-      ]
+      ],
+      "name": "image-viewer"
     }
   },
   {
-    "name": "plugin-editor",
+    "name": "editor",
     "package": "@mdview/plugin-editor",
     "entry": "../plugin-editor/src/index.tsx",
     "version": "1.0.0",
@@ -74,7 +76,8 @@
           "slot": "header-right",
           "id": "editor-toggle"
         }
-      ]
+      ],
+      "name": "editor"
     }
   }
 ]

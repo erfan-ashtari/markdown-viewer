@@ -18,7 +18,8 @@
         "slot": "header-right",
         "id": "editor-toggle"
       }
-    ]
+    ],
+    "name": "editor"
   },
   "license": "MIT",
   "description": "Text editor with save functionality",

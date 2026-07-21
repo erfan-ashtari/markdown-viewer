@@ -35,7 +35,8 @@
         ],
         "name": "Image"
       }
-    ]
+    ],
+    "name": "image-viewer"
   },
   "license": "MIT",
   "description": "Image viewer with fit-to-width/height",

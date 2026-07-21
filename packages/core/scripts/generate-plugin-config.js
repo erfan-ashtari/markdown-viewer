@@ -3,7 +3,7 @@ var fs = require('fs');
 var path = require('path');
 var ROOT = path.resolve(__dirname, '../../..');
 var PD = path.join(ROOT, 'packages');
-var PJ = path.join(ROOT, 'plugins.json');
+var PJ = path.join(ROOT, 'packages', 'plugins.json');
 var CD = path.resolve(__dirname, '..');
 var TC = path.join(CD, 'tsconfig.json');
 var dirs = fs.readdirSync(PD, { withFileTypes: true }).filter(function(d) { return d.isDirectory(); }).map(function(d) { return path.join(PD, d.name); });
@@ -16,7 +16,7 @@ for (var i = 0; i < dirs.length; i++) {
   try { pkg = JSON.parse(fs.readFileSync(pp, 'utf-8')); } catch(e) { continue; }
   if (!pkg.contributes || !pkg.main) continue;
   plugins.push({
-    name: pkg.name.replace('@mdview/', ''),
+    name: (pkg.contributes && pkg.contributes.name) || pkg.name.replace('@mdview/', '').replace(/^plugin-/, ''),
     package: pkg.name,
     entry: path.relative(CD, path.join(dir, pkg.main)).replace(/\\/g, '/'),
     version: pkg.version,

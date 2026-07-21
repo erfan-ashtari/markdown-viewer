@@ -19,7 +19,8 @@
         ],
         "name": "PDF Document"
       }
-    ]
+    ],
+    "name": "pdf-viewer"
   },
   "license": "MIT",
   "description": "PDF viewer using Chromium native renderer",
