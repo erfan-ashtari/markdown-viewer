@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
-import type { Plugin } from '@mdview/plugin-api';
+import React, { useMemo, useState, useCallback, useEffect, memo } from 'react';
+import type { PluginContext } from '@mdview/plugin-api';
 import { buttonBase, buttonDisabled, headerBar, injectPluginStyles } from '@mdview/plugin-api';
 
 const IMAGE_EXTENSIONS = [
@@ -22,7 +22,7 @@ const ImageHeader = memo(({ fileName, width, height, zoom, isFit, onToggleFit, o
     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fileName}</span>
     {width > 0 && (
       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-        {width.toLocaleString()} × {height.toLocaleString()}
+        {width.toLocaleString()} x {height.toLocaleString()}
       </span>
     )}
     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
@@ -42,7 +42,7 @@ const ImageHeader = memo(({ fileName, width, height, zoom, isFit, onToggleFit, o
         disabled={zoom <= 10 && !isFit}
         aria-label="Zoom out"
         style={{ ...buttonBase, ...((zoom <= 10 && !isFit) ? buttonDisabled : {}) }}
-      >−</button>
+      >-</button>
       <span style={{ fontSize: '11px', minWidth: '36px', textAlign: 'center' }}>{isFit ? 'Fit' : zoom + '%'}</span>
       <button
         className="mdview-plugin-btn"
@@ -87,40 +87,27 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
     setLoaded(true);
   }, []);
 
-  // Note: Keyboard zoom (Ctrl+/-) and wheel zoom are handled by core's App.tsx.
-  // We do NOT add duplicate handlers here — that would cause double-zoom and jank.
-
   // Calculate scaled dimensions and dynamic margins for centering
   const { scaledWidth, scaledHeight, marginTop, marginLeft } = useMemo(() => {
     if (!loaded || naturalSize.width === 0) {
       return { scaledWidth: 0, scaledHeight: 0, marginTop: 0, marginLeft: 0 };
     }
-
     const container = containerRef.current;
     if (!container) {
       return { scaledWidth: naturalSize.width, scaledHeight: naturalSize.height, marginTop: 0, marginLeft: 0 };
     }
-
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
-
     if (isFit) {
-      // Fit mode: let CSS handle sizing via maxWidth/maxHeight, center with flex
       return { scaledWidth: 0, scaledHeight: 0, marginTop: 0, marginLeft: 0 };
     }
-
-    // Zoom mode: calculate scaled dimensions
     const sw = naturalSize.width * (zoom / 100);
     const sh = naturalSize.height * (zoom / 100);
-
-    // Center when smaller than container, scroll when larger
     const ml = sw < containerWidth ? (containerWidth - sw) / 2 : 0;
     const mt = sh < containerHeight ? (containerHeight - sh) / 2 : 0;
-
     return { scaledWidth: sw, scaledHeight: sh, marginTop: mt, marginLeft: ml };
   }, [zoom, isFit, loaded, naturalSize]);
 
-  // Image style: fit mode uses CSS constraints, zoom mode uses explicit dimensions
   const imgStyle: React.CSSProperties = isFit
     ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' as const }
     : {
@@ -149,7 +136,6 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
         style={{
           flex: 1,
           overflow: 'auto',
-          // Fit mode: flex centers the image; Zoom mode: block layout allows scroll
           display: isFit ? 'flex' : 'block',
           alignItems: isFit ? 'center' : undefined,
           justifyContent: isFit ? 'center' : undefined,
@@ -166,7 +152,7 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
             color: 'var(--text-muted)',
             fontSize: '14px',
           }}>
-            Loading image…
+            Loading image...
           </div>
         )}
         {error && (
@@ -190,7 +176,6 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
           alt={fileName}
           style={{
             ...imgStyle,
-            display: 'block',
             flexShrink: 0,
             opacity: loaded ? 1 : 0,
           }}
@@ -201,18 +186,17 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
 });
 ImageRenderer.displayName = 'ImageRenderer';
 
-const ImagesPlugin: Plugin = {
-  name: 'image-viewer',
-  version: '1.0.0',
-  description: 'Image viewer with zoom and fit controls',
-  register(api) {
-    injectPluginStyles();
-    api.registerFileType({
-      extensions: IMAGE_EXTENSIONS,
-      name: 'Image',
-      renderer: ImageRenderer,
-    });
-  }
-};
+export function activate(context: PluginContext) {
+  console.log('[plugin-images] Activated — registering image file types');
+  injectPluginStyles();
+  context.registerFileType({
+    extensions: IMAGE_EXTENSIONS,
+    name: 'Image',
+    renderer: ImageRenderer,
+  });
+}
 
-export { ImagesPlugin };
+export function deactivate() {
+  console.log('[plugin-images] Deactivated');
+  // No cleanup needed for image viewer
+}

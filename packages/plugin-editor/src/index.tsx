@@ -1,16 +1,14 @@
 import React from 'react';
-import type { Plugin } from '@mdview/plugin-api';
+import type { PluginContext } from '@mdview/plugin-api';
 import { buttonBase, injectPluginStyles } from '@mdview/plugin-api';
 import { Editor } from './Editor';
 import { Pencil, Eye } from 'lucide-react';
 
 // Text file extensions the editor can handle
 const TEXT_EXTENSIONS = new Set([
-  // Code — languages
   'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'mts', 'cts',
   'py', 'pyw', 'pyi', 'pyx',
-  'rb', 'erb',
-  'php',
+  'rb', 'erb', 'php',
   'go', 'rs', 'java', 'kt', 'kts', 'swift',
   'c', 'h', 'cpp', 'cxx', 'cc', 'hpp', 'hxx',
   'cs', 'fs', 'fsx', 'fsi',
@@ -19,44 +17,28 @@ const TEXT_EXTENSIONS = new Set([
   'dart', 'jl', 'nim', 'v', 'vhd',
   'lua', 'hs', 'ml', 'ex', 'exs',
   'zig', 'cr', 'sol',
-
-  // Scripting / Shell
   'sh', 'bash', 'zsh', 'fish', 'ksh',
   'bat', 'cmd', 'ps1', 'psm1', 'psd1',
   'bashrc', 'zshrc', 'profile',
-
-  // SQL
   'sql', 'psql', 'mysql', 'sqlite',
-
-  // Web
   'html', 'htm', 'xhtml', 'vue', 'svelte',
   'css', 'scss', 'sass', 'less', 'styl',
   'xml', 'xsl', 'xslt', 'xsd', 'dtd',
-
-  // Data / Config
   'json', 'jsonc', 'jsonl', 'json5',
   'yaml', 'yml', 'toml', 'ini', 'cfg', 'conf',
   'env', 'properties', 'prop',
   'csv', 'tsv', 'psv',
-
-  // Build / Infra
   'dockerfile', 'makefile', 'cmake', 'gradle',
   'tf', 'hcl', 'nomad', 'pkr',
-
-  // Docs / Text
   'txt', 'text', 'log', 'md', 'markdown', 'rst',
   'tex', 'latex', 'bib', 'sty', 'cls',
-  'diff', 'patch',
-  'adoc', 'asciidoc',
-
-  // Misc text
+  'diff', 'patch', 'adoc', 'asciidoc',
   'gitignore', 'gitattributes', 'editorconfig',
   'prettierrc', 'eslintrc', 'babelrc',
   'license', 'licence', 'authors', 'changelog',
   'passwd', 'shadow', 'hosts',
 ]);
 
-// Full filename matches (no extension)
 const TEXT_FILE_NAMES = new Set([
   'dockerfile', 'makefile', 'gnumakefile', 'cmakelists.txt',
   '.gitignore', '.gitattributes', '.editorconfig', '.eslintignore',
@@ -68,17 +50,14 @@ const TEXT_FILE_NAMES = new Set([
 export function isEditableFile(fileName: string): boolean {
   const ext = fileName.split('.').pop()?.toLowerCase() || '';
   if (TEXT_EXTENSIONS.has(ext)) return true;
-  const fullLower = fileName.toLowerCase();
-  return TEXT_FILE_NAMES.has(fullLower);
+  return TEXT_FILE_NAMES.has(fileName.toLowerCase());
 }
 
 // Edit mode state (managed internally by plugin)
 let editMode = false;
 let editModeListeners: (() => void)[] = [];
 
-export function isEditMode(): boolean {
-  return editMode;
-}
+export function isEditMode(): boolean { return editMode; }
 
 export function setEditMode(value: boolean): void {
   editMode = value;
@@ -112,7 +91,6 @@ const EditToggleButton: React.FC<{
       var detail = (e as CustomEvent).detail;
       if (detail && typeof detail.editMode === 'boolean') {
         setEditMode(detail.editMode);
-        // Clear override when edit mode is turned off (e.g. Cancel button)
         if (!detail.editMode && isContentOverrideActive && isContentOverrideActive() && activeTab && toggleContentOverride) {
           toggleContentOverride({ filePath: activeTab.filePath, fileName: activeTab.fileName, content: activeTab.content });
         }
@@ -123,7 +101,6 @@ const EditToggleButton: React.FC<{
   }, [activeTab, toggleContentOverride, isContentOverrideActive]);
 
   if (!activeTab || !isEditableFile(activeTab.fileName)) return null;
-
   var isActive = isContentOverrideActive ? isContentOverrideActive() : false;
 
   return (
@@ -150,23 +127,24 @@ const EditToggleButton: React.FC<{
   );
 };
 
-const EditorPlugin: Plugin = {
-  name: 'editor',
-  version: '1.0.0',
-  description: 'Text editor with save functionality',
-  register(api) {
-    injectPluginStyles();
-    api.registerSlot({
-      slot: 'header-right',
-      id: 'editor-toggle',
-      component: EditToggleButton,
-      order: 50,
-    });
-    api.registerContentOverride({
-      canOverride: function(tab) { return isEditableFile(tab.fileName) && editMode; },
-      component: Editor,
-    });
-  }
-};
+export function activate(context: PluginContext) {
+  console.log('[plugin-editor] Activated — registering slot + content override');
+  injectPluginStyles();
+  context.registerSlot({
+    slot: 'header-right',
+    id: 'editor-toggle',
+    component: EditToggleButton,
+    order: 50,
+  });
+  context.registerContentOverride({
+    canOverride: function(tab) { return isEditableFile(tab.fileName) && editMode; },
+    component: Editor,
+  });
+}
 
-export { EditorPlugin };
+export function deactivate() {
+  console.log('[plugin-editor] Deactivated');
+  // Reset edit mode state
+  setEditMode(false);
+  editModeListeners = [];
+}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef, memo } from 'react';
-import type { Plugin } from '@mdview/plugin-api';
+import type { PluginContext } from '@mdview/plugin-api';
 import { headerBar, injectPluginStyles } from '@mdview/plugin-api';
 
 // Header with filename only — webview handles its own zoom
@@ -82,18 +82,17 @@ const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: st
 });
 PdfRenderer.displayName = 'PdfRenderer';
 
-const PdfPlugin: Plugin = {
-  name: 'pdf-viewer',
-  version: '1.0.0',
-  description: 'PDF viewer using Chromium native renderer',
-  register(api) {
-    injectPluginStyles();
-    api.registerFileType({
-      extensions: ['pdf'],
-      name: 'PDF Document',
-      renderer: PdfRenderer,
-    });
-  }
-};
+export function activate(context: PluginContext) {
+  console.log('[plugin-pdf] Activated — registering PDF file type');
+  injectPluginStyles();
+  context.registerFileType({
+    extensions: ['pdf'],
+    name: 'PDF Document',
+    renderer: PdfRenderer,
+  });
+}
 
-export { PdfPlugin };
+export function deactivate() {
+  console.log('[plugin-pdf] Deactivated');
+  // No cleanup needed for PDF viewer
+}

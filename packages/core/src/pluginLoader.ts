@@ -1,18 +1,18 @@
-import { PluginManager, Plugin, PluginModule } from '@mdview/plugin-api';
+import { PluginManager } from '@mdview/plugin-api';
 import { useAppStore } from './store/appStore';
 // @ts-ignore — JSON import
 import pluginRegistry from '../../plugins.json';
 
-// Built-in plugins: static imports for reliability
-import { PdfPlugin } from '@mdview/plugin-pdf';
-import { ImagesPlugin } from '@mdview/plugin-images';
-import { EditorPlugin } from '@mdview/plugin-editor';
+// Built-in plugins: static imports
+import { activate as activatePdf, deactivate as deactivatePdf } from '@mdview/plugin-pdf';
+import { activate as activateImages, deactivate as deactivateImages } from '@mdview/plugin-images';
+import { activate as activateEditor, deactivate as deactivateEditor } from '@mdview/plugin-editor';
 
-// Map of plugin name -> plugin object for built-in plugins
-const builtinModules: Record<string, any> = {
-  'editor': EditorPlugin,
-  'image-viewer': ImagesPlugin,
-  'pdf-viewer': PdfPlugin,
+// Map of plugin name -> activate/deactivate functions
+const builtinPlugins: Record<string, { activate: Function; deactivate?: Function }> = {
+  'pdf-viewer': { activate: activatePdf, deactivate: deactivatePdf },
+  'image-viewer': { activate: activateImages, deactivate: deactivateImages },
+  'editor': { activate: activateEditor, deactivate: deactivateEditor },
 };
 
 // Track deactivate functions for cleanup
@@ -20,42 +20,24 @@ const pluginDeactivators: Map<string, () => void> = new Map();
 
 export const pluginManager = new PluginManager();
 
-function isPluginModule(obj: any): obj is PluginModule {
-  return obj && typeof obj === 'object' && typeof obj.activate === 'function';
-}
-
-function isLegacyPlugin(obj: any): obj is Plugin {
-  return obj && typeof obj === 'object' && typeof obj.register === 'function' && 'name' in obj;
-}
-
 export async function loadPlugins() {
-  // Phase 1: Built-in plugins (compiled by Vite)
-  const enabledPlugins = useAppStore.getState().enabledPlugins;
-
-  // First run: enable all built-in plugins by default
   const saved = localStorage.getItem('mdview-enabled-plugins');
   if (saved === null) {
-    const allNames = Object.keys(builtinModules);
+    const allNames = Object.keys(builtinPlugins);
     useAppStore.setState({ enabledPlugins: allNames });
     localStorage.setItem('mdview-enabled-plugins', JSON.stringify(allNames));
   }
 
   const currentEnabled = useAppStore.getState().enabledPlugins;
 
-  // Activate enabled built-in plugins
-  for (const [name, plugin] of Object.entries(builtinModules)) {
+  for (const [name, plugin] of Object.entries(builtinPlugins)) {
     if (!currentEnabled.includes(name)) continue;
 
-    if (isPluginModule(plugin)) {
-      // New lifecycle: activate(context)
-      const context = pluginManager.createContext(name);
-      plugin.activate(context);
-      if (plugin.deactivate) {
-        pluginDeactivators.set(name, plugin.deactivate);
-      }
-    } else if (isLegacyPlugin(plugin)) {
-      // Legacy: register(api)
-      pluginManager.register(plugin);
+    const context = pluginManager.createContext(name);
+    console.log('[pluginLoader] Activating:', name);
+    plugin.activate(context);
+    if (plugin.deactivate) {
+      pluginDeactivators.set(name, plugin.deactivate as () => void);
     }
   }
 }
