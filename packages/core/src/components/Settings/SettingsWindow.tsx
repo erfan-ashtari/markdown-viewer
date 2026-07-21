@@ -506,12 +506,23 @@ const PluginsSection: React.FC = () => {
   const disablePlugin = useAppStore(s => s.disablePlugin);
   const [plugins, setPlugins] = useState<any[]>([]);
 
-  const loadPluginsList = () => {
-    window.electronAPI?.getPlugins?.().then((list: any[]) => {
-      console.log('[Settings] getPlugins returned:', list?.length, 'plugins');
-      if (list) list.forEach((p: any) => console.log('  -', p.name, p.runtime ? '(runtime)' : '(built-in)'));
-      setPlugins(list || []);
-    });
+  const [runtimeState, setRuntimeState] = useState<Record<string, {enabled: boolean}>>({});
+
+  const loadPluginsList = async () => {
+    const list = await window.electronAPI?.getPlugins?.();
+    console.log('[Settings] getPlugins returned:', list?.length, 'plugins');
+    setPlugins(list || []);
+
+    // Fetch runtime plugin enabled state
+    const state = await window.electronAPI?.getPluginState?.();
+    setRuntimeState(state || {});
+  };
+
+  const isPluginEnabled = (plugin: any) => {
+    if (plugin.runtime) {
+      return runtimeState[plugin.name]?.enabled !== false;
+    }
+    return enabledPlugins.includes(plugin.name);
   };
 
   useEffect(() => { loadPluginsList(); }, []);
@@ -575,7 +586,7 @@ const PluginsSection: React.FC = () => {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {plugins.map((plugin: any) => {
-            const isEnabled = enabledPlugins.includes(plugin.name);
+            const isEnabled = isPluginEnabled(plugin);
             const summary = getContributorSummary(plugin.contributes);
             return (
               <div key={plugin.name} style={{

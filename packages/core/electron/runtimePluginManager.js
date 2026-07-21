@@ -180,6 +180,11 @@ class RuntimePluginManager {
   }
 
   loadAllEnabled() {
+    // Prevent rapid rescans (feedback loop from state file changes)
+    const now = Date.now();
+    if (this._lastScan && (now - this._lastScan) < 1000) return;
+    this._lastScan = now;
+
     const state = this.loadState();
     const plugins = this.discoverPlugins();
     const discoveredNames = new Set(plugins.map(p => p.name));
