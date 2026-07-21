@@ -1,5 +1,8 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
+// Store wrapper functions for proper listener cleanup
+const listenerMap = new Map();
+
 contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
   openFolder: () => ipcRenderer.invoke('open-folder'),
@@ -36,8 +39,42 @@ contextBridge.exposeInMainWorld('electronAPI', {
   executeExport: (name, content, meta) => ipcRenderer.invoke('execute-export', name, content, meta),
   executeCommand: (name, args) => ipcRenderer.invoke('execute-command', name, args),
   rescanPlugins: () => ipcRenderer.invoke('rescan-plugins'),
-  onPluginsChanged: (callback) => ipcRenderer.on('plugins-changed', () => callback()),
-  onPluginStateUpdated: (callback) => ipcRenderer.on('plugin-state-updated', (event, data) => callback(data)),
+  onPluginsChanged: (callback) => {
+    const wrapper = () => callback();
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('plugins-changed', wrapper);
+  },
+  offPluginsChanged: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('plugins-changed', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  onPluginStateUpdated: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('plugin-state-updated', wrapper);
+  },
+  offPluginStateUpdated: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('plugin-state-updated', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  onPluginCommandLog: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('plugin-command-log', wrapper);
+  },
+  offPluginCommandLog: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('plugin-command-log', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
   reloadMain: () => ipcRenderer.send('reload-main'),
   getPathForFile: (file) => {
     try {

@@ -49,8 +49,6 @@ class RuntimePluginManager {
 
   saveState(state) {
     fs.writeFileSync(this.stateFile, JSON.stringify(state, null, 2), 'utf-8');
-    // Broadcast to all renderer windows
-    this.broadcast('plugin-state-updated', state.plugins);
   }
 
   broadcast(channel, data) {
@@ -70,6 +68,9 @@ class RuntimePluginManager {
     const state = this.loadState();
     state.plugins[name] = { enabled };
     this.saveState(state);
+
+    // Broadcast per-plugin update
+    this.broadcast('plugin-state-updated', { name, enabled, state: {} });
 
     if (enabled) {
       this.loadPlugin(name);
@@ -356,10 +357,39 @@ class RuntimePluginManager {
     return exporter.handler(content, meta);
   }
 
+  // Command execution queue to prevent concurrent console monkey-patching
+  _commandQueue = Promise.resolve();
+
   executeCommand(name, args) {
     const command = this.commands.get(name);
     if (!command) throw new Error('Command not found: ' + name);
-    return command.handler(args);
+
+    return new Promise((resolve, reject) => {
+      this._commandQueue = this._commandQueue.then(async () => {
+        const logs = [];
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+
+        console.log = (...a) => { logs.push({ level: 'log', args: a }); originalLog.apply(console, a); };
+        console.warn = (...a) => { logs.push({ level: 'warn', args: a }); originalWarn.apply(console, a); };
+        console.error = (...a) => { logs.push({ level: 'error', args: a }); originalError.apply(console, a); };
+
+        try {
+          const result = command.handler(args);
+          // Handle async handlers
+          const value = result instanceof Promise ? await result : result;
+          resolve(value);
+        } catch (err) {
+          reject(err);
+        } finally {
+          console.log = originalLog;
+          console.warn = originalWarn;
+          console.error = originalError;
+          this.broadcast('plugin-command-log', { command: name, plugin: command.plugin, logs });
+        }
+      });
+    });
   }
 
   getExporters() {
@@ -373,7 +403,7 @@ class RuntimePluginManager {
   getCommands() {
     const result = [];
     for (const [name, val] of this.commands) {
-      result.push({ name, description: val.description });
+      result.push({ id: name, name, description: val.description, when: val.plugin });
     }
     return result;
   }

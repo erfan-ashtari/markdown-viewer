@@ -357,15 +357,23 @@ ipcMain.handle('get-plugins', () => {
   const pluginsJsonPath = path.join(__dirname, '../../plugins.json');
   let builtin = [];
   try {
-    builtin = JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8'));
+    builtin = JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8')).map(p => ({
+      ...p,
+      enabled: true,
+      state: {},
+      runtime: false,
+    }));
   } catch {}
 
   // Runtime plugins from userData
+  const pluginState = runtimePluginManager.getPluginState() || {};
   const runtime = runtimePluginManager.discoverPlugins().map(p => ({
     name: p.name,
     displayName: p.displayName,
     version: p.version,
     description: p.description,
+    enabled: pluginState[p.name]?.enabled ?? true,
+    state: {},
     runtime: true,
   }));
 
@@ -487,12 +495,8 @@ ipcMain.handle('execute-export', (event, name, content, meta) => {
   }
 });
 
-ipcMain.handle('execute-command', (event, name, args) => {
-  try {
-    return runtimePluginManager.executeCommand(name, args);
-  } catch (e) {
-    return { error: e.message };
-  }
+ipcMain.handle('execute-command', async (event, name, args) => {
+  return runtimePluginManager.executeCommand(name, args);
 });
 
 // Re-scan and reload all runtime plugins (called after installing a new plugin)

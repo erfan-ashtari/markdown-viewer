@@ -24,6 +24,7 @@ interface AppState {
   // UI state
   sidebarOpen: boolean
   sidebarWidth: number
+  rightSidebarOpen: boolean
   zoomLevel: number
   contentWidth: 'full' | 'medium' | 'a4'
   currentTheme: Theme
@@ -32,6 +33,10 @@ interface AppState {
 
   // Plugin state
   enabledPlugins: string[]
+  runtimeExporters: Array<{ id: string; name: string; description: string }>
+  runtimeCommands: Array<{ id: string; name: string; description: string; when?: string }>
+  currentFile: { filePath: string; fileName: string; content: string } | null
+  currentDirectory: string | null
 
   // Actions
   addTab: (filePath: string, content: string, fileName: string, type?: 'markdown' | 'other') => void
@@ -42,6 +47,7 @@ interface AppState {
   setActiveTab: (tabId: string) => void
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
+  toggleRightSidebar: () => void
   setZoomLevel: (level: number) => void
   toggleContentWidth: () => void
   setTheme: (theme: Theme) => void
@@ -51,6 +57,10 @@ interface AppState {
   navigateToAdjacentFile: (direction: 'prev' | 'next') => Promise<void>
   enablePlugin: (name: string) => void
   disablePlugin: (name: string) => void
+  setRuntimeExporters: (items: Array<{ id: string; name: string; description: string }>) => void
+  setRuntimeCommands: (items: Array<{ id: string; name: string; description: string; when?: string }>) => void
+  setCurrentFile: (file: { filePath: string; fileName: string; content: string } | null) => void
+  setCurrentDirectory: (dir: string | null) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -61,6 +71,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   // UI state
   sidebarOpen: true,
+  rightSidebarOpen: false,
   enabledPlugins: JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('mdview-enabled-plugins') || '[]' : '[]'),
   sidebarWidth: 260,
   zoomLevel: 100,
@@ -68,6 +79,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentTheme: 'github-dark',
   currentFont: 'default',
   isFullscreen: false,
+
+  // Runtime plugin state
+  runtimeExporters: [],
+  runtimeCommands: [],
+  currentFile: null,
+  currentDirectory: null,
   
   // Actions
   addTab: (filePath, content, fileName, type = 'markdown') => {
@@ -142,6 +159,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   setSidebarWidth: (width) => set({ sidebarWidth: Math.max(180, Math.min(500, width)) }),
   
+  toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
+  
   setZoomLevel: (level) => set({
     zoomLevel: Math.max(50, Math.min(300, level)),
   }),
@@ -180,6 +199,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     localStorage.setItem('mdview-enabled-plugins', JSON.stringify(updated))
     set({ enabledPlugins: updated })
   },
+
+  setCurrentFile: (file) => set({ currentFile: file }),
+  setCurrentDirectory: (dir) => set({ currentDirectory: dir }),
 
   navigateToAdjacentFile: async (direction) => {
     const state = get()

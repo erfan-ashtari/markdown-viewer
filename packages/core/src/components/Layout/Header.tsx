@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react'
 import {
   PanelLeftClose,
   PanelLeft,
+  PanelRightClose,
+  PanelRight,
   ZoomIn,
   ZoomOut,
   RotateCcw,
@@ -33,6 +35,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExportHTML, pluginToolbarItems = [] }) => {
   const sidebarOpen = useAppStore(s => s.sidebarOpen)
   const toggleSidebar = useAppStore(s => s.toggleSidebar)
+  const rightSidebarOpen = useAppStore(s => s.rightSidebarOpen)
+  const toggleRightSidebar = useAppStore(s => s.toggleRightSidebar)
   const zoomLevel = useAppStore(s => s.zoomLevel)
   const setZoomLevel = useAppStore(s => s.setZoomLevel)
   const contentWidth = useAppStore(s => s.contentWidth)
@@ -745,6 +749,29 @@ export const Header: React.FC<HeaderProps> = React.memo(({ onExportPDF, onExport
           title="Settings"
         >
           <Settings size={18} />
+        </button>
+
+        {/* Right sidebar toggle */}
+        <button
+          onClick={toggleRightSidebar}
+          style={{
+            padding: '8px',
+            borderRadius: '6px',
+            border: 'none',
+            backgroundColor: rightSidebarOpen ? 'var(--bg-tertiary)' : 'transparent',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)' }}
+          onMouseLeave={(e) => {
+            if (!rightSidebarOpen) e.currentTarget.style.backgroundColor = 'transparent'
+          }}
+          title={rightSidebarOpen ? 'Hide Plugins Panel' : 'Show Plugins Panel'}
+        >
+          {rightSidebarOpen ? <PanelRightClose size={18} /> : <PanelRight size={18} />}
         </button>
       </div>
     </div>

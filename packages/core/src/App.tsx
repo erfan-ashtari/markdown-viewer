@@ -3,6 +3,7 @@ import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
 import { Tabs } from './components/Layout/Tabs'
+import { RuntimePluginSidebar } from './components/Layout/RuntimePluginSidebar'
 import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
 import { TextRenderer } from './components/Text/TextRenderer'
 import { FindBar } from './components/FindBar/FindBar'
@@ -45,6 +46,7 @@ const App: React.FC = () => {
   const tabs = useAppStore(s => s.tabs)
   const activeTabId = useAppStore(s => s.activeTabId)
   const sidebarOpen = useAppStore(s => s.sidebarOpen)
+  const rightSidebarOpen = useAppStore(s => s.rightSidebarOpen)
   const zoomLevel = useAppStore(s => s.zoomLevel)
   const contentWidth = useAppStore(s => s.contentWidth)
   const setZoomLevel = useAppStore(s => s.setZoomLevel)
@@ -157,6 +159,13 @@ const App: React.FC = () => {
       if (ctrl && e.shiftKey && e.key === 'B') {
         e.preventDefault()
         state.toggleSidebar()
+        return
+      }
+
+      // Ctrl+Shift+P — toggle plugins panel
+      if (ctrl && e.shiftKey && e.key === 'P') {
+        e.preventDefault()
+        state.toggleRightSidebar()
         return
       }
 
@@ -564,10 +573,10 @@ const App: React.FC = () => {
           isOpen={sidebarOpen}
           dirToLoad={dirToLoad}
         />
-        
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
+
+        <div style={{
+          flex: 1,
+          display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
         }}>
@@ -697,6 +706,8 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
+
+        <RuntimePluginSidebar isOpen={rightSidebarOpen} />
       </div>
     </div>
   )
