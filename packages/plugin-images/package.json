@@ -1,11 +1,43 @@
 {
-  "name": "@mdview/plugin-images",
+  "engines": {
+    "mdview": ">=1.0.0"
+  },
   "version": "1.0.0",
-  "description": "Image viewer plugin for Markdown Viewer",
-  "main": "src/index.tsx",
-  "types": "src/index.tsx",
+  "activationEvents": [
+    "onFileType:png",
+    "onFileType:jpg",
+    "onFileType:jpeg",
+    "onFileType:gif",
+    "onFileType:bmp",
+    "onFileType:svg",
+    "onFileType:webp"
+  ],
+  "name": "@mdview/plugin-images",
   "dependencies": {
     "@mdview/plugin-api": "workspace:*"
   },
-  "license": "MIT"
+  "displayName": "Image Viewer",
+  "contributes": {
+    "fileTypes": [
+      {
+        "extensions": [
+          "png",
+          "jpg",
+          "jpeg",
+          "gif",
+          "bmp",
+          "svg",
+          "webp",
+          "ico",
+          "tiff",
+          "tif",
+          "avif"
+        ],
+        "name": "Image"
+      }
+    ]
+  },
+  "license": "MIT",
+  "description": "Image viewer with fit-to-width/height",
+  "main": "src/index.tsx"
 }

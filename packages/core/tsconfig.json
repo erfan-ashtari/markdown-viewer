@@ -28,13 +28,13 @@
         "../plugin-api/src"
       ],
       "@mdview/plugin-pdf": [
-        "../plugin-pdf/src"
+        "../plugin-pdf/src/index.tsx"
       ],
       "@mdview/plugin-images": [
-        "../plugin-images/src"
+        "../plugin-images/src/index.tsx"
       ],
       "@mdview/plugin-editor": [
-        "../plugin-editor/src"
+        "../plugin-editor/src/index.tsx"
       ]
     }
   },

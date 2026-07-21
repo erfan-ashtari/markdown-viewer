@@ -1,11 +1,27 @@
 {
-  "name": "@mdview/plugin-pdf",
+  "engines": {
+    "mdview": ">=1.0.0"
+  },
   "version": "1.0.0",
-  "description": "PDF file viewer plugin for Markdown Viewer",
-  "main": "src/index.tsx",
-  "types": "src/index.tsx",
+  "activationEvents": [
+    "onFileType:pdf"
+  ],
+  "name": "@mdview/plugin-pdf",
   "dependencies": {
     "@mdview/plugin-api": "workspace:*"
   },
-  "license": "MIT"
+  "displayName": "PDF Viewer",
+  "contributes": {
+    "fileTypes": [
+      {
+        "extensions": [
+          "pdf"
+        ],
+        "name": "PDF Document"
+      }
+    ]
+  },
+  "license": "MIT",
+  "description": "PDF viewer using Chromium native renderer",
+  "main": "src/index.tsx"
 }

@@ -5,6 +5,8 @@
   "description": "Markdown Viewer - Electron app core",
   "main": "electron/main.js",
   "scripts": {
+    "predev": "node scripts/generate-plugin-config.js",
+    "prebuild": "node scripts/generate-plugin-config.js",
     "dev": "concurrently \"vite\" \"wait-on tcp:3000 -t 10000 && electron .\"",
     "build": "vite build",
     "build:win": "vite build && electron-builder --win",

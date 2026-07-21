@@ -1,5 +1,14 @@
 import { Plugin, PluginAPI, FileTypeConfig, ToolbarItemConfig, ContentOverrideConfig, SlotConfig, FileFilterConfig } from './types';
 
+interface PluginRegistrations {
+  fileTypes: number[];
+  toolbarItems: number[];
+  shortcuts: string[];
+  contentOverrides: number[];
+  slots: number[];
+  fileFilters: number[];
+}
+
 export class PluginManager implements PluginAPI {
   private plugins: Plugin[] = [];
   private fileTypes: FileTypeConfig[] = [];
@@ -10,6 +19,7 @@ export class PluginManager implements PluginAPI {
   private slots: SlotConfig[] = [];
   private fileFilters: FileFilterConfig[] = [];
   private overrideListeners: (() => void)[] = [];
+  private pluginRegistrations: Map<string, PluginRegistrations> = new Map();
 
   register(plugin: Plugin): void {
     plugin.register(this);
@@ -38,6 +48,47 @@ export class PluginManager implements PluginAPI {
 
   registerFileFilter(config: FileFilterConfig): void {
     this.fileFilters.push(config);
+  }
+
+  // Create a PluginContext for a plugin
+  createContext(pluginName: string): any {
+    const subscriptions: { dispose(): void }[] = [];
+    return {
+      registerFileType: (config: FileTypeConfig) => this.registerFileType(config),
+      registerSlot: (config: SlotConfig) => this.registerSlot(config),
+      registerContentOverride: (config: ContentOverrideConfig) => this.registerContentOverride(config),
+      registerShortcut: (keys: string, handler: () => void) => this.registerShortcut(keys, handler),
+      registerToolbarItem: (config: ToolbarItemConfig) => this.registerToolbarItem(config),
+      registerFileFilter: (config: FileFilterConfig) => this.registerFileFilter(config),
+      subscriptions,
+      extensionPath: '',
+      globalState: {},
+    };
+  }
+
+  // Track what a plugin registered (for dispose)
+  trackPlugin(pluginName: string): void {
+    this.pluginRegistrations.set(pluginName, {
+      fileTypes: [],
+      toolbarItems: [],
+      shortcuts: [],
+      contentOverrides: [],
+      slots: [],
+      fileFilters: [],
+    });
+  }
+
+  // Remove all registrations for a specific plugin
+  dispose(pluginName: string): void {
+    // Remove from plugins array
+    this.plugins = this.plugins.filter(p => p.name !== pluginName);
+
+    // Note: Per-plugin tracking would require intercepting every register call
+    // For now, we clear the active override if it belongs to this plugin
+    if (this.activeContentOverride) {
+      this.activeContentOverride = null;
+      this.notifyOverrideChange();
+    }
   }
 
   // Subscription for override changes (general-purpose)

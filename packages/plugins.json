@@ -1,26 +1,80 @@
 [
   {
-    "name": "pdf-viewer",
+    "name": "plugin-pdf",
     "package": "@mdview/plugin-pdf",
-    "entry": "../plugin-pdf/src",
+    "entry": "../plugin-pdf/src/index.tsx",
     "version": "1.0.0",
     "description": "PDF viewer using Chromium native renderer",
-    "builtin": true
+    "displayName": "PDF Viewer",
+    "activationEvents": [
+      "onFileType:pdf"
+    ],
+    "contributes": {
+      "fileTypes": [
+        {
+          "extensions": [
+            "pdf"
+          ],
+          "name": "PDF Document"
+        }
+      ]
+    }
   },
   {
-    "name": "image-viewer",
+    "name": "plugin-images",
     "package": "@mdview/plugin-images",
-    "entry": "../plugin-images/src",
+    "entry": "../plugin-images/src/index.tsx",
     "version": "1.0.0",
-    "description": "Image viewer with zoom and fit controls",
-    "builtin": true
+    "description": "Image viewer with fit-to-width/height",
+    "displayName": "Image Viewer",
+    "activationEvents": [
+      "onFileType:png",
+      "onFileType:jpg",
+      "onFileType:jpeg",
+      "onFileType:gif",
+      "onFileType:bmp",
+      "onFileType:svg",
+      "onFileType:webp"
+    ],
+    "contributes": {
+      "fileTypes": [
+        {
+          "extensions": [
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "bmp",
+            "svg",
+            "webp",
+            "ico",
+            "tiff",
+            "tif",
+            "avif"
+          ],
+          "name": "Image"
+        }
+      ]
+    }
   },
   {
-    "name": "editor",
+    "name": "plugin-editor",
     "package": "@mdview/plugin-editor",
-    "entry": "../plugin-editor/src",
+    "entry": "../plugin-editor/src/index.tsx",
     "version": "1.0.0",
     "description": "Text editor with save functionality",
-    "builtin": true
+    "displayName": "Text Editor",
+    "activationEvents": [
+      "onStartup"
+    ],
+    "contributes": {
+      "slots": [
+        {
+          "order": 50,
+          "slot": "header-right",
+          "id": "editor-toggle"
+        }
+      ]
+    }
   }
 ]

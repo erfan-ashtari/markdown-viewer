@@ -1,11 +1,26 @@
 {
-  "name": "@mdview/plugin-editor",
+  "engines": {
+    "mdview": ">=1.0.0"
+  },
   "version": "1.0.0",
-  "description": "Text editor plugin for Markdown Viewer",
-  "main": "src/index.tsx",
-  "types": "src/index.tsx",
+  "activationEvents": [
+    "onStartup"
+  ],
+  "name": "@mdview/plugin-editor",
   "dependencies": {
     "@mdview/plugin-api": "workspace:*"
   },
-  "license": "MIT"
+  "displayName": "Text Editor",
+  "contributes": {
+    "slots": [
+      {
+        "order": 50,
+        "slot": "header-right",
+        "id": "editor-toggle"
+      }
+    ]
+  },
+  "license": "MIT",
+  "description": "Text editor with save functionality",
+  "main": "src/index.tsx"
 }

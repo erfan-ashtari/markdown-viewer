@@ -12,3 +12,5 @@ COMMANDS.md
 *.log
 .env
 .env.*
+
+_tmp_dream*.py

@@ -1,4 +1,4 @@
-import { PluginManager } from '@mdview/plugin-api';
+import { PluginManager, Plugin, PluginModule } from '@mdview/plugin-api';
 import { useAppStore } from './store/appStore';
 // @ts-ignore — JSON import
 import pluginRegistry from '../../plugins.json';
@@ -10,64 +10,72 @@ import { EditorPlugin } from '@mdview/plugin-editor';
 
 // Map of plugin name -> plugin object for built-in plugins
 const builtinModules: Record<string, any> = {
-  'pdf-viewer': PdfPlugin,
-  'image-viewer': ImagesPlugin,
   'editor': EditorPlugin,
+  'image-viewer': ImagesPlugin,
+  'pdf-viewer': PdfPlugin,
 };
 
-// Third-party plugins loaded dynamically at startup
-let thirdPartyModules: Record<string, any> = {};
-
-async function loadThirdPartyPlugins() {
-  for (const entry of pluginRegistry.filter((e: any) => !e.builtin)) {
-    try {
-      const mod = await import(/* @vite-ignore */ entry.package);
-      // Find the Plugin object (has name + register method)
-      const pluginObj = Object.values(mod).find(
-        (v: any) => v && typeof v === 'object' && 'register' in v && 'name' in v
-      );
-      if (pluginObj) {
-        thirdPartyModules[entry.name] = pluginObj;
-      } else {
-        console.warn(`Plugin "${entry.name}" at ${entry.package} does not export a valid Plugin object.`);
-      }
-    } catch (err) {
-      console.warn(`Failed to load plugin "${entry.name}":`, err);
-    }
-  }
-}
+// Track deactivate functions for cleanup
+const pluginDeactivators: Map<string, () => void> = new Map();
 
 export const pluginManager = new PluginManager();
 
+function isPluginModule(obj: any): obj is PluginModule {
+  return obj && typeof obj === 'object' && typeof obj.activate === 'function';
+}
+
+function isLegacyPlugin(obj: any): obj is Plugin {
+  return obj && typeof obj === 'object' && typeof obj.register === 'function' && 'name' in obj;
+}
+
 export async function loadPlugins() {
-  // Load third-party plugins via dynamic import
-  await loadThirdPartyPlugins();
+  // Phase 1: Built-in plugins (compiled by Vite)
+  const enabledPlugins = useAppStore.getState().enabledPlugins;
 
-  // Merge built-in and third-party
-  const allModules = { ...builtinModules, ...thirdPartyModules };
-
-  // First run: enable all plugins by default
+  // First run: enable all built-in plugins by default
   const saved = localStorage.getItem('mdview-enabled-plugins');
   if (saved === null) {
-    const allNames = Object.keys(allModules);
+    const allNames = Object.keys(builtinModules);
     useAppStore.setState({ enabledPlugins: allNames });
     localStorage.setItem('mdview-enabled-plugins', JSON.stringify(allNames));
   }
 
-  const enabledPlugins = useAppStore.getState().enabledPlugins;
+  const currentEnabled = useAppStore.getState().enabledPlugins;
 
-  for (const [name, plugin] of Object.entries(allModules)) {
-    if (enabledPlugins.includes(name)) {
+  // Activate enabled built-in plugins
+  for (const [name, plugin] of Object.entries(builtinModules)) {
+    if (!currentEnabled.includes(name)) continue;
+
+    if (isPluginModule(plugin)) {
+      // New lifecycle: activate(context)
+      const context = pluginManager.createContext(name);
+      plugin.activate(context);
+      if (plugin.deactivate) {
+        pluginDeactivators.set(name, plugin.deactivate);
+      }
+    } else if (isLegacyPlugin(plugin)) {
+      // Legacy: register(api)
       pluginManager.register(plugin);
     }
   }
 }
 
+export function deactivatePlugin(name: string): void {
+  const deactivator = pluginDeactivators.get(name);
+  if (deactivator) {
+    deactivator();
+    pluginDeactivators.delete(name);
+  }
+  pluginManager.dispose(name);
+}
+
 export function getAvailablePlugins() {
   return pluginRegistry.map((entry: any) => ({
     name: entry.name,
+    displayName: entry.displayName || entry.name,
     version: entry.version,
     description: entry.description || '',
-    builtin: entry.builtin || false,
+    activationEvents: entry.activationEvents || ['onStartup'],
+    contributes: entry.contributes || {},
   }));
 }
