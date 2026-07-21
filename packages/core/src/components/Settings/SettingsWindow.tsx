@@ -514,6 +514,15 @@ const PluginsSection: React.FC = () => {
 
   useEffect(() => { loadPluginsList(); }, []);
 
+  // Auto-refresh when plugins directory changes
+  useEffect(() => {
+    const handler = () => {
+      console.log('[Settings] Plugins changed, refreshing list...');
+      loadPluginsList();
+    };
+    (window as any).electronAPI?.onPluginsChanged?.(handler);
+  }, []);
+
   const handleInstall = async () => {
     const input = document.createElement("input");
     input.type = "file";

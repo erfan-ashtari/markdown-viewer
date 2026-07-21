@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   executeExport: (name, content, meta) => ipcRenderer.invoke('execute-export', name, content, meta),
   executeCommand: (name, args) => ipcRenderer.invoke('execute-command', name, args),
   rescanPlugins: () => ipcRenderer.invoke('rescan-plugins'),
+  onPluginsChanged: (callback) => ipcRenderer.on('plugins-changed', () => callback()),
   reloadMain: () => ipcRenderer.send('reload-main'),
   getPathForFile: (file) => {
     try {

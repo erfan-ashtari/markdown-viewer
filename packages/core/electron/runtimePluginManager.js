@@ -26,6 +26,9 @@ class RuntimePluginManager {
     if (!fs.existsSync(this.stateFile)) {
       this.saveState({ plugins: {} });
     }
+
+    // Watch plugins directory for changes
+    this.startWatcher(pluginsDir);
   }
 
   // State management
@@ -234,6 +237,36 @@ class RuntimePluginManager {
       result.push({ name, description: val.description });
     }
     return result;
+  }
+}
+
+  // Watch plugins directory for new/removed plugins
+  startWatcher(pluginsDir) {
+    if (!fs.existsSync(pluginsDir)) return;
+
+    let debounceTimer = null;
+    const self = this;
+
+    fs.watch(pluginsDir, { recursive: false }, (eventType, filename) => {
+      if (!filename) return;
+
+      // Debounce: wait 500ms after last change
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.log('[runtimePlugin] Plugins directory changed, rescanning...');
+        self.loadAllEnabled();
+
+        // Notify renderer via all windows
+        const { BrowserWindow } = require('electron');
+        BrowserWindow.getAllWindows().forEach(win => {
+          if (!win.isDestroyed()) {
+            win.webContents.send('plugins-changed');
+          }
+        });
+      }, 500);
+    });
+
+    console.log('[runtimePlugin] Watching plugins directory:', pluginsDir);
   }
 }
 
