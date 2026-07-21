@@ -21,23 +21,54 @@ const pluginDeactivators: Map<string, () => void> = new Map();
 export const pluginManager = new PluginManager();
 
 export async function loadPlugins() {
+  // Phase 1: Discover runtime plugins (from {userData}/plugins/)
+  let runtimeEntries: any[] = [];
+  try {
+    runtimeEntries = await window.electronAPI.discoverPlugins();
+  } catch (err) {
+    console.warn('[pluginLoader] Failed to discover runtime plugins:', err);
+  }
+
+  // First run: enable all plugins (built-in + runtime) by default
   const saved = localStorage.getItem('mdview-enabled-plugins');
   if (saved === null) {
-    const allNames = Object.keys(builtinPlugins);
+    const allNames = [...Object.keys(builtinPlugins), ...runtimeEntries.map((e: any) => e.name)];
     useAppStore.setState({ enabledPlugins: allNames });
     localStorage.setItem('mdview-enabled-plugins', JSON.stringify(allNames));
   }
 
   const currentEnabled = useAppStore.getState().enabledPlugins;
 
+  // Phase 2: Activate enabled built-in plugins
   for (const [name, plugin] of Object.entries(builtinPlugins)) {
     if (!currentEnabled.includes(name)) continue;
 
     const context = pluginManager.createContext(name);
-    console.log('[pluginLoader] Activating:', name);
+    console.log('[pluginLoader] Activating built-in:', name);
     plugin.activate(context);
     if (plugin.deactivate) {
       pluginDeactivators.set(name, plugin.deactivate as () => void);
+    }
+  }
+
+  // Phase 3: Activate enabled runtime plugins
+  for (const entry of runtimeEntries) {
+    if (!currentEnabled.includes(entry.name)) continue;
+
+    try {
+      const mod = await import(/* @vite-ignore */ `file://${entry.path}/${entry.main}`);
+      if (mod.activate) {
+        const context = pluginManager.createContext(entry.name);
+        console.log('[pluginLoader] Activating runtime:', entry.name);
+        mod.activate(context);
+        if (mod.deactivate) {
+          pluginDeactivators.set(entry.name, mod.deactivate);
+        }
+      } else {
+        console.warn(`[pluginLoader] Runtime plugin "${entry.name}" has no activate() function.`);
+      }
+    } catch (err) {
+      console.warn(`[pluginLoader] Failed to load runtime plugin "${entry.name}":`, err);
     }
   }
 }
@@ -52,7 +83,8 @@ export function deactivatePlugin(name: string): void {
 }
 
 export function getAvailablePlugins() {
-  return pluginRegistry.map((entry: any) => ({
+  // Built-in from plugins.json
+  const builtin = pluginRegistry.map((entry: any) => ({
     name: entry.name,
     displayName: entry.displayName || entry.name,
     version: entry.version,
@@ -60,4 +92,8 @@ export function getAvailablePlugins() {
     activationEvents: entry.activationEvents || ['onStartup'],
     contributes: entry.contributes || {},
   }));
+
+  // Runtime plugins are handled by get-plugins IPC in main.js
+  // Settings UI reads directly from that IPC, so we just return built-in here
+  return builtin;
 }
