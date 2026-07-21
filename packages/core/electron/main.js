@@ -468,6 +468,12 @@ ipcMain.handle('execute-command', (event, name, args) => {
   }
 });
 
+// Re-scan and reload all runtime plugins (called after installing a new plugin)
+ipcMain.handle('rescan-plugins', () => {
+  runtimePluginManager.loadAllEnabled();
+  return { success: true, exporters: runtimePluginManager.getExporters() };
+});
+
 // Reload main window (from Settings)
 ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
