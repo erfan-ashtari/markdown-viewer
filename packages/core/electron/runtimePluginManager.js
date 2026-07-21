@@ -180,9 +180,23 @@ class RuntimePluginManager {
     console.log('[runtimePlugin] Unloaded:', name);
   }
 
-  // Load all enabled plugins
+  // Load all enabled plugins (auto-enable newly discovered ones)
   loadAllEnabled() {
     const state = this.loadState();
+    const plugins = this.discoverPlugins();
+
+    // Auto-enable any new plugins not yet in state
+    let changed = false;
+    for (const plugin of plugins) {
+      if (!state.plugins[plugin.name]) {
+        state.plugins[plugin.name] = { enabled: true };
+        changed = true;
+        console.log('[runtimePlugin] Auto-enabled new plugin:', plugin.name);
+      }
+    }
+    if (changed) this.saveState(state);
+
+    // Load all enabled plugins
     for (const [name, config] of Object.entries(state.plugins)) {
       if (config.enabled) {
         this.loadPlugin(name);
