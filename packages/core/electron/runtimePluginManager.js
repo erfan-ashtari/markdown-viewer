@@ -4,34 +4,32 @@ const { app } = require('electron');
 
 class RuntimePluginManager {
   constructor() {
-    this.exporters = new Map();    // name -> { handler, description }
-    this.commands = new Map();     // name -> { handler, description }
-    this.listeners = new Map();    // event -> [callbacks]
-    this.loadedPlugins = new Map(); // name -> { mod, dir }
+    this.exporters = new Map();
+    this.commands = new Map();
+    this.listeners = new Map();
+    this.loadedPlugins = new Map();
     this.stateFile = null;
+    this.watcher = null;
   }
 
-  // Initialize with userData path
   init() {
     const userDataPath = app.getPath('userData');
     this.stateFile = path.join(userDataPath, 'plugins-state.json');
 
-    // Ensure plugins directory exists
     const pluginsDir = path.join(userDataPath, 'plugins');
     if (!fs.existsSync(pluginsDir)) {
       fs.mkdirSync(pluginsDir, { recursive: true });
     }
 
-    // Ensure state file exists
     if (!fs.existsSync(this.stateFile)) {
       this.saveState({ plugins: {} });
     }
 
-    // Watch plugins directory for changes
     this.startWatcher(pluginsDir);
   }
 
-  // State management
+  // --- State Management ---
+
   loadState() {
     try {
       return JSON.parse(fs.readFileSync(this.stateFile, 'utf-8'));
@@ -62,7 +60,8 @@ class RuntimePluginManager {
     return { success: true };
   }
 
-  // Plugin discovery
+  // --- Plugin Discovery ---
+
   discoverPlugins() {
     const userDataPath = app.getPath('userData');
     const pluginsDir = path.join(userDataPath, 'plugins');
@@ -92,7 +91,6 @@ class RuntimePluginManager {
       }
     }
 
-    // Sort: newest first
     plugins.sort((a, b) => {
       try {
         return fs.statSync(path.join(pluginsDir, b.name)).mtimeMs -
@@ -103,7 +101,8 @@ class RuntimePluginManager {
     return plugins;
   }
 
-  // Create secure context for a plugin
+  // --- Plugin Context ---
+
   createContext(pluginName) {
     const self = this;
     return {
@@ -122,7 +121,8 @@ class RuntimePluginManager {
     };
   }
 
-  // Load a single plugin
+  // --- Plugin Loading ---
+
   loadPlugin(name) {
     if (this.loadedPlugins.has(name)) return;
 
@@ -135,7 +135,6 @@ class RuntimePluginManager {
 
     try {
       const entryPath = path.join(plugin.path, plugin.main);
-      // Clear require cache for hot reload
       delete require.cache[require.resolve(entryPath)];
       const mod = require(entryPath);
 
@@ -152,7 +151,6 @@ class RuntimePluginManager {
     }
   }
 
-  // Unload a single plugin
   unloadPlugin(name) {
     const loaded = this.loadedPlugins.get(name);
     if (!loaded) return;
@@ -165,7 +163,6 @@ class RuntimePluginManager {
       console.warn('[runtimePlugin] Error deactivating', name + ':', err.message);
     }
 
-    // Remove registered exporters/commands from this plugin
     for (const [key, val] of this.exporters) {
       if (val.plugin === name) this.exporters.delete(key);
     }
@@ -173,7 +170,6 @@ class RuntimePluginManager {
       if (val.plugin === name) this.commands.delete(key);
     }
 
-    // Clear require cache
     try {
       const entryPath = path.join(loaded.dir, require(path.join(loaded.dir, 'package.json')).main);
       delete require.cache[require.resolve(entryPath)];
@@ -183,12 +179,10 @@ class RuntimePluginManager {
     console.log('[runtimePlugin] Unloaded:', name);
   }
 
-  // Load all enabled plugins (auto-enable newly discovered ones)
   loadAllEnabled() {
     const state = this.loadState();
     const plugins = this.discoverPlugins();
 
-    // Auto-enable any new plugins not yet in state
     let changed = false;
     for (const plugin of plugins) {
       if (!state.plugins[plugin.name]) {
@@ -199,7 +193,6 @@ class RuntimePluginManager {
     }
     if (changed) this.saveState(state);
 
-    // Load all enabled plugins
     for (const [name, config] of Object.entries(state.plugins)) {
       if (config.enabled) {
         this.loadPlugin(name);
@@ -207,21 +200,20 @@ class RuntimePluginManager {
     }
   }
 
-  // Execute an exporter
+  // --- Execution ---
+
   executeExport(name, content, meta) {
     const exporter = this.exporters.get(name);
     if (!exporter) throw new Error('Exporter not found: ' + name);
     return exporter.handler(content, meta);
   }
 
-  // Execute a command
   executeCommand(name, args) {
     const command = this.commands.get(name);
     if (!command) throw new Error('Command not found: ' + name);
     return command.handler(args);
   }
 
-  // Get list of registered exporters
   getExporters() {
     const result = [];
     for (const [name, val] of this.exporters) {
@@ -230,7 +222,6 @@ class RuntimePluginManager {
     return result;
   }
 
-  // Get list of registered commands
   getCommands() {
     const result = [];
     for (const [name, val] of this.commands) {
@@ -238,25 +229,23 @@ class RuntimePluginManager {
     }
     return result;
   }
-}
 
-  // Watch plugins directory for new/removed plugins
+  // --- File Watcher ---
+
   startWatcher(pluginsDir) {
     if (!fs.existsSync(pluginsDir)) return;
 
     let debounceTimer = null;
     const self = this;
 
-    fs.watch(pluginsDir, { recursive: false }, (eventType, filename) => {
+    this.watcher = fs.watch(pluginsDir, { recursive: false }, (eventType, filename) => {
       if (!filename) return;
 
-      // Debounce: wait 500ms after last change
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         console.log('[runtimePlugin] Plugins directory changed, rescanning...');
         self.loadAllEnabled();
 
-        // Notify renderer via all windows
         const { BrowserWindow } = require('electron');
         BrowserWindow.getAllWindows().forEach(win => {
           if (!win.isDestroyed()) {
