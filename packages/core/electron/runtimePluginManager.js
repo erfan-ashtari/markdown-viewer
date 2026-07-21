@@ -7,9 +7,10 @@ class RuntimePluginManager {
     this.exporters = new Map();
     this.commands = new Map();
     this.listeners = new Map();
-    this.loadedPlugins = new Map();
+    this.loadedPlugins = new Map();   // name -> { mod, dir, mtime }
     this.stateFile = null;
     this.watcher = null;
+    this._lastScan = 0;
   }
 
   init() {
@@ -19,6 +20,12 @@ class RuntimePluginManager {
     const pluginsDir = path.join(userDataPath, 'plugins');
     if (!fs.existsSync(pluginsDir)) {
       fs.mkdirSync(pluginsDir, { recursive: true });
+    }
+
+    // Ensure workspace directory exists for plugin file I/O
+    const workspaceDir = path.join(userDataPath, 'workspace');
+    if (!fs.existsSync(workspaceDir)) {
+      fs.mkdirSync(workspaceDir, { recursive: true });
     }
 
     if (!fs.existsSync(this.stateFile)) {
@@ -40,6 +47,17 @@ class RuntimePluginManager {
 
   saveState(state) {
     fs.writeFileSync(this.stateFile, JSON.stringify(state, null, 2), 'utf-8');
+    // Broadcast to all renderer windows
+    this.broadcast('plugin-state-updated', state.plugins);
+  }
+
+  broadcast(channel, data) {
+    const { BrowserWindow } = require('electron');
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send(channel, data);
+      }
+    });
   }
 
   getPluginState() {
@@ -84,6 +102,8 @@ class RuntimePluginManager {
           version: pkg.version,
           description: pkg.description || '',
           main: pkg.main,
+          contributes: pkg.contributes || {},
+          permissions: (pkg.mdview && pkg.mdview.permissions) || [],
           path: dir,
         });
       } catch (e) {
@@ -101,11 +121,51 @@ class RuntimePluginManager {
     return plugins;
   }
 
+  // --- Restricted File System ---
+
+  createFsWrapper(pluginName) {
+    const userDataPath = app.getPath('userData');
+    const allowedDirs = [
+      path.join(userDataPath, 'plugins'),
+      path.join(userDataPath, 'workspace'),
+    ];
+
+    function validatePath(filePath) {
+      const resolved = path.resolve(filePath);
+      if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
+        throw new Error('Access denied: path "' + filePath + '" is outside allowed directories');
+      }
+      return resolved;
+    }
+
+    return {
+      readFile(filePath) {
+        return fs.readFileSync(validatePath(filePath), 'utf-8');
+      },
+      writeFile(filePath, content) {
+        fs.writeFileSync(validatePath(filePath), content, 'utf-8');
+      },
+      exists(filePath) {
+        try { return fs.existsSync(validatePath(filePath)); }
+        catch { return false; }
+      },
+      readDir(dirPath) {
+        return fs.readdirSync(validatePath(dirPath));
+      },
+      mkdir(dirPath) {
+        fs.mkdirSync(validatePath(dirPath), { recursive: true });
+      },
+    };
+  }
+
   // --- Plugin Context ---
 
   createContext(pluginName) {
     const self = this;
+    const pluginFs = this.createFsWrapper(pluginName);
+
     return {
+      // Registration
       registerExporter(name, handler, description) {
         self.exporters.set(name, { handler, description: description || name, plugin: pluginName });
         console.log('[runtimePlugin] Registered exporter:', name, 'from', pluginName);
@@ -114,10 +174,15 @@ class RuntimePluginManager {
         self.commands.set(name, { handler, description: description || name, plugin: pluginName });
         console.log('[runtimePlugin] Registered command:', name, 'from', pluginName);
       },
+
+      // Events
       onEvent(event, callback) {
         if (!self.listeners.has(event)) self.listeners.set(event, []);
         self.listeners.get(event).push({ callback, plugin: pluginName });
       },
+
+      // Restricted file system
+      fs: pluginFs,
     };
   }
 
@@ -141,7 +206,8 @@ class RuntimePluginManager {
       if (mod.activate) {
         const context = this.createContext(name);
         mod.activate(context);
-        this.loadedPlugins.set(name, { mod, dir: plugin.path });
+        const mtime = this.getPluginMtime(plugin.path);
+        this.loadedPlugins.set(name, { mod, dir: plugin.path, mtime });
         console.log('[runtimePlugin] Loaded:', name);
       } else {
         console.warn('[runtimePlugin] Plugin', name, 'has no activate() function');
@@ -179,8 +245,21 @@ class RuntimePluginManager {
     console.log('[runtimePlugin] Unloaded:', name);
   }
 
+  // Force reload a plugin (unload + load)
+  forceReloadPlugin(name) {
+    this.unloadPlugin(name);
+    this.loadPlugin(name);
+  }
+
+  getPluginMtime(pluginDir) {
+    try {
+      const pkgPath = path.join(pluginDir, 'package.json');
+      return fs.statSync(pkgPath).mtimeMs;
+    } catch { return 0; }
+  }
+
   loadAllEnabled() {
-    // Prevent rapid rescans (feedback loop from state file changes)
+    // Prevent rapid rescans
     const now = Date.now();
     if (this._lastScan && (now - this._lastScan) < 1000) return;
     this._lastScan = now;
@@ -209,12 +288,37 @@ class RuntimePluginManager {
       }
     }
 
+    // Force-reload plugins whose files were modified
+    for (const plugin of plugins) {
+      const loaded = this.loadedPlugins.get(plugin.name);
+      if (loaded) {
+        const currentMtime = this.getPluginMtime(plugin.path);
+        if (currentMtime !== loaded.mtime) {
+          console.log('[runtimePlugin] Plugin file changed, reloading:', plugin.name);
+          this.forceReloadPlugin(plugin.name);
+        }
+      }
+    }
+
     if (changed) this.saveState(state);
 
-    // Load all enabled plugins
+    // Load all enabled plugins (that aren't already loaded)
     for (const [name, config] of Object.entries(state.plugins)) {
       if (config.enabled && !this.loadedPlugins.has(name)) {
         this.loadPlugin(name);
+      }
+    }
+  }
+
+  // --- Event System ---
+
+  emitEvent(eventName, data) {
+    const listeners = this.listeners.get(eventName) || [];
+    for (const { callback, plugin } of listeners) {
+      try {
+        callback(data);
+      } catch (err) {
+        console.warn('[runtimePlugin] Event handler error in', plugin + ':', err.message);
       }
     }
   }
@@ -259,20 +363,13 @@ class RuntimePluginManager {
 
     this.watcher = fs.watch(pluginsDir, { recursive: false }, (eventType, filename) => {
       if (!filename) return;
-      // Ignore state file changes (prevents feedback loop)
       if (filename === 'plugins-state.json') return;
 
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         console.log('[runtimePlugin] Plugins directory changed, rescanning...');
         self.loadAllEnabled();
-
-        const { BrowserWindow } = require('electron');
-        BrowserWindow.getAllWindows().forEach(win => {
-          if (!win.isDestroyed()) {
-            win.webContents.send('plugins-changed');
-          }
-        });
+        self.broadcast('plugins-changed');
       }, 500);
     });
 

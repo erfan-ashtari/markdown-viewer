@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   executeCommand: (name, args) => ipcRenderer.invoke('execute-command', name, args),
   rescanPlugins: () => ipcRenderer.invoke('rescan-plugins'),
   onPluginsChanged: (callback) => ipcRenderer.on('plugins-changed', () => callback()),
+  onPluginStateUpdated: (callback) => ipcRenderer.on('plugin-state-updated', (event, data) => callback(data)),
   reloadMain: () => ipcRenderer.send('reload-main'),
   getPathForFile: (file) => {
     try {

@@ -195,6 +195,9 @@ ipcMain.handle('open-file', async () => {
     const filePath = result.filePaths[0];
     const content = fs.readFileSync(filePath, 'utf-8');
     const fileName = path.basename(filePath);
+    // Emit fileOpened event to runtime plugins
+    runtimePluginManager.emitEvent('fileOpened', { filePath, fileName, content });
+
     return { filePath, content, fileName };
   }
   return null;

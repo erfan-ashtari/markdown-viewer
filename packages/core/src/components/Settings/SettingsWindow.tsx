@@ -606,13 +606,21 @@ const PluginsSection: React.FC = () => {
                   <div
                     onClick={async () => {
                       if (plugin.runtime) {
-                        // Runtime plugin: toggle via main process, then refresh
+                        // Show consent dialog when enabling a runtime plugin for the first time
+                        if (!isEnabled) {
+                          const confirmed = window.confirm(
+                            'Enabling this plugin gives it access to your file system and Node.js environment.\\n\\n' +
+                            'Only enable plugins from authors you trust.\\n\\n' +
+                            'Plugin: ' + (plugin.displayName || plugin.name) + '\\n' +
+                            'Version: ' + plugin.version + '\\n' +
+                            (plugin.description ? 'Description: ' + plugin.description : '')
+                          );
+                          if (!confirmed) return;
+                        }
                         const result = await (window as any).electronAPI?.setPluginState?.(plugin.name, !isEnabled);
                         console.log('[Settings] toggle result:', result);
-                        // Small delay to let main process finish loading/unloading
                         setTimeout(() => loadPluginsList(), 200);
                       } else {
-                        // Built-in plugin: toggle via Zustand
                         if (isEnabled) disablePlugin(plugin.name);
                         else enablePlugin(plugin.name);
                       }
@@ -651,8 +659,26 @@ const RuntimePluginDebug: React.FC = () => {
   const [testResult, setTestResult] = useState<string>('');
 
   useEffect(() => {
-    (window as any).electronAPI?.getExporters?.().then((list: any[]) => setExporters(list || []));
-    (window as any).electronAPI?.getCommands?.().then((list: any[]) => setCommands(list || []));
+    const load = async () => {
+      try {
+        const api = (window as any).electronAPI;
+        console.log('[RuntimePluginDebug] electronAPI available:', !!api);
+        console.log('[RuntimePluginDebug] getExporters available:', typeof api?.getExporters);
+        if (api?.getExporters) {
+          const ex = await api.getExporters();
+          console.log('[RuntimePluginDebug] exporters result:', JSON.stringify(ex));
+          setExporters(ex || []);
+        }
+        if (api?.getCommands) {
+          const cmd = await api.getCommands();
+          console.log('[RuntimePluginDebug] commands result:', JSON.stringify(cmd));
+          setCommands(cmd || []);
+        }
+      } catch (e) {
+        console.error('[RuntimePluginDebug] fetch error:', e);
+      }
+    };
+    load();
   }, []);
 
   const testExporter = async (name: string) => {
