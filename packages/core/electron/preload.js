@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installPlugin: (sourcePath) => ipcRenderer.invoke('install-plugin', sourcePath),
   uninstallPlugin: (name) => ipcRenderer.invoke('uninstall-plugin', name),
   openPluginsFolder: () => ipcRenderer.invoke('open-plugins-folder'),
+  setCurrentFile: (fileInfo) => ipcRenderer.invoke('set-current-file', fileInfo),
   getPluginState: () => ipcRenderer.invoke('get-plugin-state'),
   setPluginState: (name, enabled) => ipcRenderer.invoke('set-plugin-state', name, enabled),
   getExporters: () => ipcRenderer.invoke('get-exporters'),

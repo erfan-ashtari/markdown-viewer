@@ -452,6 +452,10 @@ ipcMain.handle('open-plugins-folder', () => {
 });
 
 // Runtime plugin state management
+ipcMain.handle('set-current-file', (event, fileInfo) => {
+  runtimePluginManager.updateCurrentFile(fileInfo);
+});
+
 ipcMain.handle('get-plugin-state', () => {
   return runtimePluginManager.getPluginState();
 });

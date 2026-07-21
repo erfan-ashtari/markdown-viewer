@@ -331,21 +331,8 @@ class RuntimePluginManager {
 
   updateCurrentFile(fileInfo) {
     this.currentFile = fileInfo || null;
-    for (const [, context] of this.pluginContexts) {
-      context.currentFile = this.currentFile;
-      // Update fs wrapper to resolve relative paths against current file's directory
-      if (this.currentFile && this.currentFile.filePath) {
-        const fileDir = path.dirname(this.currentFile.filePath);
-        const userDataPath = app.getPath('userData');
-        const allowedDirs = [
-          path.join(userDataPath, 'plugins'),
-          path.join(userDataPath, 'workspace'),
-          fileDir,
-        ];
-        context.fs._currentDir = fileDir;
-        context.fs._allowedDirs = allowedDirs;
-      }
-    }
+    // No need to update contexts — they use self.currentFile via getter
+    console.log('[runtimePlugin] Current file updated:', fileInfo ? fileInfo.fileName : 'none');
   }
 
   // --- Event System ---
