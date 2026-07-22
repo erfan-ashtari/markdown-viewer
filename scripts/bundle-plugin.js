@@ -4,28 +4,23 @@
  * Bundle a runtime plugin's dependencies into a single file.
  * 
  * Usage:
- *   node scripts/bundle-plugin.js <plugin-directory>
- * 
- * This script uses esbuild to bundle all dependencies into a single
- * index.bundled.js file. The plugin's package.json "main" field
- * should be updated to point to this file after bundling.
+ *   node bundle-plugin.js <plugin-directory>
  * 
  * Requirements:
- *   - esbuild must be installed (npm install -g esbuild)
- *   - Plugin must have a package.json with dependencies
+ *   - esbuild must be installed globally: npm install -g esbuild
  */
 
-const esbuild = require('esbuild');
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 const pluginDir = process.argv[2];
 
 if (!pluginDir) {
-  console.error('Usage: node scripts/bundle-plugin.js <plugin-directory>');
+  console.error('Usage: node bundle-plugin.js <plugin-directory>');
   console.error('');
   console.error('Example:');
-  console.error('  node scripts/bundle-plugin.js C:\\Users\\user\\AppData\\Roaming\\@mdview\\core\\plugins\\my-plugin');
+  console.error('  node bundle-plugin.js .');
   process.exit(1);
 }
 
@@ -37,35 +32,32 @@ if (!fs.existsSync(path.join(resolvedDir, 'package.json'))) {
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(resolvedDir, 'package.json'), 'utf-8'));
-const entryPoint = path.join(resolvedDir, pkg.main || 'index.js');
+const entryFile = pkg.main === 'index.bundled.js' ? 'index.js' : (pkg.main || 'index.js');
+const entryPoint = path.join(resolvedDir, entryFile);
 
 if (!fs.existsSync(entryPoint)) {
   console.error('Error: Entry point not found:', entryPoint);
+  console.error('Expected:', entryFile);
   process.exit(1);
 }
 
-console.log('Bundling plugin:', pkg.name || resolvedDir);
-console.log('Entry point:', entryPoint);
+const outFile = path.join(resolvedDir, 'index.bundled.js');
+
+console.log('Bundling:', pkg.name || resolvedDir);
+console.log('Entry:', entryFile);
+console.log('Output: index.bundled.js');
 
 try {
-  esbuild.buildSync({
-    entryPoints: [entryPoint],
-    bundle: true,
-    outfile: path.join(resolvedDir, 'index.bundled.js'),
-    platform: 'node',
-    target: 'node18',
-    format: 'cjs',
-    external: [], // Bundle everything
-    minify: false,
-    sourcemap: false,
-  });
+  execSync(
+    `npx esbuild "${entryFile}" --bundle --outfile=index.bundled.js --platform=node --target=node18 --format=cjs`,
+    { cwd: resolvedDir, stdio: 'inherit' }
+  );
 
-  console.log('Success! Bundled to:', path.join(resolvedDir, 'index.bundled.js'));
   console.log('');
-  console.log('Next steps:');
-  console.log('1. Update package.json "main" to "index.bundled.js"');
-  console.log('2. Test your plugin');
+  console.log('Done! Bundled to index.bundled.js');
+  console.log('');
+  console.log('Next: Update package.json "main" to "index.bundled.js"');
 } catch (err) {
-  console.error('Bundle failed:', err.message);
+  console.error('Bundle failed. Is esbuild installed? Run: npm install -g esbuild');
   process.exit(1);
 }
