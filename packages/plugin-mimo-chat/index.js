@@ -10,7 +10,7 @@
  * - Cancel button to abort long-running queries
  */
 
-const { execFile } = require('child_process');
+const { execSync, exec } = require('child_process');
 const path = require('path');
 
 // Constants
@@ -103,34 +103,31 @@ module.exports = {
     // Helper: execute mimo CLI (async, non-blocking)
     function executeMimo(prompt, filePath) {
       return new Promise((resolve, reject) => {
-        // Build command - on Windows, call node.exe directly with entry point
-        let cmd, args;
+        const { exec } = require('child_process');
+        
+        // Build command string with proper quoting (like the Python script)
+        let cmd;
         if (state.nodeExe && state.mimoEntryPoint) {
-          // Windows: node.exe entry_point.js run ...
-          cmd = state.nodeExe;
-          args = [state.mimoEntryPoint, 'run', prompt, '--thinking', '--model', 'mimo/mimo-auto', '--agent', 'build', '--dir', path.dirname(filePath), '--dangerously-skip-permissions', '--file', filePath];
+          // Windows: node.exe entry_point.js run "prompt" ...
+          cmd = `"${state.nodeExe}" "${state.mimoEntryPoint}" run "${prompt}" --thinking --model mimo/mimo-auto --agent build --dir "${path.dirname(filePath)}" --dangerously-skip-permissions --file "${filePath}"`;
         } else {
           // Fallback: direct mimo command
-          cmd = state.mimoEntryPoint || 'mimo';
-          args = ['run', prompt, '--thinking', '--model', 'mimo/mimo-auto', '--agent', 'build', '--dir', path.dirname(filePath), '--dangerously-skip-permissions', '--file', filePath];
+          const mimoExe = state.mimoEntryPoint || 'mimo';
+          cmd = `"${mimoExe}" run "${prompt}" --thinking --model mimo/mimo-auto --agent build --dir "${path.dirname(filePath)}" --dangerously-skip-permissions --file "${filePath}"`;
         }
 
         // Log debug info
-        console.log('[mimo-chat] Executing:', cmd);
-        console.log('[mimo-chat] Args:', args.slice(0, 3).join(' '), '...');
+        console.log('[mimo-chat] Executing:', cmd.substring(0, 100) + '...');
         console.log('[mimo-chat] CWD:', path.dirname(filePath));
 
-        // On Windows, .cmd files need shell: true
-        const isWindows = process.platform === 'win32';
         const options = {
           encoding: 'utf-8',
           timeout: TIMEOUT_MS,
           maxBuffer: 10 * 1024 * 1024,
           cwd: path.dirname(filePath),
-          shell: isWindows && !state.nodeExe, // Only shell for .cmd fallback
         };
 
-        const child = execFile(cmd, args, options, (error, stdout, stderr) => {
+        const child = exec(cmd, options, (error, stdout, stderr) => {
           state.currentProcess = null;
           if (error) {
             console.error('[mimo-chat] CLI error:', error.message);
