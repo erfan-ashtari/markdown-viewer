@@ -269,6 +269,27 @@ class RuntimePluginManager {
         self.listeners.get(event).push({ callback, plugin: pluginName });
       },
 
+      // Content override registration (declarative - no React components)
+      registerContentOverride(declaration) {
+        self.contentOverrides.set(pluginName, {
+          extensions: declaration.extensions || [],
+          label: declaration.label || 'Preview',
+        });
+        self.broadcast('content-overrides-changed', self.getContentOverrides());
+        console.log('[runtimePlugin] Registered content override:', pluginName, declaration.extensions);
+      },
+
+      // Render mode management
+      setRenderMode(extension, rendered) {
+        self.renderModeStates.set(extension, rendered);
+        self.broadcast('render-mode-changed', { extension, rendered });
+        console.log('[runtimePlugin] Render mode:', extension, rendered ? 'rendered' : 'source');
+      },
+
+      getRenderMode(extension) {
+        return self.renderModeStates.get(extension) ?? true;
+      },
+
       // Restricted file system
       fs: pluginFs,
     };
@@ -344,6 +365,10 @@ class RuntimePluginManager {
     this.sidebarPanels.delete(name);
     this.panelStates.delete(name);
     this.broadcast('sidebar-panel-removed', { pluginName: name });
+
+    // Clean up content overrides registered by this plugin
+    this.contentOverrides.delete(name);
+    this.broadcast('content-overrides-changed', this.getContentOverrides());
 
     try {
       const entryPath = path.join(loaded.dir, loaded.main);
@@ -571,6 +596,14 @@ class RuntimePluginManager {
       });
     }
     console.log('[DEBUG] getSidebarPanels returning', result.length, 'panels');
+    return result;
+  }
+
+  getContentOverrides() {
+    const result = [];
+    for (const [name, override] of this.contentOverrides) {
+      result.push({ name, ...override });
+    }
     return result;
   }
 

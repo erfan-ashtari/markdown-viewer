@@ -104,6 +104,35 @@ contextBridge.exposeInMainWorld('electronAPI', {
       listenerMap.delete(callback);
     }
   },
+  // Content overrides from runtime plugins
+  getContentOverrides: () => ipcRenderer.invoke('get-content-overrides'),
+  onContentOverridesChanged: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('content-overrides-changed', wrapper);
+  },
+  offContentOverridesChanged: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('content-overrides-changed', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  // Render mode
+  setRenderMode: (extension, rendered) => ipcRenderer.invoke('set-render-mode', extension, rendered),
+  getRenderMode: (extension) => ipcRenderer.invoke('get-render-mode', extension),
+  onRenderModeChanged: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('render-mode-changed', wrapper);
+  },
+  offRenderModeChanged: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('render-mode-changed', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
   onPluginStateUpdated: (callback) => {
     const wrapper = (event, data) => callback(data);
     listenerMap.set(callback, wrapper);

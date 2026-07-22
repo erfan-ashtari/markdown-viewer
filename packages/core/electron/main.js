@@ -560,6 +560,22 @@ ipcMain.handle('handle-ui-interaction', (event, pluginName, elementId, eventType
   return runtimePluginManager.handleUIInteraction(pluginName, elementId, eventType, payload);
 });
 
+// Content overrides from runtime plugins
+ipcMain.handle('get-content-overrides', () => {
+  return runtimePluginManager.getContentOverrides();
+});
+
+// Render mode
+ipcMain.handle('set-render-mode', (event, extension, rendered) => {
+  runtimePluginManager.renderModeStates.set(extension, rendered);
+  runtimePluginManager.broadcast('render-mode-changed', { extension, rendered });
+  return { success: true };
+});
+
+ipcMain.handle('get-render-mode', (event, extension) => {
+  return runtimePluginManager.renderModeStates.get(extension) ?? true;
+});
+
 // Reload main window (from Settings)
 ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
