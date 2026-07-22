@@ -94,13 +94,13 @@ module.exports = {
         const mimoExe = state.mimoPath || 'mimo';
         const args = [
           'run',
-          `"${prompt}"`,
+          prompt,
           '--thinking',
           '--model', 'mimo/mimo-auto',
           '--agent', 'build',
-          '--dir', `"${path.dirname(filePath)}"`,
+          '--dir', path.dirname(filePath),
           '--dangerously-skip-permissions',
-          '--file', `"${filePath}"`,
+          '--file', filePath,
         ];
 
         // Log debug info
@@ -108,12 +108,17 @@ module.exports = {
         console.log('[mimo-chat] Args:', args.join(' '));
         console.log('[mimo-chat] CWD:', path.dirname(filePath));
 
-        const child = execFile(mimoExe, args, {
+        // On Windows, .cmd files need shell: true
+        const isWindows = process.platform === 'win32';
+        const options = {
           encoding: 'utf-8',
           timeout: TIMEOUT_MS,
           maxBuffer: 10 * 1024 * 1024,
           cwd: path.dirname(filePath),
-        }, (error, stdout, stderr) => {
+          shell: isWindows,
+        };
+
+        const child = execFile(mimoExe, args, options, (error, stdout, stderr) => {
           state.currentProcess = null;
           if (error) {
             console.error('[mimo-chat] CLI error:', error.message);
