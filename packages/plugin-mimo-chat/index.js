@@ -25,21 +25,48 @@ module.exports = {
   activate(context) {
     console.log('[mimo-chat] Activated');
 
-    // Check if mimo CLI is installed (sync with short timeout)
+    // Find mimo CLI path
+    let mimoPath = null;
     let mimoInstalled = false;
     try {
       const { execSync } = require('child_process');
-      execSync('mimo --version', { encoding: 'utf-8', stdio: 'ignore', timeout: 3000 });
+      // Try to find mimo path
+      const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+      mimoPath = execSync(`${whichCmd} mimo`, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
+      console.log('[mimo-chat] mimo path:', mimoPath);
+      
+      // Verify it works
+      execSync(`"${mimoPath}" --version`, { encoding: 'utf-8', stdio: 'ignore', timeout: 3000 });
       mimoInstalled = true;
-      console.log('[mimo-chat] mimo CLI found');
+      console.log('[mimo-chat] mimo CLI found and verified');
     } catch (err) {
-      console.warn('[mimo-chat] mimo CLI not found:', err.message);
+      console.warn('[mimo-chat] mimo CLI error:', err.message);
+      // Try fallback: check common install locations
+      const fallbackPaths = [
+        path.join(process.env.APPDATA || '', 'npm', 'mimo.cmd'),
+        path.join(process.env.APPDATA || '', 'npm', 'mimo'),
+        '/usr/local/bin/mimo',
+        '/usr/bin/mimo',
+      ];
+      for (const p of fallbackPaths) {
+        try {
+          require('fs').accessSync(p);
+          mimoPath = p;
+          mimoInstalled = true;
+          console.log('[mimo-chat] mimo found at fallback:', mimoPath);
+          break;
+        } catch {}
+      }
+      if (!mimoInstalled) {
+        console.warn('[mimo-chat] mimo not found in PATH or fallback locations');
+      }
     }
 
     const state = {
       isProcessing: false,
       chatHistory: [],
       mimoInstalled,
+      mimoPath,
       currentProcess: null,
     };
     this._state = state;
@@ -58,6 +85,7 @@ module.exports = {
     // Helper: execute mimo CLI (async, non-blocking)
     function executeMimo(prompt, filePath) {
       return new Promise((resolve, reject) => {
+        const mimoExe = state.mimoPath || 'mimo';
         const args = [
           'run', prompt,
           '--thinking',
@@ -68,18 +96,24 @@ module.exports = {
           '--file', filePath,
         ];
 
-        // Log redacted prompt for security
-        console.log('[mimo-chat] Executing query:', truncate(prompt, 50));
+        // Log debug info
+        console.log('[mimo-chat] Executing:', mimoExe);
+        console.log('[mimo-chat] Args:', args.join(' '));
+        console.log('[mimo-chat] CWD:', path.dirname(filePath));
 
-        const child = execFile('mimo', args, {
+        const child = execFile(mimoExe, args, {
           encoding: 'utf-8',
           timeout: TIMEOUT_MS,
           maxBuffer: 10 * 1024 * 1024,
+          cwd: path.dirname(filePath),
         }, (error, stdout, stderr) => {
           state.currentProcess = null;
           if (error) {
+            console.error('[mimo-chat] CLI error:', error.message);
+            console.error('[mimo-chat] stderr:', stderr);
             reject(error);
           } else {
+            console.log('[mimo-chat] Response length:', stdout.length);
             resolve(stdout);
           }
         });
