@@ -25,17 +25,16 @@ module.exports = {
   activate(context) {
     console.log('[mimo-chat] Activated');
 
-    // Check if mimo CLI is installed (async to avoid blocking)
+    // Check if mimo CLI is installed (sync with short timeout)
     let mimoInstalled = false;
-    const { execFile: execFileAsync } = require('child_process');
-    execFileAsync('mimo', ['--version'], { encoding: 'utf-8', timeout: 5000 }, (err) => {
-      mimoInstalled = !err;
-      if (mimoInstalled) {
-        console.log('[mimo-chat] mimo CLI found');
-      } else {
-        console.warn('[mimo-chat] mimo CLI not found');
-      }
-    });
+    try {
+      const { execSync } = require('child_process');
+      execSync('mimo --version', { encoding: 'utf-8', stdio: 'ignore', timeout: 3000 });
+      mimoInstalled = true;
+      console.log('[mimo-chat] mimo CLI found');
+    } catch (err) {
+      console.warn('[mimo-chat] mimo CLI not found:', err.message);
+    }
 
     const state = {
       isProcessing: false,
