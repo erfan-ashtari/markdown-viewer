@@ -25,54 +25,66 @@ module.exports = {
   activate(context) {
     console.log('[mimo-chat] Activated');
 
-    // Find mimo CLI path
-    let mimoPath = null;
+    // Resolve mimo CLI - on Windows, call Node.js directly with entry point
+    let nodeExe = null;
+    let mimoEntryPoint = null;
     let mimoInstalled = false;
+
     try {
+      const fs = require('fs');
       const { execSync } = require('child_process');
-      // Try to find mimo path
+
+      // Find node.exe
       const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-      mimoPath = execSync(`${whichCmd} mimo`, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
-      
-      // On Windows, ensure .cmd extension
-      if (process.platform === 'win32' && !mimoPath.endsWith('.cmd')) {
-        mimoPath = mimoPath + '.cmd';
-      }
-      
-      console.log('[mimo-chat] mimo path:', mimoPath);
-      
-      // Verify it works
-      execSync(`"${mimoPath}" --version`, { encoding: 'utf-8', stdio: 'ignore', timeout: 3000 });
-      mimoInstalled = true;
-      console.log('[mimo-chat] mimo CLI found and verified');
-    } catch (err) {
-      console.warn('[mimo-chat] mimo CLI error:', err.message);
-      // Try fallback: check common install locations
-      const fallbackPaths = [
-        path.join(process.env.APPDATA || '', 'npm', 'mimo.cmd'),
-        path.join(process.env.APPDATA || '', 'npm', 'mimo'),
-        '/usr/local/bin/mimo',
-        '/usr/bin/mimo',
-      ];
-      for (const p of fallbackPaths) {
-        try {
-          require('fs').accessSync(p);
-          mimoPath = p;
+      nodeExe = execSync(`${whichCmd} node`, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
+      console.log('[mimo-chat] node path:', nodeExe);
+
+      // Find mimo package
+      const npmGlobalPrefix = path.join(
+        process.env.APPDATA || path.join(require('os').homedir(), 'AppData', 'Roaming'),
+        'npm', 'node_modules'
+      );
+      const mimoPkgPath = path.join(npmGlobalPrefix, '@mimo-ai', 'cli', 'package.json');
+
+      if (fs.existsSync(mimoPkgPath)) {
+        const mimoPkg = JSON.parse(fs.readFileSync(mimoPkgPath, 'utf-8'));
+        const binField = mimoPkg.bin;
+        const binScript = typeof binField === 'object' ? Object.values(binField)[0] : binField;
+        mimoEntryPoint = path.join(path.dirname(mimoPkgPath), binScript);
+
+        if (fs.existsSync(mimoEntryPoint)) {
           mimoInstalled = true;
-          console.log('[mimo-chat] mimo found at fallback:', mimoPath);
-          break;
-        } catch {}
+          console.log('[mimo-chat] mimo entry point:', mimoEntryPoint);
+        }
       }
+
+      // Fallback: try direct mimo command
       if (!mimoInstalled) {
-        console.warn('[mimo-chat] mimo not found in PATH or fallback locations');
+        const mimoCmd = process.platform === 'win32' ? 'mimo.cmd' : 'mimo';
+        const mimoPath = execSync(`${whichCmd} ${mimoCmd}`, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
+        if (mimoPath) {
+          nodeExe = null; // Use direct command
+          mimoEntryPoint = mimoPath;
+          mimoInstalled = true;
+          console.log('[mimo-chat] mimo fallback path:', mimoEntryPoint);
+        }
       }
+    } catch (err) {
+      console.warn('[mimo-chat] mimo resolution error:', err.message);
+    }
+
+    if (mimoInstalled) {
+      console.log('[mimo-chat] mimo CLI ready');
+    } else {
+      console.warn('[mimo-chat] mimo CLI not found');
     }
 
     const state = {
       isProcessing: false,
       chatHistory: [],
       mimoInstalled,
-      mimoPath,
+      nodeExe,
+      mimoEntryPoint,
       currentProcess: null,
     };
     this._state = state;
@@ -91,21 +103,21 @@ module.exports = {
     // Helper: execute mimo CLI (async, non-blocking)
     function executeMimo(prompt, filePath) {
       return new Promise((resolve, reject) => {
-        const mimoExe = state.mimoPath || 'mimo';
-        const args = [
-          'run',
-          prompt,
-          '--thinking',
-          '--model', 'mimo/mimo-auto',
-          '--agent', 'build',
-          '--dir', path.dirname(filePath),
-          '--dangerously-skip-permissions',
-          '--file', filePath,
-        ];
+        // Build command - on Windows, call node.exe directly with entry point
+        let cmd, args;
+        if (state.nodeExe && state.mimoEntryPoint) {
+          // Windows: node.exe entry_point.js run ...
+          cmd = state.nodeExe;
+          args = [state.mimoEntryPoint, 'run', prompt, '--thinking', '--model', 'mimo/mimo-auto', '--agent', 'build', '--dir', path.dirname(filePath), '--dangerously-skip-permissions', '--file', filePath];
+        } else {
+          // Fallback: direct mimo command
+          cmd = state.mimoEntryPoint || 'mimo';
+          args = ['run', prompt, '--thinking', '--model', 'mimo/mimo-auto', '--agent', 'build', '--dir', path.dirname(filePath), '--dangerously-skip-permissions', '--file', filePath];
+        }
 
         // Log debug info
-        console.log('[mimo-chat] Executing:', mimoExe);
-        console.log('[mimo-chat] Args:', args.join(' '));
+        console.log('[mimo-chat] Executing:', cmd);
+        console.log('[mimo-chat] Args:', args.slice(0, 3).join(' '), '...');
         console.log('[mimo-chat] CWD:', path.dirname(filePath));
 
         // On Windows, .cmd files need shell: true
@@ -115,10 +127,10 @@ module.exports = {
           timeout: TIMEOUT_MS,
           maxBuffer: 10 * 1024 * 1024,
           cwd: path.dirname(filePath),
-          shell: isWindows,
+          shell: isWindows && !state.nodeExe, // Only shell for .cmd fallback
         };
 
-        const child = execFile(mimoExe, args, options, (error, stdout, stderr) => {
+        const child = execFile(cmd, args, options, (error, stdout, stderr) => {
           state.currentProcess = null;
           if (error) {
             console.error('[mimo-chat] CLI error:', error.message);
