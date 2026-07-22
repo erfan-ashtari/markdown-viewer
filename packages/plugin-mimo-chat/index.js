@@ -33,6 +33,12 @@ module.exports = {
       // Try to find mimo path
       const whichCmd = process.platform === 'win32' ? 'where' : 'which';
       mimoPath = execSync(`${whichCmd} mimo`, { encoding: 'utf-8', timeout: 3000 }).trim().split('\n')[0];
+      
+      // On Windows, ensure .cmd extension
+      if (process.platform === 'win32' && !mimoPath.endsWith('.cmd')) {
+        mimoPath = mimoPath + '.cmd';
+      }
+      
       console.log('[mimo-chat] mimo path:', mimoPath);
       
       // Verify it works
@@ -87,13 +93,14 @@ module.exports = {
       return new Promise((resolve, reject) => {
         const mimoExe = state.mimoPath || 'mimo';
         const args = [
-          'run', prompt,
+          'run',
+          `"${prompt}"`,
           '--thinking',
           '--model', 'mimo/mimo-auto',
           '--agent', 'build',
-          '--dir', path.dirname(filePath),
+          '--dir', `"${path.dirname(filePath)}"`,
           '--dangerously-skip-permissions',
-          '--file', filePath,
+          '--file', `"${filePath}"`,
         ];
 
         // Log debug info
