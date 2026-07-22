@@ -7,10 +7,16 @@
  * - Shows thinking process in collapsible section
  * - Loading animation while waiting
  * - Notification when answer is ready
+ * - Cancel button to abort long-running queries
  */
 
-const { execSync } = require('child_process');
+const { execFile } = require('child_process');
 const path = require('path');
+
+// Constants
+const MAX_QUERY_LENGTH = 4096;
+const MAX_HISTORY = 50;
+const TIMEOUT_MS = 120000; // 2 minutes
 
 /** @type {import('@mdview/plugin-api/runtime').RuntimePluginContext} */
 module.exports = {
@@ -19,61 +25,98 @@ module.exports = {
   activate(context) {
     console.log('[mimo-chat] Activated');
 
-    // Check if mimo CLI is installed
+    // Check if mimo CLI is installed (async to avoid blocking)
     let mimoInstalled = false;
-    try {
-      execSync('mimo --version', { encoding: 'utf-8', stdio: 'ignore' });
-      mimoInstalled = true;
-      console.log('[mimo-chat] mimo CLI found');
-    } catch (err) {
-      console.warn('[mimo-chat] mimo CLI not found');
-    }
+    const { execFile: execFileAsync } = require('child_process');
+    execFileAsync('mimo', ['--version'], { encoding: 'utf-8', timeout: 5000 }, (err) => {
+      mimoInstalled = !err;
+      if (mimoInstalled) {
+        console.log('[mimo-chat] mimo CLI found');
+      } else {
+        console.warn('[mimo-chat] mimo CLI not found');
+      }
+    });
 
     const state = {
       isProcessing: false,
       chatHistory: [],
       mimoInstalled,
+      currentProcess: null,
     };
     this._state = state;
 
-    // Helper: execute mimo CLI and parse output
+    // Helper: validate input
+    function validateInput(query) {
+      if (!query || typeof query !== 'string') return { valid: false, error: 'Invalid input' };
+      const trimmed = query.trim();
+      if (trimmed.length === 0) return { valid: false, error: 'Please enter a question' };
+      if (trimmed.length > MAX_QUERY_LENGTH) {
+        return { valid: false, error: `Query too long (max ${MAX_QUERY_LENGTH} characters)` };
+      }
+      return { valid: true, query: trimmed };
+    }
+
+    // Helper: execute mimo CLI (async, non-blocking)
     function executeMimo(prompt, filePath) {
-      const escapedPrompt = prompt.replace(/'/g, "'\\''");
-      const escapedPath = filePath.replace(/'/g, "'\\''");
-      
-      const cmd = `mimo run '${escapedPrompt}' --thinking --model mimo/mimo-auto --agent build --dir "${path.dirname(filePath)}" --dangerously-skip-permissions --file "${escapedPath}"`;
-      
-      console.log('[mimo-chat] Executing:', cmd);
-      
-      const result = execSync(cmd, { 
-        encoding: 'utf-8',
-        timeout: 120000, // 2 minutes timeout
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      return new Promise((resolve, reject) => {
+        const args = [
+          'run', prompt,
+          '--thinking',
+          '--model', 'mimo/mimo-auto',
+          '--agent', 'build',
+          '--dir', path.dirname(filePath),
+          '--dangerously-skip-permissions',
+          '--file', filePath,
+        ];
+
+        // Log redacted prompt for security
+        console.log('[mimo-chat] Executing query:', truncate(prompt, 50));
+
+        const child = execFile('mimo', args, {
+          encoding: 'utf-8',
+          timeout: TIMEOUT_MS,
+          maxBuffer: 10 * 1024 * 1024,
+        }, (error, stdout, stderr) => {
+          state.currentProcess = null;
+          if (error) {
+            reject(error);
+          } else {
+            resolve(stdout);
+          }
+        });
+
+        state.currentProcess = child;
       });
-      
-      return result;
     }
 
     // Helper: parse mimo output into thinking and answer
     function parseOutput(output) {
-      // Try to extract thinking section
       const thinkingMatch = output.match(/<thinking>([\s\S]*?)<\/thinking>/i);
       const thinking = thinkingMatch ? thinkingMatch[1].trim() : '';
-      
-      // Answer is everything outside thinking tags
       let answer = output.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '').trim();
-      
-      // Clean up common artifacts
-      answer = answer.replace(/^```[\s\S]*?```/gm, (match) => match); // Keep code blocks
-      answer = answer.replace(/\n{3,}/g, '\n\n'); // Reduce multiple newlines
-      
+      answer = answer.replace(/\n{3,}/g, '\n\n');
       return { thinking, answer };
     }
 
     // Helper: truncate text for display
     function truncate(text, maxLength = 500) {
-      if (text.length <= maxLength) return text;
-      return text.substring(0, maxLength) + '...';
+      if (!text) return '';
+      return text.length <= maxLength ? text : text.substring(0, maxLength) + '...';
+    }
+
+    // Helper: get user-friendly error message
+    function getErrorMessage(err) {
+      const msg = err.message || String(err);
+      if (msg.includes('ENOENT') || msg.includes('not found')) {
+        return 'Mimo CLI not found. Please install: npm install -g @mimo-ai/cli';
+      }
+      if (msg.includes('timeout') || msg.includes('TIMEOUT')) {
+        return 'Request timed out. Try a shorter question.';
+      }
+      if (msg.includes('maxBuffer') || msg.includes('MAXBUFFER')) {
+        return 'Response too large. Try a shorter question.';
+      }
+      return 'An error occurred. Please try again.';
     }
 
     // Register sidebar panel
@@ -87,7 +130,8 @@ module.exports = {
         
         // Action Buttons
         { type: 'button', id: 'send-btn', label: 'Send', icon: 'Send', variant: 'primary' },
-        { type: 'button', id: 'summarize-btn', label: 'Summarize', icon: 'FileText', variant: 'default' },
+        { type: 'button', id: 'summarize-btn', label: 'Summarize', icon: 'FileText', variant: 'ghost' },
+        { type: 'button', id: 'cancel-btn', label: 'Cancel', icon: 'XCircle', variant: 'danger', disabled: true },
         
         // Loading State
         { type: 'separator', id: 'sep1' },
@@ -129,13 +173,14 @@ module.exports = {
       // Handle Send button
       if (elementId === 'send-btn') {
         const inputValue = payload?.value || '';
-        if (!inputValue.trim()) {
+        const validation = validateInput(inputValue);
+        if (!validation.valid) {
           context.updateElementState({
-            'status': { value: 'Please enter a question', color: 'warning' },
+            'status': { value: validation.error, color: 'warning' },
           });
           return;
         }
-        await processQuery(inputValue);
+        await processQuery(validation.query);
       }
 
       // Handle Summarize button
@@ -146,8 +191,23 @@ module.exports = {
       // Handle chat input submission (Enter key)
       if (elementId === 'chat-input' && eventType === 'submit') {
         const inputValue = payload?.value || '';
-        if (!inputValue.trim()) return;
-        await processQuery(inputValue);
+        const validation = validateInput(inputValue);
+        if (!validation.valid) return;
+        await processQuery(validation.query);
+      }
+
+      // Handle Cancel button
+      if (elementId === 'cancel-btn' && state.currentProcess) {
+        state.currentProcess.kill();
+        state.currentProcess = null;
+        state.isProcessing = false;
+        context.updateElementState({
+          'status': { value: 'Cancelled', color: 'warning' },
+          'progress': { value: 0 },
+          'send-btn': { disabled: false },
+          'summarize-btn': { disabled: false },
+          'cancel-btn': { disabled: true },
+        });
       }
     });
 
@@ -171,51 +231,40 @@ module.exports = {
       state.isProcessing = true;
 
       try {
-        // Update UI - processing started
+        // Update UI - processing started, disable buttons
         context.updateElementState({
           'status': { value: 'Processing...', color: 'info' },
-          'progress': { value: 10 },
+          'progress': { value: 50 },
           'thinking-content': { value: 'Starting analysis...' },
           'answer-content': { value: 'Waiting for response...' },
+          'send-btn': { disabled: true },
+          'summarize-btn': { disabled: true },
+          'cancel-btn': { disabled: false },
         });
 
-        // Progress simulation
-        let progress = 10;
-        const progressInterval = setInterval(() => {
-          if (progress < 90) {
-            progress += 5;
-            context.updateElementState({ 'progress': { value: progress } });
-          }
-        }, 500);
-
-        // Execute mimo
-        context.updateElementState({
-          'status': { value: 'Querying Mimo AI...', color: 'info' },
-          'progress': { value: 30 },
-        });
-
-        const output = executeMimo(query, file.filePath);
+        // Execute mimo (async, non-blocking)
+        const output = await executeMimo(query, file.filePath);
 
         // Parse output
         const { thinking, answer } = parseOutput(output);
 
-        // Complete progress
-        clearInterval(progressInterval);
-        context.updateElementState({ 'progress': { value: 100 } });
-
         // Update UI with results
         context.updateElementState({
           'status': { value: 'Complete', color: 'success' },
+          'progress': { value: 100 },
           'thinking-content': { value: thinking || 'No thinking process captured' },
           'answer-content': { value: answer || 'No answer generated' },
         });
 
-        // Add to chat history
+        // Add to chat history (capped)
         state.chatHistory.push({
           query,
           answer: truncate(answer, 200),
           timestamp: new Date().toLocaleTimeString(),
         });
+        if (state.chatHistory.length > MAX_HISTORY) {
+          state.chatHistory = state.chatHistory.slice(-MAX_HISTORY);
+        }
 
         // Update history display
         const historyText = state.chatHistory
@@ -236,12 +285,21 @@ module.exports = {
       } catch (err) {
         console.error('[mimo-chat] Error:', err.message);
         context.updateElementState({
-          'status': { value: 'Error: ' + truncate(err.message, 100), color: 'error' },
+          'status': { value: getErrorMessage(err), color: 'error' },
           'progress': { value: 0 },
-          'answer-content': { value: 'Error: ' + err.message },
+          'answer-content': { value: getErrorMessage(err) },
+          'send-btn': { disabled: false },
+          'summarize-btn': { disabled: false },
+          'cancel-btn': { disabled: true },
         });
       } finally {
         state.isProcessing = false;
+        // Re-enable buttons if not already done
+        context.updateElementState({
+          'send-btn': { disabled: false },
+          'summarize-btn': { disabled: false },
+          'cancel-btn': { disabled: true },
+        });
       }
     }
 
@@ -249,6 +307,10 @@ module.exports = {
   },
 
   deactivate() {
+    // Kill any running process
+    if (this._state?.currentProcess) {
+      this._state.currentProcess.kill();
+    }
     this._state = null;
     console.log('[mimo-chat] Deactivated');
   }
