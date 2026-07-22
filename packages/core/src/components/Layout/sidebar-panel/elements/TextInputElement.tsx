@@ -1,17 +1,19 @@
 import { useCallback, useState, useEffect, memo } from 'react'
 
-export const TextInputElement = memo(({ element, onInteraction }: any) => {
-  const [localValue, setLocalValue] = useState(element.value)
+export const TextInputElement = memo(({ element, state, onInteraction }: any) => {
+  // Use state override if available, otherwise use element definition, fallback to empty string
+  const initialValue = state?.[element.id]?.value ?? element.value ?? ''
+  const [localValue, setLocalValue] = useState(initialValue)
 
   useEffect(() => {
-    setLocalValue(element.value)
-  }, [element.value])
+    setLocalValue(initialValue)
+  }, [initialValue])
 
   const handleSubmit = useCallback(() => {
-    if (localValue !== element.value) {
+    if (localValue !== initialValue) {
       onInteraction(element.id, 'submit', { value: localValue })
     }
-  }, [localValue, element.id, element.value, onInteraction])
+  }, [localValue, element.id, initialValue, onInteraction])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSubmit()

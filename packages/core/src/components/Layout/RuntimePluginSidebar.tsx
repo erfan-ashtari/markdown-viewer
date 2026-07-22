@@ -299,10 +299,10 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
       setPanels((prev) => [...prev, data])
     }
 
-    const handlePanelUpdated = (data: { pluginName: string; panel: SidebarPanel }) => {
+    const handlePanelUpdated = (data: { pluginName: string; panel: SidebarPanel; state?: Record<string, any> }) => {
       setPanels((prev) =>
         prev.map((p) =>
-          p.pluginName === data.pluginName ? { ...p, panel: data.panel } : p
+          p.pluginName === data.pluginName ? { ...p, panel: data.panel, state: data.state ?? p.state } : p
         )
       )
     }

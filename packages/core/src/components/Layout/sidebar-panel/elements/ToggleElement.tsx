@@ -1,9 +1,23 @@
-import { useCallback, memo } from 'react'
+import { useCallback, useState, useEffect, memo } from 'react'
 
-export const ToggleElement = memo(({ element, onInteraction }: any) => {
+export const ToggleElement = memo(({ element, state, onInteraction }: any) => {
+  // Use state override if available, otherwise use element definition
+  const initialValue = state?.[element.id]?.checked ?? element.checked ?? false
+  const [localChecked, setLocalChecked] = useState(initialValue)
+
+  // Sync with external state updates
+  useEffect(() => {
+    setLocalChecked(initialValue)
+  }, [initialValue])
+
   const handleChange = useCallback(() => {
-    onInteraction(element.id, 'change', { checked: !element.checked })
-  }, [element.id, element.checked, onInteraction])
+    const newValue = !localChecked
+    // Optimistic update - immediately reflect the change
+    setLocalChecked(newValue)
+    onInteraction(element.id, 'change', { checked: newValue })
+  }, [element.id, localChecked, onInteraction])
+
+  const checked = localChecked
 
   return (
     <div style={{
@@ -17,7 +31,7 @@ export const ToggleElement = memo(({ element, onInteraction }: any) => {
         onClick={handleChange}
         disabled={element.disabled}
         role="switch"
-        aria-checked={element.checked}
+        aria-checked={checked}
         style={{
           width: '36px',
           height: '20px',
@@ -25,7 +39,7 @@ export const ToggleElement = memo(({ element, onInteraction }: any) => {
           border: 'none',
           padding: '2px',
           cursor: element.disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: element.checked ? 'var(--accent-color)' : 'var(--bg-tertiary)',
+          backgroundColor: checked ? 'var(--accent-color)' : 'var(--bg-tertiary)',
           position: 'relative',
           transition: 'background-color 0.2s',
           flexShrink: 0,
@@ -38,7 +52,7 @@ export const ToggleElement = memo(({ element, onInteraction }: any) => {
           backgroundColor: 'white',
           position: 'absolute',
           top: '2px',
-          left: element.checked ? '18px' : '2px',
+          left: checked ? '18px' : '2px',
           transition: 'left 0.2s',
         }} />
       </button>

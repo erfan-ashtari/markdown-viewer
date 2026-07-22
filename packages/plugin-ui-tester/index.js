@@ -12,6 +12,7 @@
  */
 
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 // Get the plugin's directory for HTML file path
 const pluginDir = __dirname;
@@ -95,7 +96,7 @@ module.exports = {
           ]},
           { type: 'separator', id: 'gallery-sep-html' },
           { type: 'label', id: 'gallery-html-label', text: 'HTML Iframe', variant: 'muted' },
-          { type: 'html', id: 'html1', src: `file:///${path.join(pluginDir, 'test.html').replace(/\\/g, '/')}`, height: 150 },
+          { type: 'html', id: 'html1', src: pathToFileURL(path.join(pluginDir, 'test.html')).href, height: 150 },
         ]},
 
         // ── Section 2: Context Inspector ──
@@ -308,6 +309,7 @@ module.exports = {
       // Conditional Visibility
       if (elementId === 'vis-show-advanced') {
         context.updateElementState({
+          'vis-show-advanced': { checked: payload.checked },
           'vis-basic': { value: payload.checked ? 'Advanced' : 'Basic' },
         });
       }

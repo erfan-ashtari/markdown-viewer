@@ -1,17 +1,19 @@
 import { useCallback, useState, useEffect, memo } from 'react'
 
-export const TextAreaElement = memo(({ element, onInteraction }: any) => {
-  const [localValue, setLocalValue] = useState(element.value)
+export const TextAreaElement = memo(({ element, state, onInteraction }: any) => {
+  // Use state override if available, otherwise use element definition, fallback to empty string
+  const initialValue = state?.[element.id]?.value ?? element.value ?? ''
+  const [localValue, setLocalValue] = useState(initialValue)
 
   useEffect(() => {
-    setLocalValue(element.value)
-  }, [element.value])
+    setLocalValue(initialValue)
+  }, [initialValue])
 
   const handleSubmit = useCallback(() => {
-    if (localValue !== element.value) {
+    if (localValue !== initialValue) {
       onInteraction(element.id, 'submit', { value: localValue })
     }
-  }, [localValue, element.id, element.value, onInteraction])
+  }, [localValue, element.id, initialValue, onInteraction])
 
   return (
     <div style={{ padding: '4px 10px' }}>

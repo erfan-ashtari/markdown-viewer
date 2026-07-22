@@ -16,7 +16,11 @@ const textColorMap: Record<string, string> = {
   error: '#fff',
 }
 
-export const BadgeElement = memo(({ element }: any) => {
+export const BadgeElement = memo(({ element, state }: any) => {
+  // Use state override if available, otherwise use element definition
+  const count = state?.[element.id]?.count ?? element.count
+  const color = state?.[element.id]?.color ?? element.color
+
   return (
     <div style={{ padding: '4px 10px' }}>
       <span style={{
@@ -26,11 +30,11 @@ export const BadgeElement = memo(({ element }: any) => {
         padding: '2px 8px',
         borderRadius: '10px',
         fontSize: '11px',
-        backgroundColor: colorMap[element.color || 'default'],
-        color: textColorMap[element.color || 'default'],
+        backgroundColor: colorMap[color || 'default'],
+        color: textColorMap[color || 'default'],
       }}>
         {element.label}
-        {element.count != null && <span>{element.count}</span>}
+        {count != null && <span>{count}</span>}
       </span>
     </div>
   )

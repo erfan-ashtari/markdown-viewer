@@ -1,7 +1,9 @@
 import { memo } from 'react'
 
-export const ProgressElement = memo(({ element }: any) => {
-  const percent = Math.max(0, Math.min(100, element.value || 0))
+export const ProgressElement = memo(({ element, state }: any) => {
+  // Use state override if available, otherwise use element definition
+  const value = state?.[element.id]?.value ?? element.value
+  const percent = Math.max(0, Math.min(100, value || 0))
 
   return (
     <div style={{ padding: '4px 10px' }}>

@@ -645,7 +645,11 @@ app.whenReady().then(() => {
 runtimePluginManager.loadAllEnabled();
 
 protocol.registerFileProtocol('local-file', (request, callback) => {
-    const filePath = decodeURIComponent(request.url.replace('local-file://', ''));
+    let filePath = decodeURIComponent(request.url.replace('local-file://', ''));
+    // On Windows, strip leading slash from /C:/ path
+    if (process.platform === 'win32' && /^\/[A-Z]:/i.test(filePath)) {
+      filePath = filePath.substring(1);
+    }
     callback({ path: filePath });
   });
 

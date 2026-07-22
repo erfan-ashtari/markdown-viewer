@@ -1,9 +1,23 @@
-import React, { useCallback, memo } from 'react'
+import React, { useCallback, useState, useEffect, memo } from 'react'
 
-export const SelectElement = memo(({ element, onInteraction }: any) => {
+export const SelectElement = memo(({ element, state, onInteraction }: any) => {
+  // Use state override if available, otherwise use element definition, fallback to empty string
+  const initialValue = state?.[element.id]?.value ?? element.value ?? ''
+  const [localValue, setLocalValue] = useState(initialValue)
+
+  // Sync with external state updates
+  useEffect(() => {
+    setLocalValue(initialValue)
+  }, [initialValue])
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    onInteraction(element.id, 'change', { value: e.target.value })
+    const newValue = e.target.value
+    // Optimistic update - immediately reflect the change
+    setLocalValue(newValue)
+    onInteraction(element.id, 'change', { value: newValue })
   }, [element.id, onInteraction])
+
+  const value = localValue
 
   return (
     <div style={{ padding: '4px 10px' }}>
@@ -13,7 +27,7 @@ export const SelectElement = memo(({ element, onInteraction }: any) => {
         </label>
       )}
       <select
-        value={element.value}
+        value={value}
         onChange={handleChange}
         disabled={element.disabled}
         style={{

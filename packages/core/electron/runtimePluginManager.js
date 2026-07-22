@@ -146,10 +146,35 @@ class RuntimePluginManager {
       ];
 
       const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(fileDir, filePath);
-      if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
+      // Resolve symlinks to prevent directory escape via symlink
+      let realPath;
+      try {
+        realPath = fs.realpathSync(resolved);
+      } catch {
+        // File doesn't exist — validate the nearest existing parent directory
+        // to prevent symlink write bypass
+        let parent = path.dirname(resolved);
+        let parentReal = null;
+        // Walk up until we find an existing ancestor
+        while (parent !== path.dirname(parent)) {
+          try {
+            parentReal = fs.realpathSync(parent);
+            break;
+          } catch {
+            parent = path.dirname(parent);
+          }
+        }
+        if (!parentReal) {
+          throw new Error('Access denied: cannot validate path');
+        }
+        // Reconstruct realPath from validated parent + remaining relative parts
+        const remainder = path.relative(parent, resolved);
+        realPath = path.join(parentReal, remainder);
+      }
+      if (!allowedDirs.some(dir => realPath.startsWith(dir + path.sep) || realPath === dir)) {
         throw new Error('Access denied: path outside allowed directories');
       }
-      return resolved;
+      return realPath;
     }
 
     return {
@@ -208,7 +233,8 @@ class RuntimePluginManager {
           });
           console.log('[runtimePlugin] Registered sidebar panel:', panel.id, 'from', pluginName);
         } catch (err) {
-          console.error('[DEBUG] registerSidebarPanel FAILED:', err.message);
+          console.error('[runtimePlugin] registerSidebarPanel FAILED:', err.message);
+          throw err;
         }
       },
 
@@ -226,9 +252,12 @@ class RuntimePluginManager {
         const pluginDir = self.loadedPlugins.get(pluginName)?.dir;
         self._validatePanel(panel, pluginDir);
         self.sidebarPanels.set(pluginName, panel);
+        // Reset state for new elements in replaced panel
+        self.panelStates.set(pluginName, {});
         self.broadcast('sidebar-panel-updated', {
           pluginName,
           panel,
+          state: {},
         });
       },
 
@@ -268,13 +297,15 @@ class RuntimePluginManager {
       console.log('[DEBUG] Module loaded. Has activate:', typeof mod.activate);
 
       if (mod.activate) {
+        // Set loadedPlugins BEFORE activate() so registerSidebarPanel can resolve pluginDir
+        const mtime = this.getPluginMtime(plugin.path);
+        this.loadedPlugins.set(name, { mod, dir: plugin.path, mtime, main: plugin.main });
+
         const context = this.createContext(name);
         this.pluginContexts.set(name, context);
         console.log('[DEBUG] Calling activate for:', name);
         mod.activate(context);
         console.log('[DEBUG] activate() completed for:', name);
-        const mtime = this.getPluginMtime(plugin.path);
-        this.loadedPlugins.set(name, { mod, dir: plugin.path, mtime });
         console.log('[runtimePlugin] Loaded:', name);
       } else {
         console.warn('[runtimePlugin] Plugin', name, 'has no activate() function');
@@ -303,13 +334,17 @@ class RuntimePluginManager {
     for (const [key, val] of this.commands) {
       if (val.plugin === name) this.commands.delete(key);
     }
+    // Clean up event listeners registered by this plugin
+    for (const [event, listeners] of this.listeners) {
+      this.listeners.set(event, listeners.filter(l => l.plugin !== name));
+    }
 
     this.sidebarPanels.delete(name);
     this.panelStates.delete(name);
     this.broadcast('sidebar-panel-removed', { pluginName: name });
 
     try {
-      const entryPath = path.join(loaded.dir, require(path.join(loaded.dir, 'package.json')).main);
+      const entryPath = path.join(loaded.dir, loaded.main);
       delete require.cache[require.resolve(entryPath)];
     } catch {}
 
@@ -486,28 +521,34 @@ class RuntimePluginManager {
       if (!validTypes.has(el.type)) throw new Error('Unknown element type "' + el.type + '" in panel ' + panelId);
       if (!el.id || typeof el.id !== 'string') throw new Error('Element missing id in panel ' + panelId);
       if (el.type === 'html' && el.src) {
-        if (!el.src.startsWith('file://')) throw new Error('HTML element src must be file:// in panel ' + panelId);
+        // Accept both file:// and local-file:// protocols
+        const isFileProtocol = el.src.startsWith('file://') || el.src.startsWith('local-file://');
+        if (!isFileProtocol) throw new Error('HTML element src must be file:// or local-file:// in panel ' + panelId);
         // Validate the path is within the SPECIFIC plugin's directory (not all plugins)
         try {
-          const url = new URL(el.src);
-          const srcPath = decodeURIComponent(url.pathname);
-          const normalizedPath = path.normalize(srcPath);
+          // Normalize to file:// for URL parsing
+          const normalizedSrc = el.src.startsWith('local-file://')
+            ? el.src.replace('local-file://', 'file://')
+            : el.src;
+          const url = new URL(normalizedSrc);
+          let srcPath = decodeURIComponent(url.pathname);
+          // On Windows, URL pathname starts with /C:/ which path.resolve() mishandles
+          // Strip leading slash if it's a Windows drive letter path
+          if (process.platform === 'win32' && /^\/[A-Z]:/i.test(srcPath)) {
+            srcPath = srcPath.substring(1);
+          }
+          const resolvedSrc = path.resolve(srcPath);
           // Use plugin-specific directory if available, fall back to plugins root
-          const allowedRoot = pluginDir
-            ? pluginDir + path.sep
-            : path.join(app.getPath('userData'), 'plugins') + path.sep;
-          // Case-insensitive comparison on Windows
-          const isWindows = process.platform === 'win32';
-          const matches = isWindows
-            ? normalizedPath.toLowerCase().startsWith(allowedRoot.toLowerCase())
-            : normalizedPath.startsWith(allowedRoot);
-          if (!matches) {
+          const allowedRoot = pluginDir || path.join(app.getPath('userData'), 'plugins');
+          const resolvedRoot = path.resolve(allowedRoot);
+          // Use path.relative for safe containment check across all platforms
+          const rel = path.relative(resolvedRoot, resolvedSrc);
+          if (rel.startsWith('..') || path.isAbsolute(rel)) {
             throw new Error('HTML element src must be within the plugin directory in panel ' + panelId);
           }
         } catch (e) {
-          if (e.message.includes('must be file://')) throw e;
-          if (e.message.includes('must be within')) throw e;
-          throw new Error('Invalid HTML element src URL in panel ' + panelId);
+          if (e.message.startsWith('HTML element src must be')) throw e;
+          throw new Error('Invalid HTML element src URL in panel ' + panelId + ': ' + e.message);
         }
       }
       if (el.type === 'section' && Array.isArray(el.children)) {

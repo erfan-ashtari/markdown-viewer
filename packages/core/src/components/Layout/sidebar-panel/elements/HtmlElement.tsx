@@ -4,6 +4,11 @@ import { memo } from 'react'
 const SAFE_SANDBOX = 'allow-scripts'
 
 export const HtmlElement = memo(({ element }: any) => {
+  // Convert file:// to local-file:// for Electron protocol handling
+  const src = element.src?.startsWith('file://')
+    ? element.src.replace('file://', 'local-file://')
+    : element.src
+
   return (
     <div style={{
       margin: '4px 10px',
@@ -13,7 +18,7 @@ export const HtmlElement = memo(({ element }: any) => {
       border: '1px solid var(--border-color)',
     }}>
       <iframe
-        src={element.src}
+        src={src}
         sandbox={SAFE_SANDBOX}
         style={{ width: '100%', height: '100%', border: 'none' }}
         title={element.id}

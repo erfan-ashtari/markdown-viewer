@@ -39,7 +39,10 @@ interface SidebarElementProps {
 export const SidebarElement: React.FC<SidebarElementProps> = React.memo(
   ({ element, state, onInteraction }) => {
     if (element.visibleWhen) {
-      const watchedValue = state[element.visibleWhen.elementId]
+      const watched = state[element.visibleWhen.elementId]
+      // Resolve state objects - elements store { value: X } or { checked: X }
+      const watchedValue = watched?.checked !== undefined ? watched.checked :
+        watched?.value !== undefined ? watched.value : watched
       if (watchedValue !== element.visibleWhen.value) return null
     }
 

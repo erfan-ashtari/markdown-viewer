@@ -8,11 +8,15 @@ const colorMap: Record<string, string> = {
   info: 'var(--accent-color)',
 }
 
-export const StatusElement = memo(({ element }: any) => {
+export const StatusElement = memo(({ element, state }: any) => {
+  // Use state override if available, otherwise use element definition
+  const value = state?.[element.id]?.value ?? element.value
+  const color = state?.[element.id]?.color ?? element.color
+
   return (
     <div style={{ padding: '4px 10px', fontSize: '12px' }}>
       {element.label && <span style={{ color: 'var(--text-muted)' }}>{element.label}: </span>}
-      <span style={{ color: colorMap[element.color || 'default'] }}>{element.value}</span>
+      <span style={{ color: colorMap[color || 'default'] }}>{value}</span>
     </div>
   )
 })
