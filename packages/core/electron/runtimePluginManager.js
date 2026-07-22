@@ -15,6 +15,8 @@ class RuntimePluginManager {
     this.pluginContexts = new Map();  // name -> context (for updating currentFile)
     this.sidebarPanels = new Map();   // pluginName -> SidebarPanel
     this.panelStates = new Map();     // pluginName -> { [elementId]: state }
+    this.contentOverrides = new Map(); // pluginName -> { extensions, label }
+    this.renderModeStates = new Map(); // extension -> boolean (rendered vs source)
   }
 
   init() {
