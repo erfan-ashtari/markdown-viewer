@@ -17,6 +17,8 @@ class RuntimePluginManager {
     this.panelStates = new Map();     // pluginName -> { [elementId]: state }
     this.contentOverrides = new Map(); // pluginName -> { extensions, label }
     this.renderModeStates = new Map(); // extension -> boolean (rendered vs source)
+    this._stateCache = null;          // Cached state for debounced writes
+    this._saveTimeout = null;         // Debounce timer for state saves
   }
 
   init() {
@@ -38,7 +40,29 @@ class RuntimePluginManager {
       this.saveState({ plugins: {} });
     }
 
+    // Load persisted states
+    this._stateCache = this.loadState();
+    this._loadPersistedStates();
+
     this.startWatcher(pluginsDir);
+  }
+
+  _loadPersistedStates() {
+    const state = this._stateCache;
+
+    // Load persisted panel states
+    if (state.panelStates) {
+      for (const [name, panelState] of Object.entries(state.panelStates)) {
+        this.panelStates.set(name, panelState);
+      }
+    }
+
+    // Load persisted render modes
+    if (state.renderModes) {
+      for (const [ext, rendered] of Object.entries(state.renderModes)) {
+        this.renderModeStates.set(ext, rendered);
+      }
+    }
   }
 
   // --- State Management ---
@@ -53,6 +77,13 @@ class RuntimePluginManager {
 
   saveState(state) {
     fs.writeFileSync(this.stateFile, JSON.stringify(state, null, 2), 'utf-8');
+  }
+
+  _saveStateDebounced() {
+    clearTimeout(this._saveTimeout);
+    this._saveTimeout = setTimeout(() => {
+      this.saveState(this._stateCache);
+    }, 500);
   }
 
   broadcast(channel, data) {
@@ -244,6 +275,10 @@ class RuntimePluginManager {
         const current = self.panelStates.get(pluginName) || {};
         Object.assign(current, updates);
         self.panelStates.set(pluginName, current);
+        // Persist panel state
+        if (!self._stateCache.panelStates) self._stateCache.panelStates = {};
+        self._stateCache.panelStates[pluginName] = current;
+        self._saveStateDebounced();
         self.broadcast('sidebar-panel-state-updated', {
           pluginName,
           state: current,
@@ -256,6 +291,10 @@ class RuntimePluginManager {
         self.sidebarPanels.set(pluginName, panel);
         // Reset state for new elements in replaced panel
         self.panelStates.set(pluginName, {});
+        // Persist panel state reset
+        if (!self._stateCache.panelStates) self._stateCache.panelStates = {};
+        self._stateCache.panelStates[pluginName] = {};
+        self._saveStateDebounced();
         self.broadcast('sidebar-panel-updated', {
           pluginName,
           panel,
@@ -282,12 +321,38 @@ class RuntimePluginManager {
       // Render mode management
       setRenderMode(extension, rendered) {
         self.renderModeStates.set(extension, rendered);
+        // Persist render mode
+        if (!self._stateCache.renderModes) self._stateCache.renderModes = {};
+        self._stateCache.renderModes[extension] = rendered;
+        self._saveStateDebounced();
         self.broadcast('render-mode-changed', { extension, rendered });
         console.log('[runtimePlugin] Render mode:', extension, rendered ? 'rendered' : 'source');
       },
 
       getRenderMode(extension) {
         return self.renderModeStates.get(extension) ?? true;
+      },
+
+      // Plugin-scoped persistent state
+      getState(key, defaultValue) {
+        const data = self._stateCache.pluginData?.[pluginName] || {};
+        return key in data ? data[key] : defaultValue;
+      },
+
+      setState(key, value) {
+        if (!self._stateCache.pluginData) self._stateCache.pluginData = {};
+        if (!self._stateCache.pluginData[pluginName]) self._stateCache.pluginData[pluginName] = {};
+        self._stateCache.pluginData[pluginName][key] = value;
+        self._saveStateDebounced();
+      },
+
+      // Notifications
+      notify(options) {
+        const { BrowserWindow } = require('electron');
+        const wins = BrowserWindow.getAllWindows();
+        if (wins.length > 0) {
+          wins[0].webContents.send('show-notification', options);
+        }
       },
 
       // Restricted file system

@@ -158,6 +158,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
   reloadMain: () => ipcRenderer.send('reload-main'),
+  // System notifications
+  showNotification: (options) => ipcRenderer.invoke('show-notification', options),
+  // Listen for notifications from main process
+  onShowNotification: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('show-notification', wrapper);
+  },
+  offShowNotification: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('show-notification', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
   getPathForFile: (file) => {
     try {
       return webUtils.getPathForFile(file);

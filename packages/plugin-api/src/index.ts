@@ -8,4 +8,19 @@ export type {
   SidebarStatus, SidebarProgress, SidebarLabel, SidebarSeparator, SidebarSection,
   SidebarLink, SidebarBadge, SidebarHtml,
 } from './types';
+export type {
+  RuntimePluginContext,
+  RuntimePluginManifest,
+  PluginFileSystem,
+  ContentOverrideDeclaration,
+  NotificationOptions,
+  FileOpenedEvent,
+  FileChangedEvent,
+  UIEvent,
+  IconName,
+  ElementColor,
+  ButtonVariant,
+  LabelVariant,
+  VisibleWhenCondition,
+} from './runtime';
 export { buttonBase, buttonDisabled, headerBar, injectPluginStyles } from './pluginStyles';

@@ -296,6 +296,20 @@ ipcMain.handle('read-file-binary', async (event, filePath) => {
 ipcMain.handle('write-file', async (event, filePath, content) => {
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
+    // Update current file reference if it's the same file
+    if (runtimePluginManager.currentFile?.filePath === filePath) {
+      runtimePluginManager.updateCurrentFile({
+        filePath,
+        fileName: path.basename(filePath),
+        content,
+      });
+    }
+    // Emit fileChanged event to plugins
+    runtimePluginManager.emitEvent('fileChanged', {
+      filePath,
+      fileName: path.basename(filePath),
+      content,
+    });
     return true;
   } catch (error) {
     console.error('Error writing file:', error);
@@ -581,6 +595,14 @@ ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
     mainWindow.webContents.reload();
   }
+});
+
+// System notifications
+ipcMain.handle('show-notification', (event, { title, body, icon }) => {
+  const { Notification } = require('electron');
+  const notification = new Notification({ title, body, icon });
+  notification.show();
+  return { success: true };
 });
 
 function buildFileTree(dirPath, relativePath = '', maxDepth = 1, currentDepth = 0) {
