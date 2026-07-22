@@ -32,14 +32,16 @@ export const HtmlRenderer: React.FC<HtmlRendererProps> = memo(({ content, filePa
     })
   }, [])
 
-  // If source view is active, return null to fall through to default renderer
+  // If source view is active, return null (override will be deactivated by auto-activation logic)
   if (!rendered) {
     return null
   }
 
-  // Rendered view: show HTML in a sandboxed iframe using local-file:// protocol
   // Convert file path to local-file:// URL for Electron
-  const fileUrl = filePath.replace(/^([A-Z]:)/i, 'local-file://$1').replace(/\\/g, '/')
+  // Handle Windows paths: D:\path\to\file.html -> local-file:///D:/path/to/file.html
+  const fileUrl = filePath
+    .replace(/^([A-Z]:)/i, 'local-file:///$1')
+    .replace(/\\/g, '/')
 
   return (
     <div style={{

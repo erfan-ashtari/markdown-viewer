@@ -21,7 +21,81 @@ const builtinPlugins: Record<string, { activate: Function; deactivate?: Function
 // Track deactivate functions for cleanup
 const pluginDeactivators: Map<string, () => void> = new Map();
 
+// Track registered content override extensions
+let registeredExtensions: string[] = [];
+
 export const pluginManager = new PluginManager();
+
+// Helper to check if a file is HTML
+function isHtmlFile(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+  return registeredExtensions.includes(ext);
+}
+
+// Auto-activate/deactivate content override based on active tab
+function setupContentOverrideAutoActivation() {
+  let lastActiveTabId: string | null = null;
+
+  // Listen for render mode changes from main process
+  window.electronAPI?.onRenderModeChanged?.((data: { extension: string; rendered: boolean }) => {
+    const activeTab = useAppStore.getState().tabs.find(t => t.id === useAppStore.getState().activeTabId);
+    if (!activeTab) return;
+
+    if (isHtmlFile(activeTab.fileName)) {
+      if (data.rendered && !pluginManager.isContentOverrideActive()) {
+        // Activate override for rendered mode
+        pluginManager.toggleContentOverride({
+          filePath: activeTab.filePath,
+          fileName: activeTab.fileName,
+          content: activeTab.content,
+        });
+        console.log('[pluginLoader] Auto-activated content override for HTML file');
+      } else if (!data.rendered && pluginManager.isContentOverrideActive()) {
+        // Deactivate override for source mode
+        pluginManager.toggleContentOverride({
+          filePath: activeTab.filePath,
+          fileName: activeTab.fileName,
+          content: activeTab.content,
+        });
+        console.log('[pluginLoader] Auto-deactivated content override for source mode');
+      }
+    }
+  });
+
+  // Listen for tab changes
+  useAppStore.subscribe((state, prevState) => {
+    if (state.activeTabId !== prevState.activeTabId) {
+      const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+      if (!activeTab) return;
+
+      // Skip if same tab
+      if (state.activeTabId === lastActiveTabId) return;
+      lastActiveTabId = state.activeTabId;
+
+      if (isHtmlFile(activeTab.fileName)) {
+        // Check initial render mode and activate if needed
+        window.electronAPI?.getRenderMode?.('html').then((rendered: boolean) => {
+          if (rendered && !pluginManager.isContentOverrideActive()) {
+            pluginManager.toggleContentOverride({
+              filePath: activeTab.filePath,
+              fileName: activeTab.fileName,
+              content: activeTab.content,
+            });
+            console.log('[pluginLoader] Auto-activated content override for new HTML tab');
+          }
+        });
+      } else if (pluginManager.isContentOverrideActive()) {
+        // Deactivate override when switching to non-HTML file
+        pluginManager.toggleContentOverride({
+          filePath: activeTab.filePath,
+          fileName: activeTab.fileName,
+          content: activeTab.content,
+        });
+        console.log('[pluginLoader] Auto-deactivated content override for non-HTML file');
+      }
+    }
+  });
+}
 
 export async function loadPlugins() {
   // First run: enable all built-in plugins by default
@@ -58,6 +132,7 @@ export async function loadPlugins() {
     const contentOverrides = await window.electronAPI.getContentOverrides();
     if (contentOverrides && contentOverrides.length > 0) {
       for (const override of contentOverrides) {
+        registeredExtensions = override.extensions;
         pluginManager.registerContentOverride({
           canOverride: (tab) => {
             const ext = tab.fileName.split('.').pop()?.toLowerCase() || '';
@@ -67,6 +142,8 @@ export async function loadPlugins() {
         });
         console.log('[pluginLoader] Registered runtime content override for:', override.extensions);
       }
+      // Setup auto-activation for content overrides
+      setupContentOverrideAutoActivation();
     }
   } catch (err) {
     console.warn('[pluginLoader] Failed to fetch runtime plugin state:', err);
