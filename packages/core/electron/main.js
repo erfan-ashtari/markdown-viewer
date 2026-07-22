@@ -224,6 +224,52 @@ ipcMain.handle('build-file-tree', async (event, dirPath) => {
   }
 });
 
+// Lazy load: read a single directory level for on-demand expansion
+ipcMain.handle('read-directory', async (event, dirPath) => {
+  try {
+    const entries = [];
+    const items = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const item of items) {
+      const itemPath = path.join(dirPath, item.name);
+      const itemRelativePath = item.name;
+      if (item.isDirectory()) {
+        if (!item.name.startsWith('.') && item.name !== 'node_modules' && item.name !== 'System Volume Information') {
+          let mtimeMs = 0;
+          try { mtimeMs = fs.statSync(itemPath).mtimeMs; } catch {}
+          entries.push({
+            name: item.name,
+            path: itemPath,
+            relativePath: itemRelativePath,
+            type: 'directory',
+            mtimeMs,
+            children: [], // Empty - will be loaded on demand
+          });
+        }
+      } else {
+        let mtimeMs = 0;
+        try { mtimeMs = fs.statSync(itemPath).mtimeMs; } catch {}
+        entries.push({
+          name: item.name,
+          path: itemPath,
+          relativePath: itemRelativePath,
+          type: 'file',
+          mtimeMs,
+        });
+      }
+    }
+    entries.sort((a, b) => {
+      if (a.type === b.type) return a.name.localeCompare(b.name);
+      return a.type === 'directory' ? -1 : 1;
+    });
+    return entries;
+  } catch (error) {
+    if (error.code !== 'EPERM') {
+      console.error('Error reading directory:', error);
+    }
+    return [];
+  }
+});
+
 ipcMain.handle('read-file', async (event, filePath) => {
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
@@ -505,6 +551,15 @@ ipcMain.handle('rescan-plugins', () => {
   return { success: true, exporters: runtimePluginManager.getExporters() };
 });
 
+// Sidebar panel
+ipcMain.handle('get-sidebar-panels', () => {
+  return runtimePluginManager.getSidebarPanels();
+});
+
+ipcMain.handle('handle-ui-interaction', (event, pluginName, elementId, eventType, payload) => {
+  return runtimePluginManager.handleUIInteraction(pluginName, elementId, eventType, payload);
+});
+
 // Reload main window (from Settings)
 ipcMain.on('reload-main', () => {
   if (isWindowUsable(mainWindow)) {
@@ -512,7 +567,7 @@ ipcMain.on('reload-main', () => {
   }
 });
 
-function buildFileTree(dirPath, relativePath = '') {
+function buildFileTree(dirPath, relativePath = '', maxDepth = 1, currentDepth = 0) {
   const entries = [];
   try {
     const items = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -520,16 +575,24 @@ function buildFileTree(dirPath, relativePath = '') {
       const itemPath = path.join(dirPath, item.name);
       const itemRelativePath = relativePath ? `${relativePath}/${item.name}` : item.name;
       if (item.isDirectory()) {
-        if (!item.name.startsWith('.') && item.name !== 'node_modules') {
+        // Skip hidden dirs, node_modules, and system-protected directories
+        if (!item.name.startsWith('.') && item.name !== 'node_modules' && item.name !== 'System Volume Information') {
           let mtimeMs = 0;
-          try { mtimeMs = fs.statSync(itemPath).mtimeMs; } catch {}
+          let children = [];
+          try {
+            mtimeMs = fs.statSync(itemPath).mtimeMs;
+            // Only recurse if we haven't reached max depth
+            if (currentDepth < maxDepth) {
+              children = buildFileTree(itemPath, itemRelativePath, maxDepth, currentDepth + 1);
+            }
+          } catch {}
           entries.push({
             name: item.name,
             path: itemPath,
             relativePath: itemRelativePath,
             type: 'directory',
             mtimeMs,
-            children: buildFileTree(itemPath, itemRelativePath),
+            children,
           });
         }
       } else {
@@ -549,7 +612,10 @@ function buildFileTree(dirPath, relativePath = '') {
       return a.type === 'directory' ? -1 : 1;
     });
   } catch (error) {
-    console.error('Error reading directory:', error);
+    // Silently handle permission errors for system directories
+    if (error.code !== 'EPERM') {
+      console.error('Error reading directory:', error);
+    }
   }
   return entries;
 }

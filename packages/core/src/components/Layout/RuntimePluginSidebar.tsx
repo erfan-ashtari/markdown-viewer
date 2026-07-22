@@ -10,11 +10,19 @@ import {
   FolderOpen,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
+import type { SidebarPanel } from '@mdview/plugin-api'
+import { SidebarPanelRenderer } from './sidebar-panel/SidebarPanelRenderer'
 
 interface RuntimePlugin {
   name: string
   description: string
   enabled: boolean
+  state: Record<string, any>
+}
+
+interface PanelData {
+  pluginName: string
+  panel: SidebarPanel
   state: Record<string, any>
 }
 
@@ -25,8 +33,10 @@ interface RuntimePluginSidebarProps {
 const PluginItem: React.FC<{
   plugin: RuntimePlugin
   commands: Array<{ id: string; name: string; description: string; when?: string }>
+  panel?: PanelData
   onExecuteCommand: (commandId: string) => void
-}> = React.memo(({ plugin, commands, onExecuteCommand }) => {
+  onUIInteraction: (pluginName: string, elementId: string, eventType: string, payload: any) => void
+}> = React.memo(({ plugin, commands, panel, onExecuteCommand, onUIInteraction }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [runningCommandId, setRunningCommandId] = useState<string | null>(null)
 
@@ -43,6 +53,13 @@ const PluginItem: React.FC<{
       setRunningCommandId(null)
     }
   }
+
+  const handleUIInteraction = useCallback((elementId: string, eventType: string, payload: any) => {
+    onUIInteraction(plugin.name, elementId, eventType, payload)
+  }, [plugin.name, onUIInteraction])
+
+  const hasPanel = !!panel
+  const hasCommands = pluginCommands.length > 0
 
   return (
     <div style={{ marginBottom: '2px' }}>
@@ -110,18 +127,14 @@ const PluginItem: React.FC<{
       </div>
 
       {isExpanded && (
-        <div style={{ paddingLeft: '32px', paddingBottom: '8px' }}>
-          {pluginCommands.length === 0 ? (
-            <div
-              style={{
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-                padding: '4px 8px',
-              }}
-            >
-              No commands available
-            </div>
-          ) : (
+        <div style={{ paddingLeft: '16px', paddingBottom: '8px' }}>
+          {hasPanel ? (
+            <SidebarPanelRenderer
+              panel={panel!.panel}
+              state={panel!.state}
+              onInteraction={handleUIInteraction}
+            />
+          ) : hasCommands ? (
             pluginCommands.map((cmd, index) => {
               const isRunning = runningCommandId === cmd.id
               return (
@@ -166,9 +179,19 @@ const PluginItem: React.FC<{
                 </button>
               )
             })
+          ) : (
+            <div
+              style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                padding: '4px 8px',
+              }}
+            >
+              No UI elements registered
+            </div>
           )}
 
-          {plugin.state && Object.keys(plugin.state).length > 0 && (
+          {plugin.state && Object.keys(plugin.state).length > 0 && process.env.NODE_ENV === 'development' && (
             <div
               style={{
                 marginTop: '8px',
@@ -193,7 +216,7 @@ const PluginItem: React.FC<{
                 <div key={key} style={{ display: 'flex', gap: '8px', marginBottom: '2px' }}>
                   <span style={{ color: 'var(--accent-color)' }}>{key}:</span>
                   <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>
-                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    {typeof value === 'object' ? (() => { try { return JSON.stringify(value) } catch { return '[Circular]' } })() : String(value)}
                   </span>
                 </div>
               ))}
@@ -208,22 +231,30 @@ const PluginItem: React.FC<{
 export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOpen }) => {
   const [plugins, setPlugins] = useState<RuntimePlugin[]>([])
   const [commands, setCommands] = useState<Array<{ id: string; name: string; description: string; when?: string }>>([])
+  const [panels, setPanels] = useState<PanelData[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const currentFile = useAppStore((s) => s.currentFile)
   const currentDirectory = useAppStore((s) => s.currentDirectory)
 
   const fetchData = useCallback(async () => {
     try {
-      const [pluginsData, commandsData] = await Promise.all([
+      const [pluginsData, commandsData, panelsData] = await Promise.all([
         window.electronAPI?.getPlugins(),
         window.electronAPI?.getCommands(),
+        window.electronAPI?.getSidebarPanels(),
       ])
+      console.log('[DEBUG-Sidebar] pluginsData:', pluginsData?.length, 'runtime:', pluginsData?.filter((p: any) => p.runtime === true).length)
+      console.log('[DEBUG-Sidebar] commandsData:', commandsData?.length)
+      console.log('[DEBUG-Sidebar] panelsData:', panelsData)
       if (pluginsData && Array.isArray(pluginsData)) {
         const runtimeOnly = pluginsData.filter((p: any) => p.runtime === true)
         setPlugins(runtimeOnly.map((p: any) => ({ ...p, state: p.state || {} })))
       }
       if (commandsData && Array.isArray(commandsData)) {
         setCommands(commandsData)
+      }
+      if (panelsData && Array.isArray(panelsData)) {
+        setPanels(panelsData)
       }
     } catch (error) {
       console.error('Failed to fetch plugin data:', error)
@@ -264,14 +295,46 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
       }
     }
 
+    const handlePanelRegistered = (data: PanelData) => {
+      setPanels((prev) => [...prev, data])
+    }
+
+    const handlePanelUpdated = (data: { pluginName: string; panel: SidebarPanel }) => {
+      setPanels((prev) =>
+        prev.map((p) =>
+          p.pluginName === data.pluginName ? { ...p, panel: data.panel } : p
+        )
+      )
+    }
+
+    const handlePanelStateUpdated = (data: { pluginName: string; state: Record<string, any> }) => {
+      setPanels((prev) =>
+        prev.map((p) =>
+          p.pluginName === data.pluginName ? { ...p, state: data.state } : p
+        )
+      )
+    }
+
+    const handlePanelRemoved = (data: { pluginName: string }) => {
+      setPanels((prev) => prev.filter((p) => p.pluginName !== data.pluginName))
+    }
+
     window.electronAPI?.onPluginsChanged?.(handlePluginsChanged)
     window.electronAPI?.onPluginStateUpdated?.(handleStateUpdated)
     window.electronAPI?.onPluginCommandLog?.(handleCommandLog)
+    window.electronAPI?.onSidebarPanelRegistered?.(handlePanelRegistered)
+    window.electronAPI?.onSidebarPanelUpdated?.(handlePanelUpdated)
+    window.electronAPI?.onSidebarPanelStateUpdated?.(handlePanelStateUpdated)
+    window.electronAPI?.onSidebarPanelRemoved?.(handlePanelRemoved)
 
     return () => {
       window.electronAPI?.offPluginsChanged?.(handlePluginsChanged)
       window.electronAPI?.offPluginStateUpdated?.(handleStateUpdated)
       window.electronAPI?.offPluginCommandLog?.(handleCommandLog)
+      window.electronAPI?.offSidebarPanelRegistered?.(handlePanelRegistered)
+      window.electronAPI?.offSidebarPanelUpdated?.(handlePanelUpdated)
+      window.electronAPI?.offSidebarPanelStateUpdated?.(handlePanelStateUpdated)
+      window.electronAPI?.offSidebarPanelRemoved?.(handlePanelRemoved)
     }
   }, [isOpen, fetchData])
 
@@ -287,10 +350,27 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
     [fetchData]
   )
 
+  const handleUIInteraction = useCallback(
+    async (pluginName: string, elementId: string, eventType: string, payload: any) => {
+      try {
+        await window.electronAPI?.handleUIInteraction(pluginName, elementId, eventType, payload)
+      } catch (error) {
+        console.error('Failed to handle UI interaction:', error)
+      }
+    },
+    []
+  )
+
   const handleRefresh = useCallback(() => {
     setIsLoading(true)
     fetchData().finally(() => setIsLoading(false))
   }, [fetchData])
+
+  const getPanelForPlugin = useCallback((pluginName: string) => {
+    const found = panels.find((p) => p.pluginName === pluginName)
+    console.log('[DEBUG-Sidebar] getPanelForPlugin:', pluginName, '-> found:', !!found, 'panels:', panels.map(p => p.pluginName))
+    return found
+  }, [panels])
 
   if (!isOpen) return null
 
@@ -416,21 +496,13 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
               key={plugin.name}
               plugin={plugin}
               commands={commands}
+              panel={getPanelForPlugin(plugin.name)}
               onExecuteCommand={handleExecuteCommand}
+              onUIInteraction={handleUIInteraction}
             />
           ))
         )}
       </div>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .sidebar-spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
     </div>
   )
 }

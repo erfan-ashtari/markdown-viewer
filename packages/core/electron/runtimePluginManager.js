@@ -13,6 +13,8 @@ class RuntimePluginManager {
     this._lastScan = 0;
     this.currentFile = null;  // { filePath, fileName, content }
     this.pluginContexts = new Map();  // name -> context (for updating currentFile)
+    this.sidebarPanels = new Map();   // pluginName -> SidebarPanel
+    this.panelStates = new Map();     // pluginName -> { [elementId]: state }
   }
 
   init() {
@@ -144,7 +146,6 @@ class RuntimePluginManager {
       ];
 
       const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(fileDir, filePath);
-      console.log('[runtimePlugin] fs.validatePath:', filePath, '->', resolved, '(fileDir:', fileDir + ')');
       if (!allowedDirs.some(dir => resolved.startsWith(dir + path.sep) || resolved === dir)) {
         throw new Error('Access denied: path outside allowed directories');
       }
@@ -190,6 +191,47 @@ class RuntimePluginManager {
         console.log('[runtimePlugin] Registered command:', name, 'from', pluginName);
       },
 
+      // Sidebar panel registration
+      registerSidebarPanel(panel) {
+        // Find the plugin's directory for scoped validation
+        const pluginDir = self.loadedPlugins.get(pluginName)?.dir;
+        console.log('[DEBUG] registerSidebarPanel called by plugin:', pluginName, 'panel id:', panel?.id);
+        try {
+          self._validatePanel(panel, pluginDir);
+          self.sidebarPanels.set(pluginName, panel);
+          self.panelStates.set(pluginName, {});
+          console.log('[DEBUG] Panel stored successfully. Map size now:', self.sidebarPanels.size);
+          self.broadcast('sidebar-panel-registered', {
+            pluginName,
+            panel,
+            state: {},
+          });
+          console.log('[runtimePlugin] Registered sidebar panel:', panel.id, 'from', pluginName);
+        } catch (err) {
+          console.error('[DEBUG] registerSidebarPanel FAILED:', err.message);
+        }
+      },
+
+      updateElementState(updates) {
+        const current = self.panelStates.get(pluginName) || {};
+        Object.assign(current, updates);
+        self.panelStates.set(pluginName, current);
+        self.broadcast('sidebar-panel-state-updated', {
+          pluginName,
+          state: current,
+        });
+      },
+
+      updatePanel(panel) {
+        const pluginDir = self.loadedPlugins.get(pluginName)?.dir;
+        self._validatePanel(panel, pluginDir);
+        self.sidebarPanels.set(pluginName, panel);
+        self.broadcast('sidebar-panel-updated', {
+          pluginName,
+          panel,
+        });
+      },
+
       // Events
       onEvent(event, callback) {
         if (!self.listeners.has(event)) self.listeners.set(event, []);
@@ -204,24 +246,33 @@ class RuntimePluginManager {
   // --- Plugin Loading ---
 
   loadPlugin(name) {
-    if (this.loadedPlugins.has(name)) return;
+    if (this.loadedPlugins.has(name)) {
+      console.log('[DEBUG] Plugin already loaded:', name);
+      return;
+    }
 
     const plugins = this.discoverPlugins();
     const plugin = plugins.find(p => p.name === name);
     if (!plugin) {
       console.warn('[runtimePlugin] Plugin not found:', name);
+      console.log('[DEBUG] Available plugins:', plugins.map(p => p.name));
       return;
     }
 
+    console.log('[DEBUG] Loading plugin:', name, 'from', plugin.path);
     try {
       const entryPath = path.join(plugin.path, plugin.main);
+      console.log('[DEBUG] Entry path:', entryPath);
       delete require.cache[require.resolve(entryPath)];
       const mod = require(entryPath);
+      console.log('[DEBUG] Module loaded. Has activate:', typeof mod.activate);
 
       if (mod.activate) {
         const context = this.createContext(name);
         this.pluginContexts.set(name, context);
+        console.log('[DEBUG] Calling activate for:', name);
         mod.activate(context);
+        console.log('[DEBUG] activate() completed for:', name);
         const mtime = this.getPluginMtime(plugin.path);
         this.loadedPlugins.set(name, { mod, dir: plugin.path, mtime });
         console.log('[runtimePlugin] Loaded:', name);
@@ -230,6 +281,7 @@ class RuntimePluginManager {
       }
     } catch (err) {
       console.error('[runtimePlugin] Failed to load', name + ':', err.message);
+      console.error('[DEBUG] Full error:', err.stack);
     }
   }
 
@@ -251,6 +303,10 @@ class RuntimePluginManager {
     for (const [key, val] of this.commands) {
       if (val.plugin === name) this.commands.delete(key);
     }
+
+    this.sidebarPanels.delete(name);
+    this.panelStates.delete(name);
+    this.broadcast('sidebar-panel-removed', { pluginName: name });
 
     try {
       const entryPath = path.join(loaded.dir, require(path.join(loaded.dir, 'package.json')).main);
@@ -406,6 +462,89 @@ class RuntimePluginManager {
       result.push({ id: name, name, description: val.description, when: val.plugin });
     }
     return result;
+  }
+
+  // --- Sidebar Panel ---
+
+  _validatePanel(panel, pluginDir) {
+    if (!panel || typeof panel !== 'object') throw new Error('SidebarPanel must be an object');
+    if (!panel.id || typeof panel.id !== 'string') throw new Error('SidebarPanel.id is required');
+    if (!panel.title || typeof panel.title !== 'string') throw new Error('SidebarPanel.title is required');
+    if (!Array.isArray(panel.children)) throw new Error('SidebarPanel.children must be an array');
+    this._validateElements(panel.children, panel.id, 0, pluginDir);
+  }
+
+  _validateElements(elements, panelId, depth, pluginDir) {
+    if (depth > 5) throw new Error('Section nesting too deep in panel ' + panelId);
+    const validTypes = new Set([
+      'button', 'toggle', 'select', 'text-input', 'text-area',
+      'status', 'progress', 'label', 'separator', 'section',
+      'link', 'badge', 'html',
+    ]);
+    for (const el of elements) {
+      if (!el || typeof el !== 'object') throw new Error('Invalid element in panel ' + panelId);
+      if (!validTypes.has(el.type)) throw new Error('Unknown element type "' + el.type + '" in panel ' + panelId);
+      if (!el.id || typeof el.id !== 'string') throw new Error('Element missing id in panel ' + panelId);
+      if (el.type === 'html' && el.src) {
+        if (!el.src.startsWith('file://')) throw new Error('HTML element src must be file:// in panel ' + panelId);
+        // Validate the path is within the SPECIFIC plugin's directory (not all plugins)
+        try {
+          const url = new URL(el.src);
+          const srcPath = decodeURIComponent(url.pathname);
+          const normalizedPath = path.normalize(srcPath);
+          // Use plugin-specific directory if available, fall back to plugins root
+          const allowedRoot = pluginDir
+            ? pluginDir + path.sep
+            : path.join(app.getPath('userData'), 'plugins') + path.sep;
+          // Case-insensitive comparison on Windows
+          const isWindows = process.platform === 'win32';
+          const matches = isWindows
+            ? normalizedPath.toLowerCase().startsWith(allowedRoot.toLowerCase())
+            : normalizedPath.startsWith(allowedRoot);
+          if (!matches) {
+            throw new Error('HTML element src must be within the plugin directory in panel ' + panelId);
+          }
+        } catch (e) {
+          if (e.message.includes('must be file://')) throw e;
+          if (e.message.includes('must be within')) throw e;
+          throw new Error('Invalid HTML element src URL in panel ' + panelId);
+        }
+      }
+      if (el.type === 'section' && Array.isArray(el.children)) {
+        this._validateElements(el.children, panelId, depth + 1, pluginDir);
+      }
+    }
+  }
+
+  getSidebarPanels() {
+    const result = [];
+    console.log('[DEBUG] getSidebarPanels called. sidebarPanels map size:', this.sidebarPanels.size);
+    for (const [pluginName, panel] of this.sidebarPanels) {
+      console.log('[DEBUG] Found panel for plugin:', pluginName, 'panel id:', panel.id);
+      result.push({
+        pluginName,
+        panel,
+        state: this.panelStates.get(pluginName) || {},
+      });
+    }
+    console.log('[DEBUG] getSidebarPanels returning', result.length, 'panels');
+    return result;
+  }
+
+  handleUIInteraction(pluginName, elementId, eventType, payload) {
+    const panel = this.sidebarPanels.get(pluginName);
+    if (!panel) throw new Error('No panel registered by plugin: ' + pluginName);
+
+    const listeners = this.listeners.get('ui-event') || [];
+    for (const { callback, plugin } of listeners) {
+      if (plugin === pluginName) {
+        try {
+          callback({ elementId, eventType, payload });
+        } catch (err) {
+          console.warn('[runtimePlugin] UI event handler error in ' + plugin + ':', err.message);
+        }
+      }
+    }
   }
 
   // --- File Watcher ---

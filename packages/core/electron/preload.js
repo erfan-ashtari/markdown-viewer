@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: () => ipcRenderer.invoke('open-file'),
   openFolder: () => ipcRenderer.invoke('open-folder'),
   buildFileTree: (dirPath) => ipcRenderer.invoke('build-file-tree', dirPath),
+  readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
   readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
   readFileBinary: (filePath) => ipcRenderer.invoke('read-file-binary', filePath),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
@@ -39,6 +40,58 @@ contextBridge.exposeInMainWorld('electronAPI', {
   executeExport: (name, content, meta) => ipcRenderer.invoke('execute-export', name, content, meta),
   executeCommand: (name, args) => ipcRenderer.invoke('execute-command', name, args),
   rescanPlugins: () => ipcRenderer.invoke('rescan-plugins'),
+  // Sidebar panel
+  getSidebarPanels: () => ipcRenderer.invoke('get-sidebar-panels'),
+  handleUIInteraction: (pluginName, elementId, eventType, payload) =>
+    ipcRenderer.invoke('handle-ui-interaction', pluginName, elementId, eventType, payload),
+  onSidebarPanelRegistered: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('sidebar-panel-registered', wrapper);
+  },
+  offSidebarPanelRegistered: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('sidebar-panel-registered', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  onSidebarPanelUpdated: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('sidebar-panel-updated', wrapper);
+  },
+  offSidebarPanelUpdated: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('sidebar-panel-updated', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  onSidebarPanelStateUpdated: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('sidebar-panel-state-updated', wrapper);
+  },
+  offSidebarPanelStateUpdated: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('sidebar-panel-state-updated', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
+  onSidebarPanelRemoved: (callback) => {
+    const wrapper = (event, data) => callback(data);
+    listenerMap.set(callback, wrapper);
+    ipcRenderer.on('sidebar-panel-removed', wrapper);
+  },
+  offSidebarPanelRemoved: (callback) => {
+    const wrapper = listenerMap.get(callback);
+    if (wrapper) {
+      ipcRenderer.removeListener('sidebar-panel-removed', wrapper);
+      listenerMap.delete(callback);
+    }
+  },
   onPluginsChanged: (callback) => {
     const wrapper = () => callback();
     listenerMap.set(callback, wrapper);

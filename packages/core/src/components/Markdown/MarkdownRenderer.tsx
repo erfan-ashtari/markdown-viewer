@@ -14,7 +14,10 @@ declare global {
       openFile: () => Promise<{ filePath: string; content: string; fileName: string } | null>
       openFolder: () => Promise<{ tree: any; name: string } | null>
       buildFileTree: (dirPath: string) => Promise<{ tree: any; name: string } | null>
+      readDirectory: (dirPath: string) => Promise<any[]>
       readFile: (filePath: string) => Promise<{ filePath: string; content: string; fileName: string } | null>
+      readFileBinary: (filePath: string) => Promise<string | null>
+      writeFile: (filePath: string, content: string) => Promise<boolean>
       listMdFiles: (dirPath: string) => Promise<{ name: string; path: string }[]>
       openExternal: (link: string) => Promise<void>
       openFileWithSystem: (filePath: string) => Promise<void>
@@ -29,7 +32,39 @@ declare global {
       onSettingsChanged: (callback: (data: { key: string; value: any }) => void) => void
       rendererReady: () => void
       exportPdf: (htmlContent: string, margins?: { top: number; bottom: number; left: number; right: number }) => Promise<Buffer>
+      setFileFilters: (filters: Array<{ name: string; extensions: string[] }>) => void
+      getPlugins: () => Promise<any[]>
+      discoverPlugins: () => Promise<any[]>
+      installPlugin: (sourcePath: string) => Promise<{ success: boolean; name?: string; error?: string }>
+      uninstallPlugin: (name: string) => Promise<{ success: boolean; error?: string }>
+      openPluginsFolder: () => Promise<void>
+      setCurrentFile: (fileInfo: { filePath: string; fileName: string; content: string }) => Promise<void>
+      setCurrentDirectory: (dirPath: string) => Promise<void>
+      getPluginState: () => Promise<Record<string, { enabled: boolean }>>
+      setPluginState: (name: string, enabled: boolean) => Promise<{ success: boolean }>
+      getExporters: () => Promise<Array<{ name: string; description: string }>>
+      getCommands: () => Promise<Array<{ id: string; name: string; description: string; when?: string }>>
+      executeExport: (name: string, content: string, meta: any) => Promise<any>
+      executeCommand: (name: string, args?: any) => Promise<any>
+      rescanPlugins: () => Promise<{ success: boolean; exporters: any[] }>
+      getSidebarPanels: () => Promise<Array<{ pluginName: string; panel: any; state: Record<string, any> }>>
+      handleUIInteraction: (pluginName: string, elementId: string, eventType: string, payload: any) => Promise<void>
+      onPluginsChanged: (callback: () => void) => void
+      offPluginsChanged: (callback: () => void) => void
+      onPluginStateUpdated: (callback: (data: { name: string; enabled: boolean; state: Record<string, any> }) => void) => void
+      offPluginStateUpdated: (callback: (data: { name: string; enabled: boolean; state: Record<string, any> }) => void) => void
+      onPluginCommandLog: (callback: (data: { command: string; plugin: string; logs: Array<{ level: string; args: any[] }> }) => void) => void
+      offPluginCommandLog: (callback: (data: { command: string; plugin: string; logs: Array<{ level: string; args: any[] }> }) => void) => void
+      onSidebarPanelRegistered: (callback: (data: { pluginName: string; panel: any; state: Record<string, any> }) => void) => void
+      offSidebarPanelRegistered: (callback: (data: { pluginName: string; panel: any; state: Record<string, any> }) => void) => void
+      onSidebarPanelUpdated: (callback: (data: { pluginName: string; panel: any }) => void) => void
+      offSidebarPanelUpdated: (callback: (data: { pluginName: string; panel: any }) => void) => void
+      onSidebarPanelStateUpdated: (callback: (data: { pluginName: string; state: Record<string, any> }) => void) => void
+      offSidebarPanelStateUpdated: (callback: (data: { pluginName: string; state: Record<string, any> }) => void) => void
+      onSidebarPanelRemoved: (callback: (data: { pluginName: string }) => void) => void
+      offSidebarPanelRemoved: (callback: (data: { pluginName: string }) => void) => void
       getPathForFile: (file: File) => string | null
+      reloadMain: () => void
     }
   }
 }

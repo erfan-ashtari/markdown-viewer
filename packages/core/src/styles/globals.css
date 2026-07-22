@@ -678,3 +678,9 @@ body {
   outline: 2px solid rgba(255, 140, 0, 1);
   color: inherit;
 }
+
+/* Sidebar panel spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

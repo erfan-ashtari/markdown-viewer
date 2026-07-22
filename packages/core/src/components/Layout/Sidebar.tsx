@@ -201,8 +201,9 @@ const TreeItem: React.FC<{
   node: FileNode
   onFileSelect: (path: string, content: string, name: string) => void
   onNonMarkdownFile: (path: string, content: string, name: string) => void
+  onExpand?: (node: FileNode) => Promise<void>
   level?: number
-}> = React.memo(({ node, onFileSelect, onNonMarkdownFile, level = 0 }) => {
+}> = React.memo(({ node, onFileSelect, onNonMarkdownFile, onExpand, level = 0 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -210,7 +211,17 @@ const TreeItem: React.FC<{
 
   const handleClick = async () => {
     if (node.type === 'directory') {
-      setIsExpanded(!isExpanded)
+      const newExpanded = !isExpanded
+      setIsExpanded(newExpanded)
+      // Lazy load children on first expand
+      if (newExpanded && node.children && node.children.length === 0 && onExpand) {
+        setIsLoading(true)
+        try {
+          await onExpand(node)
+        } finally {
+          setIsLoading(false)
+        }
+      }
     } else if (isMarkdown) {
       setIsLoading(true)
       try {
@@ -285,12 +296,23 @@ const TreeItem: React.FC<{
       
       {node.type === 'directory' && isExpanded && node.children && (
         <div>
+          {isLoading && (
+            <div style={{
+              paddingLeft: `${(level + 1) * 16 + 8}px`,
+              padding: '4px 8px',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+            }}>
+              Loading...
+            </div>
+          )}
           {node.children.map((child) => (
             <TreeItem
               key={child.path}
               node={child}
               onFileSelect={onFileSelect}
               onNonMarkdownFile={onNonMarkdownFile}
+              onExpand={onExpand}
               level={level + 1}
             />
           ))}
@@ -332,6 +354,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
       setFileTree(result.tree)
       setRootPath(result.name)
       lastRootPath.current = folderPath
+    }
+  }, [])
+
+  // Lazy load children for a directory node
+  const handleExpandNode = useCallback(async (node: FileNode) => {
+    const children = await window.electronAPI?.readDirectory?.(node.path)
+    if (children) {
+      // Update the tree with the loaded children
+      const updateTree = (nodes: FileNode[]): FileNode[] => {
+        return nodes.map((n) => {
+          if (n.path === node.path) {
+            return { ...n, children }
+          }
+          if (n.children && n.children.length > 0) {
+            return { ...n, children: updateTree(n.children) }
+          }
+          return n
+        })
+      }
+      setFileTree((prev) => updateTree(prev))
     }
   }, [])
 
@@ -849,6 +891,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onFileSelect, onNonMarkdownFil
               node={node}
               onFileSelect={onFileSelect}
               onNonMarkdownFile={onNonMarkdownFile}
+              onExpand={handleExpandNode}
             />
           ))
         )}
