@@ -828,7 +828,11 @@ Runtime plugins can use npm packages. Two approaches:
 
 ### Option 1: Bundle with esbuild (Recommended)
 
-1. Create `package.json` with dependencies:
+This creates a single self-contained file with all dependencies included.
+
+**Step-by-step process:**
+
+1. Create your plugin with `package.json`:
 
 ```json
 {
@@ -841,34 +845,70 @@ Runtime plugins can use npm packages. Two approaches:
 }
 ```
 
-2. Install dependencies in your plugin folder:
+2. Install dependencies:
 
 ```bash
-cd {userData}/plugins/my-plugin
 npm install
 ```
 
 3. Bundle into a single file:
 
 ```bash
+npx esbuild index.js --bundle --outfile=index.bundled.js --platform=node --target=node18
+```
+
+Or use the bundle script (from project root):
+
+```bash
 node scripts/bundle-plugin.js .
 ```
 
-4. The bundled file `index.bundled.js` will contain all dependencies.
+4. Clean up files you don't need to distribute:
+
+```bash
+# Windows
+rmdir /s /q node_modules
+del package-lock.json
+
+# Linux/Mac
+rm -rf node_modules package-lock.json
+```
+
+5. Your final plugin folder should contain only:
+
+```
+my-plugin/
+├── package.json        # {"main": "index.bundled.js", ...}
+├── index.js            # Source code (optional, for reference)
+└── index.bundled.js    # Bundled file (MDView loads this)
+```
+
+6. Install the plugin:
+
+```bash
+# Copy to plugins directory
+cp -r my-plugin "{userData}/plugins/my-plugin"
+```
 
 ### Option 2: Ship node_modules
 
-Simply include the `node_modules` folder in your plugin directory. This works but increases plugin size.
+Simply include the `node_modules` folder in your plugin directory. This works but increases plugin size significantly.
 
 ### Bundle Script
 
-The `scripts/bundle-plugin.js` script uses esbuild to bundle dependencies:
+The `scripts/bundle-plugin.js` script automates bundling:
 
 ```bash
 node scripts/bundle-plugin.js <plugin-directory>
 ```
 
-This creates `index.bundled.js` in the plugin directory with all dependencies included.
+**Requirements:**
+- esbuild must be installed globally: `npm install -g esbuild`
+
+**What it does:**
+1. Reads your `package.json` to find the entry point
+2. Runs esbuild to bundle all dependencies
+3. Creates `index.bundled.js`
 
 ---
 
