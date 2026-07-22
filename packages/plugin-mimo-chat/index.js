@@ -285,6 +285,16 @@ module.exports = {
         return;
       }
 
+      // Check if it's a real file (not a directory placeholder)
+      if (file.filePath.endsWith('.current-dir') || !file.fileName) {
+        context.updateElementState({
+          'status': { value: 'Please open a file first (not a folder)', color: 'warning' },
+        });
+        return;
+      }
+
+      console.log('[mimo-chat] File:', file.fileName, file.filePath);
+
       state.isProcessing = true;
 
       try {
