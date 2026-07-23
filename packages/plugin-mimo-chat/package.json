@@ -1,7 +1,0 @@
-{
-  "name": "plugin-mimo-chat",
-  "displayName": "Mimo Chat",
-  "version": "1.0.0",
-  "description": "AI chatbot for MDView - summarize files and ask questions using Mimo",
-  "main": "index.js"
-}

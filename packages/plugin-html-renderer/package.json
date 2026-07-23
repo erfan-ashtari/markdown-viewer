@@ -1,8 +1,0 @@
-{
-  "name": "plugin-html-renderer",
-  "displayName": "HTML Renderer",
-  "version": "1.0.0",
-  "description": "Renders HTML files in an iframe with toggle for source/preview view",
-  "main": "index.js",
-  "activationEvents": ["onStartup"]
-}

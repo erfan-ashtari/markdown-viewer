@@ -1,0 +1,8 @@
+{
+  "name": "plugin-iframe-test",
+  "displayName": "Iframe Bridge Test",
+  "version": "1.0.0",
+  "description": "Tests bidirectional postMessage between sidebar iframe and plugin. Commands: fileinfo, head, wc, ls, date.",
+  "main": "index.js",
+  "activationEvents": ["*"]
+}

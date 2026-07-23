@@ -1,8 +1,0 @@
-{
-  "name": "plugin-ui-tester",
-  "displayName": "UI Test Plugin",
-  "version": "1.0.0",
-  "description": "Tests all sidebar panel UI elements and features",
-  "main": "index.js",
-  "activationEvents": ["onStartup"]
-}

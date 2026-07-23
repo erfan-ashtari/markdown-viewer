@@ -6,6 +6,7 @@ build/
 icons/
 electron/
 .mimocode/
+.opencode/
 *.log
 .env
 .env.*

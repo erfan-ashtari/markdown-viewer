@@ -8,6 +8,7 @@ build/*.ico
 build/*.png
 build/*.svg
 .mimocode/
+.opencode/
 COMMANDS.md
 *.log
 .env

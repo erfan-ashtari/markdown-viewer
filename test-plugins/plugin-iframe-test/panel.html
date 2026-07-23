@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 12px;
+      padding: 10px;
+      background: var(--bg-primary, #1e1e1e);
+      color: var(--text-primary, #ccc);
+    }
+    h3 { font-size: 13px; margin-bottom: 8px; color: var(--accent-color, #4fc1ff); }
+    .row { display: flex; gap: 6px; margin-bottom: 8px; }
+    input {
+      flex: 1;
+      padding: 5px 8px;
+      border: 1px solid var(--border-color, #333);
+      border-radius: 4px;
+      background: var(--bg-secondary, #252526);
+      color: var(--text-primary, #ccc);
+      font-size: 12px;
+    }
+    input:focus { outline: 1px solid var(--accent-color, #007acc); }
+    button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      background: var(--accent-color, #007acc);
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .log {
+      background: var(--bg-secondary, #252526);
+      border: 1px solid var(--border-color, #333);
+      border-radius: 4px;
+      padding: 6px 8px;
+      max-height: 170px;
+      overflow-y: auto;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .sent { color: #4fc1ff; }
+    .recv { color: #6a9955; }
+    .info { color: #888; }
+    .help { color: #dcdcaa; font-size: 10px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h3>Iframe Bridge Test</h3>
+  <div class="row">
+    <input id="msg" type="text" placeholder="Commands: fileinfo, head, wc, ls, date" />
+    <button id="send">Send</button>
+  </div>
+  <div class="log" id="log">
+    <div class="info">Ready. Type a command and press Enter.</div>
+  </div>
+  <div class="help">fileinfo | head [n] | wc | ls [dir] | date</div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const input = document.getElementById('msg');
+    const sendBtn = document.getElementById('send');
+
+    function addLog(cls, text) {
+      const div = document.createElement('div');
+      div.className = cls;
+      div.textContent = text;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      addLog('sent', '> ' + text);
+      window.parent.postMessage({ type: 'chat', text: text }, '*');
+      input.value = '';
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
+
+    // Receive state updates from plugin
+    window.addEventListener('message', (event) => {
+      if (event.data?.type !== 'state-update') return;
+      const s = event.data.state;
+      if (!s?.echo) return;
+      addLog('recv', '< [' + (s.fileName || '?') + '] ' + s.timestamp);
+      addLog('recv', s.echo);
+      addLog('info', '---');
+    });
+
+    addLog('info', 'Listening for state updates...');
+  </script>
+</body>
+</html>
