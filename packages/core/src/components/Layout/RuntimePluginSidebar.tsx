@@ -235,6 +235,8 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
   const [isLoading, setIsLoading] = useState(false)
   const currentFile = useAppStore((s) => s.currentFile)
   const currentDirectory = useAppStore((s) => s.currentDirectory)
+  const pluginSidebarWidth = useAppStore((s) => s.pluginSidebarWidth)
+  const setPluginSidebarWidth = useAppStore((s) => s.setPluginSidebarWidth)
 
   const fetchData = useCallback(async () => {
     try {
@@ -366,6 +368,30 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
     fetchData().finally(() => setIsLoading(false))
   }, [fetchData])
 
+  // Resize handle via mouse drag (left edge since this is a right sidebar)
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = pluginSidebarWidth
+
+    const onMouseMove = (e: MouseEvent) => {
+      const delta = startX - e.clientX
+      setPluginSidebarWidth(startWidth + delta)
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }, [pluginSidebarWidth, setPluginSidebarWidth])
+
   const getPanelForPlugin = useCallback((pluginName: string) => {
     const found = panels.find((p) => p.pluginName === pluginName)
     console.log('[DEBUG-Sidebar] getPanelForPlugin:', pluginName, '-> found:', !!found, 'panels:', panels.map(p => p.pluginName))
@@ -377,7 +403,7 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
   return (
     <div
       style={{
-        width: '280px',
+        width: `${pluginSidebarWidth}px`,
         height: '100%',
         backgroundColor: 'var(--sidebar-bg)',
         display: 'flex',
@@ -387,6 +413,19 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
         borderLeft: '1px solid var(--border-color)',
       }}
     >
+      {/* Resize handle (left edge) */}
+      <div
+        onMouseDown={handleResizeMouseDown}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: -3,
+          width: 6,
+          height: '100%',
+          cursor: 'col-resize',
+          zIndex: 10,
+        }}
+      />
       <div
         style={{
           padding: '12px',

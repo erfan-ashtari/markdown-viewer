@@ -24,6 +24,7 @@ interface AppState {
   // UI state
   sidebarOpen: boolean
   sidebarWidth: number
+  pluginSidebarWidth: number
   rightSidebarOpen: boolean
   zoomLevel: number
   contentWidth: 'full' | 'medium' | 'a4'
@@ -47,6 +48,7 @@ interface AppState {
   setActiveTab: (tabId: string) => void
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
+  setPluginSidebarWidth: (width: number) => void
   toggleRightSidebar: () => void
   setZoomLevel: (level: number) => void
   toggleContentWidth: () => void
@@ -74,6 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   rightSidebarOpen: false,
   enabledPlugins: JSON.parse(typeof localStorage !== 'undefined' ? localStorage.getItem('mdview-enabled-plugins') || '[]' : '[]'),
   sidebarWidth: 260,
+  pluginSidebarWidth: 280,
   zoomLevel: 100,
   contentWidth: 'full',
   currentTheme: 'github-dark',
@@ -158,6 +161,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   
   setSidebarWidth: (width) => set({ sidebarWidth: Math.max(180, Math.min(500, width)) }),
+  setPluginSidebarWidth: (width) => set({ pluginSidebarWidth: Math.max(200, Math.min(600, width)) }),
   
   toggleRightSidebar: () => set((state) => ({ rightSidebarOpen: !state.rightSidebarOpen })),
   
