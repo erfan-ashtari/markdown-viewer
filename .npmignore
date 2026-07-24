@@ -2,7 +2,8 @@ bin/MarkdownViewer.exe
 release/
 dist/
 src/
-build/
+build/*.png
+build/*.svg
 icons/
 electron/
 .mimocode/
