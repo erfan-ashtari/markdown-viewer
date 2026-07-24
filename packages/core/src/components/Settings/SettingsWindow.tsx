@@ -33,12 +33,14 @@ const shortcuts = [
 
 export const SettingsWindow: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SettingsSection>('general')
-  const {
-    currentTheme, setTheme,
-    currentFont, setCurrentFont,
-    contentWidth, toggleContentWidth,
-    zoomLevel, setZoomLevel,
-  } = useAppStore()
+  const currentTheme = useAppStore(s => s.currentTheme)
+  const setTheme = useAppStore(s => s.setTheme)
+  const currentFont = useAppStore(s => s.currentFont)
+  const setCurrentFont = useAppStore(s => s.setCurrentFont)
+  const contentWidth = useAppStore(s => s.contentWidth)
+  const toggleContentWidth = useAppStore(s => s.toggleContentWidth)
+  const zoomLevel = useAppStore(s => s.zoomLevel)
+  const setZoomLevel = useAppStore(s => s.setZoomLevel)
 
   const [localSettings, setLocalSettings] = useState({
     showSidebarOnStartup: true,
