@@ -18,18 +18,12 @@ export const TextRenderer: React.FC<TextRendererProps> = ({ content, fileName, z
     if (language) {
       try {
         return hljs.highlight(content, { language, ignoreIllegals: true }).value
-      } catch {
-        // fallback to auto-detection
-      }
+      } catch { /* fall through */ }
     }
-    try {
-      return hljs.highlightAuto(content).value
-    } catch {
-      return content
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-    }
+    return content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
   }, [content, language])
 
   const handleWheel = useCallback((e: WheelEvent) => {
@@ -48,7 +42,13 @@ export const TextRenderer: React.FC<TextRendererProps> = ({ content, fileName, z
     }
   }, [handleWheel])
 
-  const lineCount = useMemo(() => content.split('\n').length, [content])
+  const lineCount = useMemo(() => {
+    let count = 1
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] === '\n') count++
+    }
+    return count
+  }, [content])
 
   return (
     <div
