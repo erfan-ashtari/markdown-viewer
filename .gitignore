@@ -1,10 +1,9 @@
 node_modules/
 dist/
+release/
 packages/*/dist/
 packages/*/node_modules/
-release/
 bin/MarkdownViewer.exe
-build/*.png
 build/*.svg
 .mimocode/
 .opencode/
@@ -12,5 +11,6 @@ COMMANDS.md
 *.log
 .env
 .env.*
-
+packages/plugins.json
+STRUCTURE_ANALYSIS.md
 _tmp_dream*.py

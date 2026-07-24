@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var fs = require('fs');
 var path = require('path');
-var ROOT = path.resolve(__dirname, '../../..');
+var ROOT = path.resolve(__dirname, '..');
 var PD = path.join(ROOT, 'packages');
 var ED = path.resolve(__dirname, '..', 'electron');
 var PJ = path.join(ED, 'plugins.json');
@@ -42,7 +42,7 @@ for (var j = 0; j < plugins.length; j++) {
   var er = path.relative(CD, ea).replace(/\\/g, '/');
   pp2[plugins[j].package] = [er];
 }
-tc.compilerOptions.paths = Object.assign({ '@/*': ['src/*'], '@mdview/plugin-api': ['../plugin-api/src'] }, pp2);
+tc.compilerOptions.paths = Object.assign({ '@/*': ['src/*'], '@mdview/plugin-api': ['packages/plugin-api/src'] }, pp2);
 fs.writeFileSync(TC, JSON.stringify(tc, null, 2) + '\n');
 console.log('Updated tsconfig.json');
 console.log('Done - ' + plugins.length + ' plugin(s) configured.');

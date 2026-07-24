@@ -2,10 +2,10 @@ bin/MarkdownViewer.exe
 release/
 dist/
 src/
-build/*.png
-build/*.svg
-icons/
 electron/
+plugins/
+packages/
+build/*.svg
 .mimocode/
 .opencode/
 *.log

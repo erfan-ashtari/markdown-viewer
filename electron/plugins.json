@@ -2,7 +2,7 @@
   {
     "name": "pdf-viewer",
     "package": "@mdview/plugin-pdf",
-    "entry": "../plugin-pdf/src/index.tsx",
+    "entry": "packages/plugin-pdf/src/index.tsx",
     "version": "1.0.0",
     "description": "PDF viewer using Chromium native renderer",
     "displayName": "PDF Viewer",
@@ -24,7 +24,7 @@
   {
     "name": "image-viewer",
     "package": "@mdview/plugin-images",
-    "entry": "../plugin-images/src/index.tsx",
+    "entry": "packages/plugin-images/src/index.tsx",
     "version": "1.0.0",
     "description": "Image viewer with fit-to-width/height",
     "displayName": "Image Viewer",
@@ -62,7 +62,7 @@
   {
     "name": "editor",
     "package": "@mdview/plugin-editor",
-    "entry": "../plugin-editor/src/index.tsx",
+    "entry": "packages/plugin-editor/src/index.tsx",
     "version": "1.0.0",
     "description": "Text editor with save functionality",
     "displayName": "Text Editor",

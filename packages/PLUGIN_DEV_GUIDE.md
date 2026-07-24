@@ -536,17 +536,17 @@ const src = 'local-file:///' + filePath.replace(/\\/g, '/');
      "main": "src/index.tsx",
      "types": "src/index.tsx",
      "dependencies": {
-       "@mdview/plugin-api": "workspace:*"
+       "@mdview/plugin-api": "file:../plugin-api"
      }
    }
    ```
 
-3. **Add to plugin registry** (`packages/plugins.json`):
+3. **Add to plugin registry** (`electron/plugins.json`):
    ```json
    {
      "name": "xxx",
      "package": "@mdview/plugin-xxx",
-     "entry": "../plugin-xxx/src",
+     "entry": "packages/plugin-xxx/src",
      "version": "1.0.0",
      "description": "Your plugin description",
      "builtin": true
@@ -555,11 +555,11 @@ const src = 'local-file:///' + filePath.replace(/\\/g, '/');
 
 4. **Run the config generator:**
    ```bash
-   node packages/core/scripts/generate-plugin-config.js
+   node scripts/generate-plugin-config.js
    ```
    This auto-generates Vite aliases and TypeScript paths.
 
-5. **Add static import** (`packages/core/src/pluginLoader.ts`):
+5. **Add static import** (`src/pluginLoader.ts`):
    ```ts
    import { XPlugin } from '@mdview/plugin-xxx';
    // Add to builtinModules:
@@ -578,8 +578,8 @@ const src = 'local-file:///' + filePath.replace(/\\/g, '/');
 Third-party plugins installed via npm use dynamic imports. Just:
 
 1. `npm install @someone/plugin-xxx`
-2. Add entry to `packages/plugins.json`
-3. Run `node packages/core/scripts/generate-plugin-config.js`
+2. Add entry to `electron/plugins.json`
+3. Run `node scripts/generate-plugin-config.js`
 4. Enable in Settings → Plugins
 
 No core code changes needed — the plugin loads dynamically at startup.
@@ -715,42 +715,41 @@ useEffect(() => {
 ## File Structure
 
 ```
-packages/
-├── plugins.json                       # Plugin manifest (single source of truth)
+typora-clone/
+├── electron/
+│   ├── main.js                      # Electron main process
+│   ├── preload.js                   # IPC bridge
+│   ├── plugins.json                 # Auto-generated plugin manifest
+│   └── runtimePluginManager.js      # Runtime plugin manager
+├── src/
+│   ├── App.tsx                      # Root component, shortcut dispatch, content override logic
+│   ├── pluginLoader.ts              # Creates PluginManager, loads plugins from manifest
+│   ├── generated-plugin-aliases.ts  # Auto-generated Vite alias paths
+│   ├── store/appStore.ts            # enabledPlugins state (Zustand)
+│   └── components/
+│       ├── Slot.tsx                 # Generic Slot component
+│       ├── Layout/Header.tsx        # Has <Slot name="header-right" />
+│       └── Settings/                # Plugins tab in Settings
+├── scripts/
+│   └── generate-plugin-config.js    # Auto-generates aliases + paths from plugin packages
+├── vite.config.ts                   # Uses generated plugin aliases
+├── tsconfig.json                    # Auto-generated plugin paths
 │
-├── core/                              # The main app
-│   ├── electron/                      # Main process (main.js, preload.js)
-│   ├── scripts/
-│   │   └── generate-plugin-config.js  # Auto-generates aliases + paths from plugins.json
-│   ├── src/
-│   │   ├── App.tsx                    # Root component, shortcut dispatch, content override logic
-│   │   ├── pluginLoader.ts            # Creates PluginManager, loads plugins from manifest
-│   │   ├── generated-plugin-aliases.ts # Auto-generated Vite alias paths
-│   │   ├── store/appStore.ts          # enabledPlugins state (Zustand)
-│   │   └── components/
-│   │       ├── Slot.tsx               # Generic Slot component
-│   │       ├── Layout/Header.tsx      # Has <Slot name="header-right" />
-│   │       └── Settings/              # Plugins tab in Settings
-│   ├── vite.config.ts                 # Uses generated plugin aliases
-│   └── tsconfig.json                  # Auto-generated plugin paths
-│
-├── plugin-api/                        # Shared types and PluginManager
-│   └── src/
-│       ├── types.ts                   # Plugin, PluginAPI, all config interfaces
-│       ├── PluginManager.ts           # Registry + toggleContentOverride + fileFilters
-│       └── index.ts                   # Exports
-│
-├── plugin-pdf/                        # Built-in: PDF viewer
-│   └── src/index.tsx                  # registerFileType (extensions: ['pdf'])
-│
-├── plugin-images/                     # Built-in: Image viewer
-│   └── src/index.tsx                  # registerFileType (extensions: ['png', 'jpg', ...])
-│
-└── plugin-editor/                     # Built-in: Text editor
-    ├── src/
-    │   ├── index.tsx                  # registerSlot + registerContentOverride
-    │   └── Editor.tsx                 # Editor component with save/cancel
-    └── package.json
+├── packages/
+│   ├── plugin-api/                  # Shared types and PluginManager
+│   │   └── src/
+│   │       ├── types.ts             # Plugin, PluginAPI, all config interfaces
+│   │       ├── PluginManager.ts     # Registry + toggleContentOverride + fileFilters
+│   │       └── index.ts             # Exports
+│   ├── plugin-pdf/                  # Built-in: PDF viewer
+│   │   └── src/index.tsx            # registerFileType (extensions: ['pdf'])
+│   ├── plugin-images/               # Built-in: Image viewer
+│   │   └── src/index.tsx            # registerFileType (extensions: ['png', 'jpg', ...])
+│   └── plugin-editor/               # Built-in: Text editor
+│       ├── src/
+│       │   ├── index.tsx            # registerSlot + registerContentOverride
+│       │   └── Editor.tsx           # Editor component with save/cancel
+│       └── package.json
 ```
 
 ---

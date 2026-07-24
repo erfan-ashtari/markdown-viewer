@@ -35,8 +35,8 @@ mdview README.md
 
 | File | Description |
 |---|---|
-| `Markdown.Viewer-1.1.0-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
-| `Markdown.Viewer-1.1.0-portable.exe` | Portable — run directly, no installation needed |
+| `Markdown.Viewer-1.1.1-setup.exe` | NSIS installer with Start Menu shortcut and file associations |
+| `Markdown.Viewer-1.1.1-portable.exe` | Portable — run directly, no installation needed |
 
 ### How npm install works
 
@@ -184,8 +184,8 @@ npm run dev
 | `npm run dev` | Start Vite dev server + Electron |
 | `npm run build` | Build frontend to `dist/` |
 | `npm run build:win` | Build frontend + Windows executables |
-| `npm run build:portable` | Build portable .exe only |
-| `npm run build:nsis` | Build NSIS installer only |
+| `npm run build:win:portable` | Build portable .exe only |
+| `npm run build:win:nsis` | Build NSIS installer only |
 
 ### Plugin Development
 

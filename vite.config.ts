@@ -4,7 +4,7 @@ import path from 'path'
 // @ts-ignore — auto-generated
 import { pluginAliasPaths } from './src/generated-plugin-aliases'
 
-// Resolve relative paths from core/ directory
+// Resolve relative paths from root directory
 const pluginAliases: Record<string, string> = {}
 for (const [key, relativePath] of Object.entries(pluginAliasPaths)) {
   pluginAliases[key] = path.resolve(__dirname, relativePath)
@@ -37,7 +37,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@mdview/plugin-api': path.resolve(__dirname, '../plugin-api/src'),
+      '@mdview/plugin-api': path.resolve(__dirname, 'packages/plugin-api/src'),
       ...pluginAliases,
     },
   },
