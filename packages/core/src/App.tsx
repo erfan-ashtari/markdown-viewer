@@ -54,6 +54,7 @@ const App: React.FC = () => {
   const setTheme = useAppStore(s => s.setTheme)
   const currentTheme = useAppStore(s => s.currentTheme)
   const currentFont = useAppStore(s => s.currentFont)
+  const dirFiles = useAppStore(s => s.dirFiles)
 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
   const isFullscreen = useAppStore(s => s.isFullscreen)
@@ -219,12 +220,11 @@ const App: React.FC = () => {
 
   // Send sidebar directory to main process when dirFiles changes
   useEffect(() => {
-    const dirFiles = useAppStore.getState().dirFiles
     if (dirFiles.length > 0) {
       const dirPath = dirFiles[0].path.replace(/[\\/][^\\/]+$/, '')
       window.electronAPI?.setCurrentDirectory?.(dirPath)
     }
-  }, [useAppStore.getState().dirFiles])
+  }, [dirFiles])
 
   // Fetch directory .md files when active tab changes
   useEffect(() => {
