@@ -181,6 +181,14 @@ contextBridge.exposeInMainWorld('electronAPI', { ... })
 
 - No changes to preload
 
+#### v1.2.0 (runtime-plugin-discovery branch)
+
+- Added: `getPlugins`, `getCommands`, `getSidebarPanels`, `executeCommand`, `handleUIInteraction`
+- Added: `onPluginsChanged`, `onPluginStateUpdated`, `onPluginCommandLog`
+- Added: `onSidebarPanelRegistered`, `onSidebarPanelUpdated`, `onSidebarPanelStateUpdated`, `onSidebarPanelRemoved`
+- Added: `offPluginsChanged`, `offPluginStateUpdated`, `offPluginCommandLog`
+- Added: `offSidebarPanelRegistered`, `offSidebarPanelUpdated`, `offSidebarPanelStateUpdated`, `offSidebarPanelRemoved`
+
 ---
 
 ## 3. React App Entry (`src/App.tsx` + `src/main.tsx`)
@@ -442,9 +450,14 @@ Font selection (Header/Settings)
   tabs: Tab[]              // { id, filePath, fileName, content, type }
   activeTabId: string | null
   dirFiles: DirFile[]      // { name, path } — current directory .md files
+  currentFile: { filePath, fileName, content } | null
+  currentDirectory: string | null
 
   // UI state
   sidebarOpen: boolean
+  sidebarWidth: number     // 180-500, default 250
+  rightSidebarOpen: boolean
+  pluginSidebarWidth: number // 200-600, default 300
   zoomLevel: number        // 50-300, default 100
   contentWidth: 'full' | 'medium' | 'a4'
   currentTheme: Theme      // 11 themes
@@ -464,6 +477,8 @@ Font selection (Header/Settings)
 | `closeAllTabs` | Clears all tabs |
 | `setActiveTab` | Switches active tab |
 | `toggleSidebar` | Toggles sidebar visibility |
+| `setSidebarWidth` | Sets sidebar width (180-500) |
+| `setPluginSidebarWidth` | Sets plugin sidebar width (200-600) |
 | `setZoomLevel` | Clamps zoom 50-300 |
 | `toggleContentWidth` | Cycles full -> medium -> a4 -> full |
 | `setTheme` | Sets theme + updates `data-theme` attribute |
@@ -491,6 +506,77 @@ Font selection (Header/Settings)
 
 - Added `sidebarWidth` state (default 250) + `setSidebarWidth` action
 - `addTab`: Now detects non-markdown files via `isTextFile()` and sets tab type to `'text'`
+
+#### v1.2.0 (runtime-plugin-discovery branch)
+
+- Added `rightSidebarOpen` state for plugin sidebar toggle
+- Added `pluginSidebarWidth` state (default 300, range 200-600) + `setPluginSidebarWidth` action
+
+---
+
+## 7.5. Runtime Plugin System
+
+> Main-process plugin system with sandboxed UI, file system access, and IPC-based communication.
+
+### Workflow
+
+```
+RuntimePluginManager.init()
+  -> Scans {userData}/plugins/ for directories with package.json
+  -> Auto-enables new plugins, unloads removed plugins
+  -> hot-reload: watches plugins dir, force-reloads on package.json mtime change
+  -> activate(context) called with full PluginContext API
+  -> Plugin registers: sidebar panels, commands, exporters, content overrides
+  -> Broadcasts via IPC to renderer -> RuntimePluginSidebar renders UI
+  -> User interactions flow back via IPC -> ui-event handler in plugin
+```
+
+### Plugin Context API
+
+| Method | Description |
+|--------|-------------|
+| `context.currentFile` | Live getter: `{ filePath, fileName, content, dirPath }` |
+| `context.registerCommand(name, handler, desc)` | Register a callable command |
+| `context.registerExporter(name, handler, desc)` | Register a content transformer |
+| `context.registerSidebarPanel(panel)` | Register declarative UI panel (one per plugin) |
+| `context.updateElementState(updates)` | Update sidebar element properties |
+| `context.updatePanel(panel)` | Replace entire panel definition |
+| `context.registerContentOverride({ extensions, label })` | Declare file type rendering |
+| `context.setRenderMode(ext, rendered)` | Toggle rendered vs source view |
+| `context.getRenderMode(ext)` | Get current render mode |
+| `context.getState(key, default)` | Read persisted plugin state |
+| `context.setState(key, value)` | Write persisted plugin state (debounced 500ms) |
+| `context.notify({ title, body, icon })` | Show system notification |
+| `context.onEvent(event, callback)` | Register event listener |
+| `context.fs` | Sandboxed file system (readFile, writeFile, exists, readDir, mkdir) |
+
+### Sidebar Panel Element Types (13)
+
+`button`, `toggle`, `select`, `text-input`, `text-area`, `status`, `progress`, `label`, `separator`, `section`, `link`, `badge`, `html`
+
+### IPC Channels
+
+| Channel | Direction | Purpose |
+|---------|-----------|---------|
+| `sidebar-panel-registered` | Main → Renderer | New panel registered |
+| `sidebar-panel-updated` | Main → Renderer | Panel definition replaced |
+| `sidebar-panel-state-updated` | Main → Renderer | Element state changed |
+| `sidebar-panel-removed` | Main → Renderer | Plugin unloaded |
+| `plugin-command-log` | Main → Renderer | Command console output |
+| `content-overrides-changed` | Main → Renderer | Override registry changed |
+| `render-mode-changed` | Main → Renderer | Render mode toggled |
+| `plugins-changed` | Main → Renderer | Plugin list changed |
+| `plugin-state-updated` | Main → Renderer | Plugin enabled/disabled |
+
+### Files
+
+```
+packages/core/electron/runtimePluginManager.js   # Main process plugin manager (893 lines)
+packages/core/src/components/Layout/RuntimePluginSidebar.tsx  # Plugin sidebar UI (547 lines)
+packages/core/src/components/Layout/sidebar-panel/SidebarPanelRenderer.tsx  # Panel renderer (22 lines)
+packages/core/src/components/Layout/sidebar-panel/SidebarElement.tsx  # Element dispatcher
+packages/core/src/components/Layout/sidebar-panel/elements/  # Individual element renderers
+```
 
 ---
 
@@ -866,13 +952,15 @@ User presses Ctrl+F
 
 ---
 
-## 12. Complete File Tree (v1.1.0)
+## 12. Complete File Tree (v1.2.0)
 
 ```
 typora-clone/
 ├── .gitignore
 ├── LICENSE                          # MIT
 ├── README.md                        # Project documentation
+├── RUNTIME-PLUGIN-GUIDE.md          # Runtime plugin developer guide
+├── COMMANDS.md                      # Dev commands reference
 ├── VERSION_STATE_REPORT.md          # This document
 ├── package.json                     # npm config + electron-builder
 ├── package-lock.json
@@ -894,45 +982,52 @@ typora-clone/
 │   ├── installer.ico / .png         # Installer icons
 │   └── uninstaller.ico / .png       # Uninstaller icons
 ├── electron/
-│   ├── main.js                      # Electron main process (455 lines)
-│   └── preload.js                   # IPC bridge (29 lines)
-├── src/
-│   ├── main.tsx                     # React entry
-│   ├── settings.tsx                 # Settings window entry
-│   ├── App.tsx                      # Root component (794 lines)
-│   ├── store/
-│   │   └── appStore.ts              # Zustand store (189 lines)
-│   ├── styles/
-│   │   └── globals.css              # CSS themes + markdown styles + find bar styles (680 lines)
-│   ├── export/
-│   │   ├── ExportManager.ts         # Export orchestrator (26 lines)
-│   │   ├── types/
-│   │   │   └── ExportOptions.ts     # Export types (23 lines)
-│   │   ├── exporters/
-│   │   │   ├── HtmlExporter.ts      # HTML export via unified (38 lines)
-│   │   │   └── PdfExporter.ts       # PDF export via IPC (44 lines)
-│   │   └── templates/
-│   │       └── html.ts              # HTML document template (364 lines)
-│   └── components/
-│       ├── FontLoader.tsx           # Dynamic font injection (41 lines)
-│       ├── HighlightThemeLoader.tsx  # Dynamic highlight.js theme loader (39 lines)
-│       ├── FindBar/
-│       │   ├── FindBar.tsx          # Find bar UI component (108 lines)
-│       │   └── HighlightLayer.tsx   # CSS Highlight API renderer (141 lines)
-│       ├── Layout/
-│       │   ├── Header.tsx           # Toolbar (748 lines)
-│       │   ├── Sidebar.tsx          # File tree (957 lines)
-│       │   └── Tabs.tsx             # Tab bar (223 lines)
-│       ├── Markdown/
-│       │   └── MarkdownRenderer.tsx # Markdown parser (304 lines)
-│       ├── Settings/
-│       │   └── SettingsWindow.tsx   # Settings UI (617 lines)
-│       ├── Text/
-│       │   ├── TextRenderer.tsx     # Text file viewer (128 lines)
-│       │   └── languageMap.ts       # Language detection (205 lines)
-│       └── Themes/
-│           ├── themeDefinitions.ts  # 11 theme configs (70 lines)
-│           └── fontDefinitions.ts   # 13 font combos (151 lines)
+│   ├── main.js                      # Electron main process
+│   ├── preload.js                   # IPC bridge
+│   └── runtimePluginManager.js      # Runtime plugin manager (893 lines)
+├── test-plugins/                    # Example/test runtime plugins (gitignored for prod)
+│   ├── plugin-html-renderer/        # Content override + sidebar toggle
+│   ├── plugin-ui-tester/            # All 13 element types + features
+│   ├── plugin-iframe-test/          # Bidirectional postMessage demo
+│   └── plugin-all-features-test/    # Bundled deps + state + notifications
+├── packages/
+│   ├── core/
+│   │   ├── electron/                # Main process (main.js, preload.js)
+│   │   ├── scripts/
+│   │   │   └── generate-plugin-config.js
+│   │   ├── src/
+│   │   │   ├── main.tsx             # React entry
+│   │   │   ├── settings.tsx         # Settings window entry
+│   │   │   ├── App.tsx              # Root component
+│   │   │   ├── store/
+│   │   │   │   └── appStore.ts      # Zustand store
+│   │   │   ├── styles/
+│   │   │   │   └── globals.css      # CSS themes + markdown styles
+│   │   │   ├── export/              # Export pipeline
+│   │   │   └── components/
+│   │   │       ├── FontLoader.tsx
+│   │   │       ├── HighlightThemeLoader.tsx
+│   │   │       ├── FindBar/
+│   │   │       ├── Layout/
+│   │   │       │   ├── Header.tsx
+│   │   │       │   ├── Sidebar.tsx
+│   │   │       │   ├── Tabs.tsx
+│   │   │       │   ├── RuntimePluginSidebar.tsx  # Plugin sidebar (547 lines)
+│   │   │       │   └── sidebar-panel/
+│   │   │       │       ├── SidebarPanelRenderer.tsx
+│   │   │       │       ├── SidebarElement.tsx
+│   │   │       │       └── elements/
+│   │   │       │           └── HtmlElement.tsx   # Sandboxed iframe (77 lines)
+│   │   │       ├── Markdown/
+│   │   │       ├── Settings/
+│   │   │       ├── Text/
+│   │   │       └── Themes/
+│   │   ├── vite.config.ts
+│   │   └── tsconfig.json
+│   ├── plugin-api/                  # Shared types
+│   ├── plugin-pdf/
+│   ├── plugin-images/
+│   └── plugin-editor/
 ├── dist/                            # Build output (gitignored)
 ├── release/                         # electron-builder output (gitignored)
 └── node_modules/                    # Dependencies (gitignored)
@@ -965,6 +1060,7 @@ typora-clone/
 | **Text File Viewer** | No | No | No | Yes (100+ languages) | Same | Same |
 | **Find Bar (Ctrl+F)** | No | No | No | Yes (CSS Highlight API) | Yes (persistent across tabs) | Same |
 | **Sidebar** | Basic | Basic | Basic | Resize + Sort + Search + Refresh | Same | Same |
+| **Runtime Plugins** | No | No | No | No | No | Yes (sidebar panels, commands, content overrides, iframes) |
 | **Mermaid Diagrams** | Yes | Yes | Yes | Yes | Yes | Yes |
 | **Math/LaTeX** | Yes | Yes | Yes | Yes | Yes | Yes |
 | **Persian Support** | Yes | Yes | Yes | Yes | Yes | Yes |

@@ -66,11 +66,11 @@
         { "target": "nsis", "arch": ["x64"] },
         { "target": "portable", "arch": ["x64"] }
       ],
-      "icon": "../build/mdview.ico",
+      "icon": "../../build/mdview.ico",
       "artifactName": "${productName}-${version}-setup.${ext}",
       "fileAssociations": [
-        { "ext": "md", "name": "Markdown Document", "icon": "../build/mdview.ico", "role": "Editor" },
-        { "ext": "markdown", "name": "Markdown Document", "icon": "../build/mdview.ico", "role": "Editor" }
+        { "ext": "md", "name": "Markdown Document", "icon": "../../build/mdview.ico", "role": "Editor" },
+        { "ext": "markdown", "name": "Markdown Document", "icon": "../../build/mdview.ico", "role": "Editor" }
       ]
     },
     "nsis": {
@@ -81,9 +81,9 @@
       "createStartMenuShortcut": true,
       "shortcutName": "MarkdownViewer",
       "deleteAppDataOnUninstall": true,
-      "installerIcon": "../build/installer.ico",
-      "uninstallerIcon": "../build/uninstaller.ico",
-      "installerHeaderIcon": "../build/installer.ico"
+      "installerIcon": "../../build/installer.ico",
+      "uninstallerIcon": "../../build/uninstaller.ico",
+      "installerHeaderIcon": "../../build/installer.ico"
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
@@ -93,14 +93,14 @@
         { "target": "AppImage", "arch": ["x64"] },
         { "target": "deb", "arch": ["x64"] }
       ],
-      "icon": "../build/icons",
+      "icon": "../../build/icons",
       "category": "Utility"
     },
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["x64", "arm64"] }
       ],
-      "icon": "../build/icons"
+      "icon": "../../build/icons"
     }
   }
 }

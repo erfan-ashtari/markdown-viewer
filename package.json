@@ -26,6 +26,10 @@
     "preview": "npm run preview --workspace=packages/core",
     "start": "npm run start --workspace=packages/core"
   },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
   "keywords": ["markdown", "viewer", "editor", "themes", "electron", "plugin"],
   "author": "",
   "license": "MIT"

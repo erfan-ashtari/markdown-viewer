@@ -166,7 +166,7 @@ The `context` object passed to `activate()` provides all plugin capabilities.
 
 ### `context.currentFile`
 
-**Type:** `{ filePath: string, fileName: string, content: string } | null`
+**Type:** `{ filePath: string, fileName: string, content: string, dirPath: string } | null`
 
 Live reference to the currently open file. Updated dynamically.
 
@@ -175,6 +175,7 @@ const file = context.currentFile;
 if (file) {
   console.log(file.fileName);  // "readme.md"
   console.log(file.filePath);  // "/home/user/docs/readme.md"
+  console.log(file.dirPath);   // "/home/user/docs"
   console.log(file.content);   // Full file content as string
 }
 ```
@@ -622,22 +623,23 @@ Small count or status indicator.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `label` | `string` | — | **Required.** Badge text |
-| `count` | `number` | — | Optional. Numeric count |
+| `count` | `number` | — | Optional. Numeric count displayed on the badge |
 | `color` | `string` | `'default'` | `'default'`, `'primary'`, `'success'`, `'warning'`, `'error'` |
+
+**Updated via `updateElementState()`:** `{ count: 42, color: 'success' }`
 
 ### `html`
 
-Sandboxed iframe for custom HTML content.
+Sandboxed iframe for custom HTML content. Supports bidirectional communication via `postMessage`.
 
 ```js
-const { pathToFileURL } = require('url');
 const path = require('path');
 const pluginDir = __dirname;
 
 {
   type: 'html',
   id: 'preview',
-  src: pathToFileURL(path.join(pluginDir, 'preview.html')).href,
+  src: `file://${path.join(pluginDir, 'preview.html').replace(/\\/g, '/')}`,
   height: 200
 }
 ```
@@ -646,8 +648,50 @@ const pluginDir = __dirname;
 |----------|------|---------|-------------|
 | `src` | `string` | — | **Required.** URL to load (`file://` or `local-file://`) |
 | `height` | `number` | `200` | iframe height in pixels |
+| `sandbox` | `string` | `'allow-scripts'` | Space-separated sandbox permissions. Allowed: `allow-scripts`, `allow-popups` |
 
-**Security:** `sandbox="allow-scripts"` only. `src` must be within the plugin's directory.
+**Security:** Default sandbox is `allow-scripts` only. `allow-same-origin` is never permitted as it negates sandboxing. `src` must be within the plugin's directory (validated via `file://` or `local-file://` protocol).
+
+#### Iframe Communication
+
+The `html` element supports bidirectional `postMessage` between the iframe and the plugin:
+
+**Iframe → Plugin:** The iframe sends messages to the plugin via `window.parent.postMessage()`:
+
+```js
+// Inside the iframe's HTML file
+window.parent.postMessage({ type: 'chat', text: 'hello' }, '*');
+```
+
+These arrive as `ui-event` with `eventType: 'iframe-message'`:
+
+```js
+context.onEvent('ui-event', ({ elementId, eventType, payload }) => {
+  if (eventType === 'iframe-message' && elementId === 'my-iframe') {
+    console.log('Received from iframe:', payload.text);
+  }
+});
+```
+
+**Plugin → Iframe:** Call `updateElementState()` with the iframe element's ID. The state is pushed to the iframe as `{ type: 'state-update', state: ... }`:
+
+```js
+context.updateElementState({
+  'my-iframe': { echo: 'Response from plugin', count: 42 },
+});
+```
+
+The iframe receives it:
+
+```js
+// Inside the iframe
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'state-update') {
+    const state = event.data.state;
+    console.log('Plugin says:', state.echo);
+  }
+});
+```
 
 ---
 
@@ -780,6 +824,7 @@ context.onEvent('ui-event', ({ elementId, eventType, payload }) => {
 | `select` | `change` | `{ value: string }` |
 | `text-input` | `submit` | `{ value: string }` |
 | `text-area` | `submit` | `{ value: string }` |
+| `html` | `iframe-message` | Message data from iframe `postMessage()` |
 
 ---
 
@@ -1081,11 +1126,31 @@ children: [
 
 ### 4. Use `visibleWhen` for Conditional UI
 
-Show elements only when relevant.
+Show elements only when relevant. The `visibleWhen` property takes an `elementId` and a `value` — the element is only visible when the referenced element matches that value.
 
 ```js
-{ type: 'toggle', id: 'debug', label: 'Enable Debug' },
-{ type: 'text-input', id: 'debug-port', label: 'Debug Port', visibleWhen: { elementId: 'debug', value: true } },
+children: [
+  { type: 'toggle', id: 'debug', label: 'Enable Debug' },
+  { type: 'section', id: 'debug-options', title: 'Debug Options', visibleWhen: { elementId: 'debug', value: true }, children: [
+    { type: 'text-input', id: 'debug-port', label: 'Debug Port', placeholder: '9229' },
+    { type: 'toggle', id: 'verbose', label: 'Verbose Logging' },
+  ]},
+]
+```
+
+This also works with selects for multi-state conditional UI:
+
+```js
+children: [
+  { type: 'toggle', id: 'show-advanced', label: 'Show Advanced' },
+  { type: 'status', id: 'mode', value: 'Basic' },
+  { type: 'section', id: 'advanced', title: 'Advanced', visibleWhen: { elementId: 'show-advanced', value: true }, children: [
+    { type: 'select', id: 'mode-select', label: 'Mode', value: 'standard', options: [
+      { label: 'Standard', value: 'standard' },
+      { label: 'Performance', value: 'performance' },
+    ]},
+  ]},
+]
 ```
 
 ### 5. Validate User Input
@@ -1105,21 +1170,19 @@ context.onEvent('ui-event', ({ elementId, eventType, payload }) => {
 });
 ```
 
-### 6. Use `pathToFileURL()` for HTML Elements
+### 6. Use `file://` Protocol for HTML Elements
 
-Always use `pathToFileURL()` to create proper file URLs.
+Construct file URLs for HTML element `src` using `file://` protocol with proper path handling:
 
 ```js
-const { pathToFileURL } = require('url');
 const path = require('path');
 const pluginDir = __dirname;
 
-// Correct
-src: pathToFileURL(path.join(pluginDir, 'preview.html')).href
-
-// Incorrect (may fail on Windows)
-src: `file:///${path.join(pluginDir, 'preview.html').replace(/\\\\/g, '/')}`
+// Correct — converts backslashes to forward slashes for cross-platform compatibility
+src: `file://${path.join(pluginDir, 'preview.html').replace(/\\/g, '/')}`
 ```
+
+The `src` must use `file://` or `local-file://` protocol and reference a file within the plugin's directory. The app automatically converts `file://` to `local-file://` for Electron protocol handling.
 
 ### 7. Log Strategically
 
@@ -1151,7 +1214,22 @@ console.error('[my-plugin] Error:', err.message);
 
 - Verify `src` uses `file://` or `local-file://` protocol
 - Ensure the file is within the plugin's directory
-- Use `pathToFileURL()` to construct the URL correctly
+- Construct the URL with `path.join()` and replace backslashes: `.replace(/\\/g, '/')`
+- On Windows, `file://C:/path` is converted to `local-file:///C:/path` automatically
+
+### HTML element sandbox restrictions
+
+- Default sandbox is `allow-scripts` only — iframes cannot access the parent origin
+- `allow-same-origin` is never permitted (it negates sandboxing)
+- To allow popups from the iframe, set `sandbox: 'allow-scripts allow-popups'`
+- The iframe's origin is `"null"` when sandboxed without `allow-same-origin`
+
+### Iframe postMessage not received
+
+- Ensure the iframe sends via `window.parent.postMessage(data, '*')`
+- Messages from sandboxed iframes have `event.origin === 'null'`
+- The plugin listens via `context.onEvent('ui-event', handler)` with `eventType: 'iframe-message'`
+- Element ID in the handler must match the `html` element's `id`
 
 ### File system access denied
 

@@ -414,7 +414,7 @@ ipcMain.handle('set-file-filters', (event, filters) => {
 // Plugin registry — built-in from plugins.json + runtime from userData
 ipcMain.handle('get-plugins', () => {
   // Built-in plugins from plugins.json
-  const pluginsJsonPath = path.join(__dirname, '../../plugins.json');
+  const pluginsJsonPath = path.join(__dirname, 'plugins.json');
   let builtin = [];
   try {
     builtin = JSON.parse(fs.readFileSync(pluginsJsonPath, 'utf-8')).map(p => ({

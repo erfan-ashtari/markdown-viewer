@@ -1,5 +1,23 @@
 # Markdown Viewer — Plugin Development Guide
 
+## Two Plugin Systems
+
+MDView has **two separate plugin systems**:
+
+| Aspect | Built-in Plugins (this guide) | Runtime Plugins |
+|--------|-------------------------------|-----------------|
+| Location | `packages/plugin-*` | `{userData}/plugins/` |
+| Language | TypeScript (React) | JavaScript (Node.js) |
+| Process | Renderer | Main |
+| UI Components | Full React components | Declarative elements |
+| Installation | Bundled with app | User-installed |
+| API | `register()` with PluginAPI | `activate(context)` with RuntimePluginContext |
+| Guide | This document | `RUNTIME-PLUGIN-GUIDE.md` |
+
+**This guide covers built-in plugins** — TypeScript/React plugins that ship with the app and run in the renderer process. For user-installable plugins that run in the main process with a declarative UI API, see `RUNTIME-PLUGIN-GUIDE.md`.
+
+---
+
 ## Core Principle: Self-Contained Plugins
 
 **Plugins are self-contained at runtime — they never import from core or modify core behavior.** Plugins register capabilities through the Plugin API, receive context through Slot props, and communicate via custom events. If you think core needs a change, you probably need to extend the plugin API instead.

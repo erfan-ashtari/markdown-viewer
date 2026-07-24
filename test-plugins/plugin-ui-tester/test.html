@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erfan Ashtari — Interactive Dual Portfolio</title>
+  <meta name="description" content="Academic portfolio and Interactive 8-bit sandbox of Erfan Ashtari.">
+  
+  <!-- Fonts for both Academic and Retro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Press+Start+2P&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================================
+       1. GLOBAL & SPLIT SCREEN ARCHITECTURE
+       ========================================================================== */
+    body, html {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      overflow: hidden; /* Prevent body scrolling, handle scrolling in panels */
+      background: #000;
+    }
+
+    #app-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Sliding Panels Setup */
+    #academic-portfolio, #split-screen, #retro-portfolio {
+      position: absolute;
+      top: 0;
+      width: 100vw;
+      height: 100vh;
+      transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
+      will-change: transform;
+    }
+
+    /* State Spatial Relationships */
+    .state-split #academic-portfolio { transform: translateX(-100vw); }
+    .state-split #split-screen { transform: translateX(0); }
+    .state-split #retro-portfolio { transform: translateX(100vw); }
+
+    .state-academic #academic-portfolio { transform: translateX(0); }
+    .state-academic #split-screen { transform: translateX(100vw); }
+    .state-academic #retro-portfolio { transform: translateX(200vw); }
+
+    .state-retro #academic-portfolio { transform: translateX(-200vw); }
+    .state-retro #split-screen { transform: translateX(-100vw); }
+    .state-retro #retro-portfolio { transform: translateX(0); }
+
+    /* Split Screen UI */
+    #split-screen {
+      display: flex;
+      z-index: 100;
+    }
+    .split-half {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: flex 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .split-half:hover {
+      flex: 1.25;
+    }
+    
+    .split-left {
+      background: #fdfdfd;
+      color: #111;
+      font-family: 'Crimson Pro', serif;
+    }
+    .split-left::before {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(15, 82, 186, 0.05) 100%);
+    }
+
+    .split-right {
+      background: #050515;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      border-left: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .split-right::before {
+      content: ""; position: absolute; inset: 0;
+      background: radial-gradient(circle at center, #1b1464 0%, #030112 80%);
+      opacity: 0.8;
+    }
+
+    .split-content {
+      text-align: center;
+      z-index: 2;
+      padding: 2rem;
+      transition: transform 0.4s;
+    }
+    .split-half:hover .split-content {
+      transform: scale(1.05);
+    }
+    .split-left h2 {
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      margin: 0 0 1rem 0;
+      font-weight: 600;
+    }
+    .split-left p {
+      font-family: 'Atkinson Hyperlegible', sans-serif;
+      font-size: 1.1rem;
+      color: #555;
+      margin: 0;
+    }
+    .split-right h2 {
+      font-size: clamp(1.2rem, 2.5vw, 2.5rem);
+      color: #ffd23f;
+      text-shadow: 4px 4px 0 rgba(0,0,0,0.8);
+      margin: 0 0 1.5rem 0;
+      line-height: 1.4;
+    }
+    .split-right p {
+      font-size: 0.7rem;
+      color: #00ffff;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.8);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Redesigned Professional CHOOSE Badge */
+    .split-center-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(90deg, #fdfdfd 50%, #050515 50%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Atkinson Hyperlegible', sans-serif;
+      font-weight: 800;
+      z-index: 10;
+      pointer-events: none;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      box-shadow: 
+        -8px 0 20px -5px rgba(15, 82, 186, 0.4),
+         8px 0 20px -5px rgba(255, 210, 63, 0.4),
+         0 4px 15px rgba(0,0,0,0.3);
+    }
+    .split-center-badge::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      box-shadow: inset 3px 0 0 #0f52ba, inset -3px 0 0 #ffd23f;
+    }
+    .split-center-badge span {
+      color: #fff;
+      mix-blend-mode: difference;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      z-index: 2;
+    }
+    #split-screen:hover .split-center-badge {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8);
+    }
+
+    /* ==========================================================================
+       2. ACADEMIC PORTFOLIO CSS (Synthesized clean modern UI)
+       ========================================================================== */
+    #academic-portfolio {
+      background: #fdfdfd;
+      overflow-y: auto;
+      font-family: 'Atkinson Hyperlegible', sans-serif;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    #academic-portfolio h1, #academic-portfolio h2, #academic-portfolio h3 {
+      font-family: 'Crimson Pro', serif;
+      color: #111;
+      margin-top: 0;
+    }
+
+    /* Academic Header & Nav */
+    #academic-portfolio .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #eaeaea;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+    }
+    #academic-portfolio .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    #academic-portfolio .logo {
+      text-decoration: none;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #0f52ba;
+      font-family: 'Crimson Pro', serif;
+    }
+    #academic-portfolio .nav-list {
+      list-style: none;
+      margin: 0; padding: 0;
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    #academic-portfolio .nav-link {
+      background: none; border: none;
+      font-family: inherit; font-size: 1rem;
+      color: #666; cursor: pointer;
+      padding: 0.5rem 0;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #academic-portfolio .nav-link:hover { color: #111; }
+    #academic-portfolio .nav-link.active {
+      color: #0f52ba;
+      border-bottom-color: #0f52ba;
+      font-weight: 700;
+    }
+    
+    /* Back Button in Academic */
+    #academic-portfolio .back-to-split {
+      background: #f0f0f0;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #333;
+      transition: background 0.2s;
+    }
+    #academic-portfolio .back-to-split:hover { background: #e0e0e0; }
+
+    /* Academic Main Content */
+    #academic-portfolio .main {
+      max-width: 1000px;
+      margin: 3rem auto 5rem;
+      padding: 0 2rem;
+    }
+    #academic-portfolio .tab-panel {
+      display: none;
+      animation: ac-fadeIn 0.5s ease;
+    }
+    #academic-portfolio .tab-panel.active { display: block; }
+    @keyframes ac-fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #academic-portfolio .overline {
+      display: block;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      color: #0f52ba;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Hero Section */
+    #academic-portfolio .hero {
+      display: flex; gap: 4rem; align-items: center; margin-bottom: 4rem;
+    }
+    #academic-portfolio .hero-portrait img {
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+    }
+    #academic-portfolio .hero-name { font-size: 3.5rem; margin-bottom: 0.5rem; }
+    #academic-portfolio .hero-role { font-size: 1.25rem; color: #555; margin-bottom: 1.5rem; }
+    #academic-portfolio .hero-bio { font-size: 1.1rem; color: #444; max-width: 600px; margin-bottom: 2rem; }
+    
+    #academic-portfolio .hero-actions { display: flex; gap: 1rem; }
+    #academic-portfolio .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 6px;
+      font-weight: bold; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #academic-portfolio .btn-primary { background: #0f52ba; color: #fff; border: 2px solid #0f52ba; }
+    #academic-portfolio .btn-primary:hover { background: #0c4296; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15, 82, 186, 0.3); }
+    #academic-portfolio .btn-ghost { background: transparent; color: #333; border: 2px solid #ddd; }
+    #academic-portfolio .btn-ghost:hover { border-color: #999; transform: translateY(-2px); }
+
+    /* Divider & Stats */
+    #academic-portfolio .divider { height: 1px; background: #eaeaea; margin: 3rem 0; }
+    #academic-portfolio .stats-row { display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 2rem; }
+    #academic-portfolio .stat-value { display: block; font-size: 2.5rem; font-family: 'Crimson Pro', serif; font-weight: bold; color: #0f52ba; }
+    #academic-portfolio .stat-label { font-size: 0.9rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Grids & Columns */
+    #academic-portfolio .two-col { display: grid; grid-template-columns: 3fr 2fr; gap: 4rem; }
+    #academic-portfolio .section-title { font-size: 2rem; margin-bottom: 1.5rem; border-bottom: 2px solid #0f52ba; padding-bottom: 0.5rem; display: inline-block; }
+    #academic-portfolio .body-text { margin-bottom: 1rem; font-size: 1.05rem; }
+    
+    #academic-portfolio .skill-section { margin-bottom: 1.5rem; }
+    #academic-portfolio .skill-heading { font-size: 1.1rem; color: #555; margin-bottom: 0.5rem; font-family: 'Atkinson Hyperlegible', sans-serif; }
+    #academic-portfolio .chip {
+      display: inline-block; background: #f0f4f8; border: 1px solid #dce4ec;
+      padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.9rem; color: #333; margin: 0 0.4rem 0.4rem 0;
+    }
+
+    /* Timeline */
+    #academic-portfolio .timeline { border-left: 2px solid #eaeaea; padding-left: 2rem; position: relative; }
+    #academic-portfolio .timeline-item { position: relative; margin-bottom: 2.5rem; }
+    #academic-portfolio .timeline-marker {
+      position: absolute; left: -2.55rem; top: 0.2rem;
+      width: 14px; height: 14px; border-radius: 50%; background: #0f52ba; border: 3px solid #fff;
+    }
+    #academic-portfolio .timeline-meta { display: flex; justify-content: space-between; color: #666; font-size: 0.9rem; margin-bottom: 0.2rem; }
+    #academic-portfolio .timeline-title { font-size: 1.25rem; margin-bottom: 0.2rem; }
+    #academic-portfolio .timeline-institution { font-weight: bold; color: #444; margin: 0 0 0.5rem 0; }
+    #academic-portfolio .timeline-detail { color: #555; font-size: 0.95rem; margin: 0; }
+
+    /* Research Cards */
+    #academic-portfolio .research-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-top: 2rem;
+    }
+    #academic-portfolio .research-card {
+      background: #fff; padding: 1.5rem; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eaeaea; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    #academic-portfolio .research-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.08); }
+    #academic-portfolio .research-card-icon { color: #0f52ba; margin-bottom: 1rem; }
+    #academic-portfolio .research-card-title { font-size: 1.2rem; margin-bottom: 0.5rem; }
+    #academic-portfolio .research-card-text { font-size: 0.95rem; color: #555; margin: 0; }
+
+    /* Publication & Project Lists */
+    #academic-portfolio .pub-list { list-style: none; padding: 0; }
+    #academic-portfolio .pub-item { margin-bottom: 2rem; }
+    #academic-portfolio .pub-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    #academic-portfolio .pub-badge { font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+    #academic-portfolio .pub-badge-journal { background: #e3f2fd; color: #0d47a1; }
+    #academic-portfolio .pub-badge-conf { background: #f3e5f5; color: #4a148c; }
+    #academic-portfolio .pub-title { font-size: 1.25rem; margin-bottom: 0.3rem; }
+    #academic-portfolio .pub-meta { color: #555; margin: 0 0 0.3rem 0; }
+    #academic-portfolio .pub-authors { margin: 0; color: #333; }
+    #academic-portfolio .pub-authors strong { color: #0f52ba; }
+    
+    #academic-portfolio .project-list { display: grid; gap: 2rem; }
+    #academic-portfolio .project-item { background: #fff; padding: 1.5rem; border-radius: 8px; border: 1px solid #eaeaea; }
+    #academic-portfolio .project-date { display: block; font-size: 0.85rem; color: #777; margin-bottom: 0.5rem; font-weight: bold; text-transform: uppercase; }
+    #academic-portfolio .project-title { font-size: 1.3rem; margin-bottom: 0.2rem; }
+    #academic-portfolio .project-bullets { padding-left: 1.2rem; color: #444; margin-top: 0.8rem; }
+    #academic-portfolio .project-bullets li { margin-bottom: 0.4rem; }
+
+    /* Contact Grid */
+    #academic-portfolio .contact-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;
+    }
+    #academic-portfolio .contact-card {
+      background: #f4f6f9; padding: 1.5rem; border-radius: 8px; text-align: center;
+    }
+    #academic-portfolio .contact-card-title { font-size: 1rem; color: #666; margin-bottom: 0.5rem; font-family: 'Atkinson Hyperlegible', sans-serif;}
+    #academic-portfolio .contact-value { font-size: 1.1rem; font-weight: bold; color: #111; text-decoration: none; }
+    #academic-portfolio a.contact-value { color: #0f52ba; }
+    #academic-portfolio a.contact-value:hover { text-decoration: underline; }
+
+    #academic-portfolio .footer { text-align: center; padding: 2rem; color: #888; font-size: 0.9rem; border-top: 1px solid #eaeaea; }
+
+    @media (max-width: 768px) {
+      #academic-portfolio .hero { flex-direction: column; text-align: center; gap: 2rem; }
+      #academic-portfolio .hero-actions { justify-content: center; }
+      #academic-portfolio .two-col { grid-template-columns: 1fr; }
+      #academic-portfolio .header-inner { flex-direction: column; }
+    }
+
+
+    /* ==========================================================================
+       3. RETRO PORTFOLIO CSS (Namespaced 8-bit Sandbox)
+       ========================================================================== */
+    #retro-portfolio {
+      --ink: #050515;
+      --night-top: #060124;
+      --night-mid: #130a4a;
+      --night-low: #241663;
+      --moon: #fcf8dc;
+      --moon-shade: #cfc280;
+      --grass-hi: #3b9c44;
+      --grass-mid: #256b30;
+      --grass-low: #15421d;
+      --grass-seam: #0f2b13;
+      --gold: #ffd23f;
+      --red: #ff3344;
+      --red-dark: #a31422;
+      --red-light: #ff7a87;
+      --cyan: #00ffff;
+      --amber: #ff9f1c;
+      --reveal-bg-center: #1b1464;
+      --reveal-bg-edge: #030112;
+      --text-shadow-1: #000;
+      --text-shadow-2: rgba(0,0,0,0.4);
+
+      background: var(--ink);
+      color: #fff;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      -webkit-font-smoothing: none;
+      transition: background-color 0.8s;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #retro-portfolio.day-mode {
+      --night-top: #52b1fa;
+      --night-mid: #8ad0ff;
+      --night-low: #bfe5ff;
+      --moon: #ffeb3b;
+      --moon-shade: #fbc02d;
+      --grass-hi: #65d072;
+      --grass-mid: #419c4d;
+      --grass-low: #256b30;
+      --grass-seam: #194a20;
+      --reveal-bg-center: #87CEFA;
+      --reveal-bg-edge: #52b1fa;
+      --text-shadow-1: #e67e22;
+      --text-shadow-2: rgba(0,0,0,0.15);
+    }
+
+    #retro-portfolio *, #retro-portfolio *::before, #retro-portfolio *::after {
+      box-sizing: border-box; 
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #retro-portfolio canvas {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+    }
+
+    #retro-portfolio #crt-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 999; pointer-events: none; opacity: 0.85; transition: opacity 0.3s;
+    }
+    #retro-portfolio #crt-overlay.disabled { opacity: 0; }
+
+    #retro-portfolio #vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.7) 100%);
+      z-index: 998; pointer-events: none;
+    }
+
+    #retro-portfolio #stage { height: 100%; width: 100%; position: absolute; inset: 0; overflow: hidden; }
+
+    #retro-portfolio #sky {
+      position: absolute; top: 0; left: 0; right: 0; height: 50vh;
+      background: linear-gradient(to bottom, var(--night-top), var(--night-mid));
+      overflow: hidden; border-bottom: 0px solid var(--moon);
+      transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1), border-width 1.2s, background 1s;
+      z-index: 3;
+    }
+    #retro-portfolio.started #sky { transform: translateY(calc(-50vh + 160px)); border-bottom: 4px solid var(--moon-shade); }
+
+    #retro-portfolio #reveal {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at center, var(--reveal-bg-center) 0%, var(--reveal-bg-edge) 80%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      overflow: hidden; z-index: 1; transition: background 1s;
+    }
+
+    #retro-portfolio #grass {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 50vh;
+      background-color: var(--grass-mid); overflow: hidden;
+      border-top: 0px solid var(--grass-seam);
+      transition: transform 1.2s cubic-bezier(0.65, 0, 0.35, 1), border-width 1.2s, background-color 1s;
+      z-index: 3;
+    }
+    #retro-portfolio.started #grass { transform: translateY(calc(50vh - 210px)); border-top: 4px solid var(--grass-seam); }
+
+    #retro-portfolio #walk-area {
+      position: absolute; top: 0; left: 0; right: 0; height: 200px;
+      background: var(--grass-hi); border-bottom: 4px dashed var(--grass-low);
+      transition: background-color 1s, border-color 1s;
+    }
+
+    #retro-portfolio #moon-wrap {
+      position: absolute; bottom: 30px; right: 10%; width: 96px; height: 96px;
+      filter: drop-shadow(0 0 25px rgba(255, 250, 200, 0.9)) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+    }
+    #retro-portfolio.day-mode #moon-wrap { filter: drop-shadow(0 0 40px rgba(255, 235, 59, 1)) drop-shadow(0 0 15px rgba(255, 255, 255, 0.8)); }
+
+    #retro-portfolio .star-container { position: absolute; inset: 0; pointer-events: none; transition: opacity 1s; }
+    #retro-portfolio.day-mode .star-container { opacity: 0 !important; }
+
+    #retro-portfolio .star {
+      position: absolute; width: 4px; height: 4px; background: #fff;
+      box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+      animation: rp-twinkle 2s infinite ease-in-out alternate;
+    }
+    @keyframes rp-twinkle { 0% { opacity: 0.1; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1.3); } }
+
+    #retro-portfolio #shooting-star-canvas, #retro-portfolio #day-birds-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 4; transition: opacity 1s; }
+    #retro-portfolio #shooting-star-canvas { opacity: 1; }
+    #retro-portfolio.day-mode #shooting-star-canvas { opacity: 0 !important; }
+    #retro-portfolio #day-birds-canvas { opacity: 0; }
+    #retro-portfolio.day-mode #day-birds-canvas { opacity: 1; }
+    #retro-portfolio #day-animals-canvas { position: absolute; inset: 0; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 1s; }
+    #retro-portfolio.day-mode #day-animals-canvas { opacity: 1; }
+
+    #retro-portfolio .interactive-prop { cursor: pointer; position: absolute; transition: filter 0.2s; }
+    #retro-portfolio .interactive-prop:hover { filter: brightness(1.3) drop-shadow(0 0 6px rgba(255,210,63,0.7)); }
+    #retro-portfolio .prop-tooltip {
+      position: absolute; bottom: 105%; left: 50%; transform: translateX(-50%) translateY(5px);
+      background: #000; border: 2px solid var(--gold); color: var(--gold); padding: 6px 10px;
+      font-size: 8px; line-height: 1.2; white-space: nowrap; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s; z-index: 100; box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    }
+    #retro-portfolio .interactive-prop:hover .prop-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    #retro-portfolio #desk-wrap { top: 64px; left: 15%; width: 160px; height: 128px; margin-left: -80px; z-index: 11; }
+    #retro-portfolio #desk-canvas { width: 100%; height: 100%; }
+    #retro-portfolio #monitor-glow {
+      position: absolute; top: 40px; left: 50%; width: 40px; height: 24px; margin-left: -20px;
+      background: rgba(0, 255, 255, 0.25); filter: blur(4px); opacity: 0; pointer-events: none;
+    }
+    #retro-portfolio.typing #monitor-glow { opacity: 1; animation: rp-screenFlicker 0.2s infinite alternate; }
+    #retro-portfolio #monitor-text {
+      position: absolute; top: 42px; left: 50%; margin-left: -16px;
+      color: #0f0; font-size: 5px; font-family: monospace; white-space: pre; opacity: 0;
+      line-height: 1.2; text-shadow: 0 0 1px #0f0; pointer-events: none;
+    }
+    #retro-portfolio.typing #monitor-text { opacity: 1; }
+    @keyframes rp-screenFlicker { from { opacity: 0.5; } to { opacity: 1; } }
+
+    #retro-portfolio #tent-wrap { position: absolute; top: 40px; left: 50%; width: 192px; height: 140px; margin-left: -96px; z-index: 7; }
+    #retro-portfolio #tent-canvas { width: 100%; height: 100%; transform-origin: bottom center; animation: rp-tentWind 6s ease-in-out infinite alternate; }
+    @keyframes rp-tentWind { 0% { transform: skewX(0deg) scale(1); } 100% { transform: skewX(1deg) scale(1.01); } }
+    #retro-portfolio.sleeping #tent-canvas { animation: rp-tentSnore 1.8s ease-in-out infinite !important; }
+    @keyframes rp-tentSnore { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.06, 0.94); } }
+
+    #retro-portfolio #zzz { position: absolute; top: 80px; left: 45%; color: white; font-size: 16px; opacity: 0; z-index: 12; text-shadow: 2px 2px 0 #000; pointer-events: none; }
+    #retro-portfolio.sleeping #zzz { animation: rp-zzzAnim 2s infinite ease-in-out; }
+    @keyframes rp-zzzAnim { 0% { opacity: 0; transform: translate(-35px, 10px) scale(0.6) rotate(-10deg); } 50% { opacity: 1; transform: translate(-15px, -30px) scale(1) rotate(5deg); } 100% { opacity: 0; transform: translate(15px, -70px) scale(1.3) rotate(-15deg); } }
+
+    #retro-portfolio #telescope-wrap { position: absolute; top: 64px; left: 82%; width: 128px; height: 128px; margin-left: -64px; z-index: 19; }
+    #retro-portfolio #telescope-canvas { width: 100%; height: 100%; transform-origin: bottom center; transition: transform 0.3s ease-out; }
+    #retro-portfolio.stargazing #telescope-canvas { animation: rp-telescopeAdjust 1.5s ease-in-out infinite alternate; }
+    @keyframes rp-telescopeAdjust { 0% { transform: rotate(0deg) scale(1); } 100% { transform: rotate(-2.5deg) scale(1.03); } }
+
+    #retro-portfolio #fire-wrap { position: absolute; top: 128px; left: 68%; width: 64px; height: 64px; margin-left: -32px; z-index: 11; }
+    #retro-portfolio .fire-glow {
+      position: absolute; inset: -40%;
+      background: radial-gradient(circle, rgba(255, 140, 0, 0.6) 0%, transparent 70%);
+      animation: rp-glowPulse 0.6s ease-in-out infinite alternate; pointer-events: none; transition: opacity 1s;
+    }
+    #retro-portfolio.day-mode .fire-glow { opacity: 0.15; }
+    @keyframes rp-glowPulse { 0% { opacity: 0.55; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.15); } }
+    #retro-portfolio #fire-canvas { position: relative; width: 100%; height: 100%; }
+
+    #retro-portfolio #char-canvas { position: absolute; top: 80px; width: 96px; height: 112px; margin-left: -48px; z-index: 10; pointer-events: none; transition: transform 0.1s; }
+    #retro-portfolio #char-canvas.flip { transform: scaleX(-1); }
+
+    #retro-portfolio .retro-panel { position: absolute; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.5s ease, transform 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
+    #retro-portfolio.hud-ready .retro-panel { opacity: 0.3; pointer-events: auto; }
+    #retro-portfolio.hud-ready .retro-panel:hover { opacity: 1; transition: opacity 0.2s ease, transform 0.8s cubic-bezier(0.65, 0, 0.35, 1); }
+
+    #retro-portfolio #hud {
+      top: 15px; left: 15px; background: rgba(0, 0, 0, 0.8); border: 3px solid var(--moon-shade);
+      padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); max-width: 280px; transform: translateY(-20px);
+    }
+    #retro-portfolio.hud-ready #hud { transform: translateY(0); }
+    #retro-portfolio .hud-title { font-size: 8px; color: var(--gold); border-bottom: 2px solid var(--gold); padding-bottom: 4px; margin-bottom: 2px; }
+    #retro-portfolio .hud-item { font-size: 8px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+    #retro-portfolio .hud-value { color: var(--cyan); }
+
+    #retro-portfolio #console { bottom: 15px; left: 15px; display: flex; flex-wrap:wrap; gap: 10px; transform: translateY(20px); max-width: 90vw; }
+    #retro-portfolio.hud-ready #console { transform: translateY(0); }
+
+    #retro-portfolio .console-btn {
+      font-family: inherit; background: #2f3542; color: #fff; border: none; font-size: 8px; padding: 8px 12px;
+      cursor: pointer; display: flex; align-items: center; gap: 5px;
+      box-shadow: inset -2px -2px 0 #1e222b, inset 2px 2px 0 #747d8c, 0 0 0 2px var(--ink); transition: background 0.2s;
+    }
+    #retro-portfolio .console-btn:active { transform: translateY(1px); box-shadow: inset 2px 2px 0 #1e222b, inset -2px -2px 0 #747d8c, 0 0 0 2px var(--ink); }
+    #retro-portfolio .console-btn.active { background: var(--grass-mid); color: var(--gold); box-shadow: inset -2px -2px 0 var(--grass-low), inset 2px 2px 0 var(--grass-hi), 0 0 0 2px var(--ink); }
+    #retro-portfolio .console-btn.btn-exit { background: var(--red-dark); color: #fff; box-shadow: inset -2px -2px 0 #600, inset 2px 2px 0 #f66, 0 0 0 2px var(--ink);}
+
+    #retro-portfolio #instruction-hud {
+      top: 15px; right: 15px; background: rgba(0, 0, 0, 0.8); border: 3px dashed var(--gold);
+      padding: 10px; font-size: 7px; color: #fff; line-height: 1.5; max-width: 220px; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); transform: translateY(-20px);
+    }
+    #retro-portfolio.hud-ready #instruction-hud { transform: translateY(0); }
+
+    #retro-portfolio #top-controls { top: 15px; left: 50%; transform: translateX(-50%) translateY(-30px); display: flex; gap: 10px; }
+    #retro-portfolio.hud-ready #top-controls { transform: translateX(-50%) translateY(0); }
+
+    #retro-portfolio #start-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20; transition: opacity 0.5s, transform 0.5s; text-align: center; }
+    #retro-portfolio.started #start-wrap { opacity: 0; transform: translate(-50%, -50%) scale(0.8); pointer-events: none; }
+
+    #retro-portfolio #start-btn {
+      font-family: inherit; background: var(--red); color: #fff; border: none; padding: 20px 40px; font-size: 14px; cursor: pointer;
+      box-shadow: inset -4px -4px 0 var(--red-dark), inset 4px 4px 0 var(--red-light), 0 0 0 4px var(--ink); transition: transform 0.1s; line-height: 1.5;
+    }
+    #retro-portfolio #start-btn:active { transform: translateY(4px); box-shadow: inset 4px 4px 0 var(--red-dark), inset -4px -4px 0 var(--red-light), 0 0 0 4px var(--ink); }
+
+    #retro-portfolio .hint-text { margin-top: 20px; color: #fff; font-size: 9px; text-shadow: 2px 2px 0 #000; letter-spacing: 1px; animation: rp-blink 1s steps(2) infinite; }
+    @keyframes rp-blink { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+    #retro-portfolio #reveal h1 {
+      font-size: clamp(24px, 6vw, 64px); color: var(--gold); text-align: center; letter-spacing: 4px;
+      text-shadow: 4px 4px 0 var(--text-shadow-1), 8px 8px 0 var(--text-shadow-2);
+      opacity: 0; transform: translateY(20px); transition: opacity 1s 0.6s, transform 1s 0.6s, text-shadow 1s; margin: 0;
+    }
+    #retro-portfolio.started #reveal h1 { opacity: 1; transform: translateY(0); animation: rp-textPulse 2s infinite ease-in-out 1.6s; }
+    #retro-portfolio .subtitle {
+      font-size: clamp(10px, 3vw, 16px); color: var(--cyan); text-align: center; text-shadow: 2px 2px 0 var(--text-shadow-1);
+      margin-top: 15px; opacity: 0; letter-spacing: 2px;
+    }
+    #retro-portfolio.started #reveal .subtitle { animation: rp-fadeIn 1s forwards 2.5s; }
+    @keyframes rp-fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes rp-textPulse { 0%, 100% { filter: drop-shadow(0 0 0 rgba(255,210,63,0)); } 50% { filter: drop-shadow(0 0 12px rgba(255,210,63,0.7)); } }
+
+    #retro-portfolio #cloud-canvas { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    #retro-portfolio #scenery-container { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+    #retro-portfolio .scenery-prop { position: absolute; transform-origin: bottom center; }
+    @keyframes rp-flowerBob { 0% { transform: scale(var(--s)) skewX(-2deg); } 100% { transform: scale(var(--s)) skewX(4deg); } }
+    #retro-portfolio .flower { animation: rp-flowerBob 3s infinite alternate ease-in-out; }
+
+    #retro-portfolio #portfolio-modal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%) scale(0.95);
+      width: 85%; max-width: 650px; max-height: 70vh; background: var(--ink);
+      border: 4px solid var(--moon-shade); box-shadow: inset 4px 4px 0 rgba(255,255,255,0.1), 8px 8px 0 rgba(0,0,0,0.8);
+      z-index: 1000; padding: 25px; color: #fff; display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 9px; line-height: 1.8; overflow-y: auto;
+    }
+    #retro-portfolio #portfolio-modal.active { opacity: 1; transform: translate(-50%, -50%) scale(1); pointer-events: auto; }
+    #retro-portfolio #portfolio-modal::after { content: ""; position: fixed; inset: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
+    #retro-portfolio .modal-close { align-self: flex-end; background: var(--red); color: #fff; border: 2px solid var(--red-dark); box-shadow: 2px 2px 0 #000; padding: 8px 12px; font-family: inherit; font-size: 8px; cursor: pointer; margin-bottom: 15px; text-transform: uppercase; position: sticky; top: 0; z-index: 20; }
+    #retro-portfolio .modal-close:active { transform: translate(2px, 2px); box-shadow: 0 0 0 #000; }
+    #retro-portfolio .modal-content-section { display: none; }
+    #retro-portfolio .modal-content-section.active { display: block; animation: rp-contentFadeIn 0.5s forwards; }
+    @keyframes rp-contentFadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    #retro-portfolio .modal-content-section h2 { color: var(--gold); font-size: 14px; text-shadow: 2px 2px 0 #000; margin-top:0; border-bottom: 2px dashed var(--moon-shade); padding-bottom: 10px; line-height: 1.4; }
+    #retro-portfolio .modal-content-section h3 { color: var(--cyan); font-size: 10px; margin-top: 20px; text-transform: uppercase; text-shadow: 1px 1px 0 #000; margin-bottom: 10px; }
+    #retro-portfolio .modal-content-section p { margin-bottom: 12px; }
+    #retro-portfolio .modal-content-section ul { list-style-type: none; padding-left: 0; margin-bottom: 15px;}
+    #retro-portfolio .modal-content-section li { margin-bottom: 12px; position: relative; padding-left: 15px; }
+    #retro-portfolio .modal-content-section li::before { content: '>'; position: absolute; left: 0; color: var(--gold); }
+    #retro-portfolio .modal-content-section a { color: var(--moon); text-decoration: none; border-bottom: 1px dashed var(--moon); transition: color 0.2s; }
+    #retro-portfolio .modal-content-section a:hover { color: var(--red-light); border-bottom-color: var(--red-light); }
+    #retro-portfolio .modal-content-section .chip { display: inline-block; background: var(--night-low); padding: 4px 8px; margin: 2px; border: 1px solid var(--cyan); border-radius: 2px; color: var(--cyan); font-family: 'Press Start 2P', monospace; }
+
+    #retro-portfolio #portfolio-modal::-webkit-scrollbar { width: 8px; }
+    #retro-portfolio #portfolio-modal::-webkit-scrollbar-track { background: var(--night-mid); border-left: 1px solid var(--moon-shade); }
+    #retro-portfolio #portfolio-modal::-webkit-scrollbar-thumb { background: var(--moon-shade); }
+
+    #retro-portfolio.day-mode #portfolio-modal { background: #f0f8ff; color: #1a0f08; border-color: var(--grass-mid); box-shadow: inset 4px 4px 0 rgba(0,0,0,0.05), 8px 8px 0 rgba(0,0,0,0.2); }
+    #retro-portfolio.day-mode #portfolio-modal .modal-close { background: var(--grass-mid); border-color: var(--grass-low); }
+    #retro-portfolio.day-mode #portfolio-modal h2 { color: var(--grass-mid); border-bottom-color: var(--grass-mid); text-shadow: none; }
+    #retro-portfolio.day-mode #portfolio-modal h3 { color: var(--grass-hi); text-shadow: none; }
+    #retro-portfolio.day-mode #portfolio-modal a { color: var(--grass-mid); border-bottom-color: var(--grass-mid); }
+    #retro-portfolio.day-mode #portfolio-modal .chip { background: #e0f2f1; border-color: var(--grass-mid); color: var(--grass-mid); }
+  </style>
+</head>
+<body>
+
+  <!-- MASTER CONTAINER: Manages the Sliding States -->
+  <div id="app-container" class="state-split">
+
+    <!-- ====================================================================
+         ACADEMIC PORTFOLIO (LEFT SLIDE)
+         ==================================================================== -->
+    <div id="academic-portfolio">
+      <header class="header">
+        <div class="header-inner">
+          <a href="#" class="logo">Erfan Ashtari</a>
+          <nav class="nav">
+            <ul class="nav-list">
+              <li><button class="nav-link active" onclick="switchAcademicTab('home')">About</button></li>
+              <li><button class="nav-link" onclick="switchAcademicTab('research')">Research</button></li>
+              <li><button class="nav-link" onclick="switchAcademicTab('publications')">Publications</button></li>
+              <li><button class="nav-link" onclick="switchAcademicTab('projects')">Projects</button></li>
+              <li><button class="nav-link" onclick="switchAcademicTab('contact')">Contact</button></li>
+            </ul>
+          </nav>
+          <button class="back-to-split" onclick="window.goToSplitScreen()">
+             ⬅️ Split Screen
+          </button>
+        </div>
+      </header>
+
+      <main class="main">
+        <!-- ABOUT TAB -->
+        <section class="tab-panel active" id="panel-home">
+          <div class="hero">
+            <div class="hero-portrait">
+              <!-- Placeholder handled if image doesn't exist to prevent broken UI -->
+              <img src="erfan.png" alt="Portrait of Erfan Ashtari" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22260%22%20height%3D%22260%22%20viewBox%3D%220%200%20260%20260%22%3E%3Crect%20fill%3D%22%23eaeaea%22%20width%3D%22260%22%20height%3D%22260%22%2F%3E%3Ctext%20fill%3D%22%23999%22%20font-family%3D%22sans-serif%22%20font-size%3D%2260%22%20dy%3D%2220%22%20font-weight%3D%22bold%22%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%3EEA%3C%2Ftext%3E%3C%2Fsvg%3E'">
+            </div>
+            <div class="hero-info">
+              <span class="overline">University of Manitoba</span>
+              <h1 class="hero-name">Erfan Ashtari</h1>
+              <p class="hero-role">Machine Learning Researcher &amp; Electrical Engineer</p>
+              <p class="hero-bio">Specializing in <em>Computer Vision</em>, <em>Robotics</em>, and <em>Intelligent Rehabilitation Systems</em>. Incoming M.Sc. student (Ph.D. pathway) at the University of Manitoba, developing an adaptive rhythm-coaching technology for post-stroke telerehabilitation under Dr. Houda Elmimouni.</p>
+              <div class="hero-actions">
+                <a href="mailto:erfan.ashtari1995@gmail.com" class="btn btn-primary">✉️ Contact</a>
+                <a href="https://scholar.google.com" target="_blank" class="btn btn-ghost">Google Scholar</a>
+                <a href="https://github.com" target="_blank" class="btn btn-ghost">GitHub</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="stats-row">
+            <div class="stat"><span class="stat-value">4+</span><span class="stat-label">Years in ML/DL</span></div>
+            <div class="stat"><span class="stat-value">3</span><span class="stat-label">Publications</span></div>
+            <div class="stat"><span class="stat-value">Top 0.5%</span><span class="stat-label">M.Sc. Entrance</span></div>
+            <div class="stat"><span class="stat-value">96 / 306</span><span class="stat-label">TOEFL / GRE</span></div>
+          </div>
+          <div class="divider"></div>
+
+          <div class="two-col">
+            <div class="col">
+              <h2 class="section-title">About</h2>
+              <p class="body-text">I am an Electrical Engineer with 4+ years of experience in machine learning and deep learning applications. My research sits at the intersection of <strong>computer vision</strong>, <strong>robotics</strong>, <strong>natural language processing</strong>, and <strong>human-computer interaction</strong>, with a focus on creating intelligent systems that serve human well-being.</p>
+              <p class="body-text">I have served as a Research Assistant in the Human and Robot Interaction Laboratory, and a Teaching Assistant across Robotics, Mechatronics, and Data Analysis at the University of Tehran. My current research focus explores how adaptive rhythm-coaching systems can support post-stroke motor recovery through mobile telerehabilitation.</p>
+            </div>
+            <div class="col">
+              <h2 class="section-title">Skills</h2>
+              <div class="skill-section"><h3 class="skill-heading">Programming</h3><div class="skill-list"><span class="chip">Python</span><span class="chip">C++</span><span class="chip">MATLAB</span><span class="chip">R</span></div></div>
+              <div class="skill-section"><h3 class="skill-heading">Frameworks</h3><div class="skill-list"><span class="chip">PyTorch</span><span class="chip">TensorFlow</span><span class="chip">Jupyter</span></div></div>
+              <div class="skill-section"><h3 class="skill-heading">Robotics & Tools</h3><div class="skill-list"><span class="chip">ROS</span><span class="chip">Gazebo</span><span class="chip">AI2THOR</span><span class="chip">Kubeflow</span><span class="chip">LaTeX</span></div></div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <h2 class="section-title">Education</h2>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker"></div>
+              <div class="timeline-meta"><span>Starting Fall 2026</span><span>Winnipeg, Canada</span></div>
+              <h3 class="timeline-title">M.Sc. Computer Science (Ph.D. Pathway)</h3>
+              <p class="timeline-institution">University of Manitoba</p>
+              <p class="timeline-detail">Supervisor: Dr. Houda Elmimouni &middot; Focus: Adaptive Rhythm-Coaching for Telerehabilitation</p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker"></div>
+              <div class="timeline-meta"><span>2018 — 2022</span><span>Tehran, Iran</span></div>
+              <h3 class="timeline-title">M.Sc. Electrical Engineering (Control)</h3>
+              <p class="timeline-institution">University of Tehran</p>
+              <p class="timeline-detail">GPA: 15.99/20 &middot; Thesis: Speaker Recognition Using Deep Neural Networks Based on Geometric Indices</p>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker"></div>
+              <div class="timeline-meta"><span>2013 — 2018</span><span>Tehran, Iran</span></div>
+              <h3 class="timeline-title">B.Sc. Electrical Engineering (Power)</h3>
+              <p class="timeline-institution">Shahed University</p>
+              <p class="timeline-detail">GPA: 15.09/20</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- RESEARCH TAB -->
+        <section class="tab-panel" id="panel-research">
+          <span class="overline">Research</span>
+          <h2 class="section-title">Research Interests</h2>
+          <p class="body-text">Exploring the intersection of intelligence, interaction, and human well-being.</p>
+          <div class="research-grid">
+            <article class="research-card">
+              <div class="research-card-icon">🧠</div>
+              <h3 class="research-card-title">Rehabilitation Tech</h3>
+              <p class="research-card-text">Adaptive algorithmic frameworks and rhythm-coaching for post-stroke home telerehabilitation.</p>
+            </article>
+            <article class="research-card">
+              <div class="research-card-icon">👁️</div>
+              <h3 class="research-card-title">Computer Vision</h3>
+              <p class="research-card-text">Face recognition, object detection, and visual perception systems for human-robot interaction.</p>
+            </article>
+            <article class="research-card">
+              <div class="research-card-icon">🤖</div>
+              <h3 class="research-card-title">Robotics & Control</h3>
+              <p class="research-card-text">Path planning, navigation, and intelligent control systems for autonomous social robots.</p>
+            </article>
+            <article class="research-card">
+              <div class="research-card-icon">🗣️</div>
+              <h3 class="research-card-title">NLP</h3>
+              <p class="research-card-text">Sentiment analysis, speech recognition, and transformer-based language models.</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- PUBLICATIONS TAB -->
+        <section class="tab-panel" id="panel-publications">
+          <span class="overline">Publications</span>
+          <h2 class="section-title">Selected Publications</h2>
+          <ol class="pub-list">
+            <li class="pub-item">
+              <div class="pub-header"><span class="pub-badge pub-badge-journal">Journal (Q1)</span> <span>May 2023</span></div>
+              <h3 class="pub-title">Safe Deep Learning-Based Global Path Planning Using a Fast Collision-Free Path Generator</h3>
+              <p class="pub-meta"><em>Robotics and Autonomous Systems</em> &middot; Cited by: 20</p>
+              <p class="pub-authors">S. Chehelgami, <strong>E. Ashtari</strong>, MA. Basiri, MT. Masouleh, A. Kalhor</p>
+            </li>
+            <li class="pub-item">
+              <div class="pub-header"><span class="pub-badge pub-badge-conf">IEEE Conference</span> <span>Jul 2022</span></div>
+              <h3 class="pub-title">Synergy of Deep Learning and Artificial Potential Field Methods for Robot Path Planning...</h3>
+              <p class="pub-meta"><em>30th International Conference on Electrical Engineering (ICEE)</em> &middot; Cited by: 7</p>
+              <p class="pub-authors">A. Basiri, S. Chehelgami, <strong>E. Ashtari</strong>, MT. Masouleh, A. Kalhor</p>
+            </li>
+            <li class="pub-item">
+              <div class="pub-header"><span class="pub-badge pub-badge-conf">IEEE Conference</span> <span>Aug 2020</span></div>
+              <h3 class="pub-title">Indoor and Outdoor Face Recognition for Social Robot, Sanbot Robot as Case Study</h3>
+              <p class="pub-meta"><em>28th Iranian Conference on Electrical Engineering (ICEE)</em> &middot; Cited by: 7</p>
+              <p class="pub-authors"><strong>E. Ashtari</strong>, MA. Basiri, S. Mohammadi, H. Zandi, H. SeyyedAghaei, MT. Masouleh, A. Kalhor</p>
+            </li>
+            <li class="pub-item">
+              <div class="pub-header"><span class="pub-badge" style="background:#fff3e0; color:#e65100;">Under Prep</span> <span>Ongoing</span></div>
+              <h3 class="pub-title">Forward Learning: A Novel Training Approach for Neural Networks</h3>
+              <p class="pub-meta"><em>Introducing Forward Learning and Geometric Separation Index for Face/Speaker Recognition</em></p>
+            </li>
+          </ol>
+        </section>
+
+        <!-- PROJECTS TAB -->
+        <section class="tab-panel" id="panel-projects">
+          <span class="overline">Projects</span>
+          <h2 class="section-title">Academic Projects</h2>
+          <div class="project-list">
+            <article class="project-item">
+              <span class="project-date">Upcoming Thesis</span>
+              <h3 class="project-title">Intelligent Rhythm-Coaching System</h3>
+              <ul class="project-bullets"><li>Designing an adaptive, low-latency, audio-based computational framework for home telerehabilitation.</li><li>Focusing on post-stroke upper-limb timing and coordination through Rhythmic Auditory Stimulation.</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Dec 2024 — Apr 2025</span>
+              <h3 class="project-title">MLOps Platform Deployment</h3>
+              <ul class="project-bullets"><li>Set up Kubeflow & MLflow infrastructure for scalable AI workflows on a local network.</li><li>Managed experiment tracking, model deployment, and automation.</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Jan 2022 — May 2023</span>
+              <h3 class="project-title">Global Path Planning for Mobile Robots</h3>
+              <ul class="project-bullets"><li>TensorFlow implementation of near-optimal path planning using geometric methods for robot localization (YOLO).</li><li>Developed a collision-free path generation method simulated on the AI2THOR platform.</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Aug 2020 — Jan 2022</span>
+              <h3 class="project-title">Forward Learning for CNNs</h3>
+              <ul class="project-bullets"><li>Introduced Separation Index for evaluating neural networks.</li><li>Applied Forward Learning to speaker and face recognition, enhancing initialization and accuracy.</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Fall 2019</span>
+              <h3 class="project-title">Face Recognition for Sanbot Robot</h3>
+              <ul class="project-bullets"><li>Implemented face recognition using Siamese Network and Triplet loss, deployed directly on a Sanbot Robot.</li><li>Enhanced results under different lighting conditions using robust image processing algorithms.</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Spring 2020 — Summer 2020</span>
+              <h3 class="project-title">Deep Learning NLP, Speech & Generative Models</h3>
+              <ul class="project-bullets"><li>PyTorch implementation of end-to-end speech recognition using a Transformer model.</li><li>Sentiment classification of tweets using PyTorch (LSTM) and a pre-trained BERT model.</li><li>Implemented a Generative Cooperative Net (unseen image generator).</li></ul>
+            </article>
+            <article class="project-item">
+              <span class="project-date">Winter 2020</span>
+              <h3 class="project-title">ROS & Gazebo Robotics Simulation</h3>
+              <ul class="project-bullets"><li>Gmapping and path planning simulation for Turtlebot using ROS and Gazebo.</li></ul>
+            </article>
+          </div>
+        </section>
+
+        <!-- CONTACT TAB -->
+        <section class="tab-panel" id="panel-contact">
+          <span class="overline">Contact</span>
+          <h2 class="section-title">Get in Touch</h2>
+          <div class="contact-grid">
+            <div class="contact-card">
+              <h3 class="contact-card-title">Email</h3>
+              <a href="mailto:erfan.ashtari1995@gmail.com" class="contact-value">erfan.ashtari1995@gmail.com</a>
+            </div>
+            <div class="contact-card">
+              <h3 class="contact-card-title">Location</h3>
+              <p class="contact-value">Tehran, Iran<br><span style="font-size:0.85em; color:#666;">(Relocating to Winnipeg, MB)</span></p>
+            </div>
+            <div class="contact-card">
+              <h3 class="contact-card-title">Phone</h3>
+              <a href="tel:+989365867347" class="contact-value">+98 9365867347</a>
+            </div>
+          </div>
+        </section>
+      </main>
+      <footer class="footer">
+        <p>&copy; 2026 Erfan Ashtari. All rights reserved.</p>
+      </footer>
+    </div>
+
+
+    <!-- ====================================================================
+         WELCOME SPLIT SCREEN (CENTER)
+         ==================================================================== -->
+    <div id="split-screen">
+      <div class="split-center-badge"><span>CHOOSE</span></div>
+      <div class="split-half split-left" onclick="window.goToAcademic()">
+        <div class="split-content">
+          <h2>Academic Portfolio</h2>
+          <p>Professional Research &amp; Engineering</p>
+        </div>
+      </div>
+      <div class="split-half split-right" onclick="window.goToRetro()">
+        <div class="split-content">
+          <h2>8-Bit Sandbox</h2>
+          <p>Interactive Retro Experience</p>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ====================================================================
+         RETRO PORTFOLIO (RIGHT SLIDE)
+         ==================================================================== -->
+    <div id="retro-portfolio">
+      <div id="crt-overlay"></div>
+      <div id="vignette"></div>
+
+      <div id="stage">
+        <div id="reveal">
+          <div class="star-container" id="reveal-stars"></div>
+          <h1>ERFAN ASHTARI</h1>
+          <p class="subtitle">ML RESEARCHER & ENGINEER</p>
+        </div>
+
+        <div id="sky">
+          <div class="star-container" id="sky-stars"></div>
+          <canvas id="cloud-canvas"></canvas>
+          <canvas id="shooting-star-canvas"></canvas>
+          <canvas id="day-birds-canvas"></canvas>
+          <div id="moon-wrap"><canvas id="moon-canvas" width="32" height="32"></canvas></div>
+        </div>
+
+        <div id="grass">
+          <div id="walk-area"></div>
+          <div id="scenery-container"></div>
+          <canvas id="day-animals-canvas"></canvas>
+          
+          <div id="desk-wrap" class="interactive-prop" onclick="event.stopPropagation(); window.retroCommand(15, 'desk')">
+            <canvas id="desk-canvas" width="40" height="32"></canvas>
+            <div id="monitor-glow"></div>
+            <div id="monitor-text"></div>
+            <div class="prop-tooltip">[CLICK] VIEW PROJECTS & SKILLS</div>
+          </div>
+
+          <div id="tent-wrap" class="interactive-prop" onclick="event.stopPropagation(); window.retroCommand(50, 'tent')">
+            <canvas id="tent-canvas" width="48" height="48"></canvas>
+            <div class="prop-tooltip">[CLICK] VIEW CONTACT LOG</div>
+          </div>
+          <div id="zzz">Zzz</div>
+
+          <div id="telescope-wrap" class="interactive-prop" onclick="event.stopPropagation(); window.retroCommand(80, 'telescope')">
+            <canvas id="telescope-canvas" width="32" height="32"></canvas>
+            <div class="prop-tooltip">[CLICK] VIEW RESEARCH & PUBS</div>
+          </div>
+
+          <div id="fire-wrap" class="interactive-prop" onclick="event.stopPropagation(); window.retroCommand(68, 'fire')">
+            <div class="fire-glow"></div>
+            <canvas id="fire-canvas" width="16" height="16"></canvas>
+            <div class="prop-tooltip">[CLICK] VIEW ABOUT & EDUCATION</div>
+          </div>
+
+          <canvas id="char-canvas" width="24" height="28"></canvas>
+        </div>
+
+        <!-- PORTFOLIO MODAL OVERLAY -->
+        <div id="portfolio-modal">
+          <button class="modal-close" onclick="window.closeRetroModal()">[X] CLOSE DATA</button>
+          
+          <div id="about-section" class="modal-content-section">
+            <h2>> ABOUT_ME.TXT</h2>
+            <p>Hello! I am <strong>Erfan Ashtari</strong>, an Electrical Engineer with 4+ years of experience in ML/DL. I have served as a Teaching & Research Assistant at the University of Tehran.</p>
+            <h3>EDUCATION_LOG</h3>
+            <ul>
+              <li><strong>M.Sc. Computer Science (Ph.D. pathway)</strong> - Univ. of Manitoba (Fall 2026).</li>
+              <li><strong>M.Sc. Electrical Eng. (Control)</strong> - Univ. of Tehran (GPA: 15.99/20).</li>
+              <li><strong>B.Sc. Electrical Eng. (Power)</strong> - Shahed Univ. (GPA: 15.09/20).</li>
+            </ul>
+            <h3>TEST_SCORES</h3>
+            <p>TOEFL-IBT: 96 | GRE: 306</p>
+          </div>
+
+          <div id="projects-section" class="modal-content-section">
+            <h2>> SKILLS_AND_PROJECTS.EXE</h2>
+            <h3>CORE_SYSTEM_SKILLS</h3>
+            <p>
+              <span class="chip">Python</span> <span class="chip">C++</span> <span class="chip">MATLAB</span> <span class="chip">R</span> <span class="chip">PyTorch</span> <span class="chip">TensorFlow</span> <span class="chip">ROS</span> <span class="chip">Gazebo</span> <span class="chip">LaTeX</span>
+            </p>
+            <h3>ACADEMIC_PROJECTS</h3>
+            <ul>
+              <li><strong>Rhythm-Coaching System:</strong> Adaptive post-stroke telerehabilitation.</li>
+              <li><strong>MLOps Platform:</strong> Kubeflow & MLflow infrastructure.</li>
+              <li><strong>Path Planning:</strong> Geometric localization using YOLO on AI2THOR.</li>
+              <li><strong>Forward Learning:</strong> Separation index for neural networks.</li>
+              <li><strong>Sanbot Robot:</strong> Face recognition using Siamese Networks.</li>
+              <li><strong>Deep Learning NLP:</strong> Transformers, BERT & LSTMs.</li>
+            </ul>
+          </div>
+
+          <div id="research-section" class="modal-content-section">
+            <h2>> RESEARCH_DATABANKS.LOG</h2>
+            <h3>RESEARCH_INTERESTS</h3>
+            <p>Computer Vision, Robotics & Control, Data Analysis, NLP, and Human-Computer Interaction.</p>
+            <h3>CURRENT_WORK_FOCUS</h3>
+            <p style="color:var(--amber);">Intelligent Rhythm-Coaching System: An adaptive, low-latency computational framework for home telerehabilitation of post-stroke timing and coordination.</p>
+            <h3>PUBLICATIONS</h3>
+            <ul>
+              <li>1x Journal Article (Robotics and Autonomous Systems - Q1)</li>
+              <li>2x IEEE Conference Papers (ICEE)</li>
+            </ul>
+          </div>
+
+          <div id="contact-section" class="modal-content-section">
+            <h2>> COMM_LINK_ESTABLISHED</h2>
+            <ul>
+              <li><strong>LOCATION:</strong> Tehran, Iran (Relocating to Winnipeg, Canada)</li>
+              <li><strong>EMAIL:</strong> erfan.ashtari1995@gmail.com</li>
+              <li><strong>PHONE:</strong> +98 9365867347</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div id="top-controls" class="retro-panel">
+          <button id="theme-toggle" class="console-btn" onclick="event.stopPropagation(); window.toggleTheme()">
+            <span>☀️ DAY MODE</span>
+          </button>
+        </div>
+
+        <div id="hud" class="retro-panel">
+          <div class="hud-title">ERFAN-OS MONITORS</div>
+          <div class="hud-item"><span>CURRENT UNIT:</span> <span class="hud-value" id="hud-name">E. ASHTARI</span></div>
+          <div class="hud-item"><span>COORDINATES:</span> <span class="hud-value" id="hud-coord">X: 50%</span></div>
+          <div class="hud-item"><span>STATUS:</span> <span class="hud-value" id="hud-status" style="color:var(--amber);">INITIALIZING</span></div>
+          <div class="hud-item"><span>CYCLE MODE:</span> <span class="hud-value" id="hud-cycle" style="color:var(--gold);">AUTO-ORBIT</span></div>
+        </div>
+
+        <div id="console" class="retro-panel">
+          <button class="console-btn btn-exit" onclick="event.stopPropagation(); window.goToSplitScreen()">
+            <span>⬅️ EXIT TO SPLIT</span>
+          </button>
+          <button id="toggle-audio" class="console-btn active" onclick="event.stopPropagation(); window.toggleAudio()">
+            <span>🔊 SOUND: ON</span>
+          </button>
+          <button id="toggle-crt" class="console-btn active" onclick="event.stopPropagation(); window.toggleCRT()">
+            <span>📺 CRT: ON</span>
+          </button>
+          <button id="toggle-mode" class="console-btn active" onclick="event.stopPropagation(); window.toggleMode()">
+            <span>🤖 MODE: AUTO</span>
+          </button>
+          <button id="close-sandbox" class="console-btn" onclick="event.stopPropagation(); window.closeSandbox()">
+            <span>❌ RESET</span>
+          </button>
+        </div>
+
+        <div id="instruction-hud" class="retro-panel">
+          <div style="color: var(--gold); margin-bottom: 4px; font-weight: bold;">PORTFOLIO ACTIVE</div>
+          Click directly on the campfire, telescope, workstation, or tent to load my academic and project modules!
+        </div>
+
+        <div id="start-wrap">
+          <button id="start-btn" onclick="event.stopPropagation(); window.triggerRetroStart()">INITIATE_PROFILE.exe</button>
+          <div class="hint-text">CLICK TO PROCEED</div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End App Container -->
+
+
+  <script>
+    /* ==========================================================================
+       GLOBAL STATE MANAGER (SPLIT SCREEN LOGIC)
+       ========================================================================== */
+    const appContainer = document.getElementById('app-container');
+
+    window.goToAcademic = function() {
+      appContainer.className = 'state-academic';
+      if(window.closeSandbox) window.closeSandbox(); // Mute/Reset retro if it's running
+    };
+
+    window.goToRetro = function() {
+      appContainer.className = 'state-retro';
+    };
+
+    window.goToSplitScreen = function() {
+      appContainer.className = 'state-split';
+      if(window.closeSandbox) window.closeSandbox(); // Mute/Reset retro if it's running
+    };
+
+    /* ==========================================================================
+       ACADEMIC JS LOGIC (Tabs)
+       ========================================================================== */
+    window.switchAcademicTab = function(tabId) {
+      // Remove active class from all links and panels
+      document.querySelectorAll('#academic-portfolio .nav-link').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('#academic-portfolio .tab-panel').forEach(panel => panel.classList.remove('active'));
+      
+      // Add active to the clicked button and matching panel
+      const targetBtn = Array.from(document.querySelectorAll('#academic-portfolio .nav-link')).find(b => b.getAttribute('onclick').includes(tabId));
+      if (targetBtn) targetBtn.classList.add('active');
+      document.getElementById('panel-' + tabId).classList.add('active');
+      
+      // Scroll to top
+      document.getElementById('academic-portfolio').scrollTo(0, 0);
+    };
+
+    /* ==========================================================================
+       RETRO JS LOGIC (Encapsulated)
+       ========================================================================== */
+    (function(){
+      "use strict";
+      const retroApp = document.getElementById('retro-portfolio');
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+      async function safeWait(ms) {
+        let elapsed = 0;
+        while(elapsed < ms) {
+          if (!isStarted || interruptCurrentAction) return; 
+          await sleep(100);
+          elapsed += 100;
+        }
+      }
+
+      let audioCtx = null;
+      let masterGain = null;
+      let isSoundEnabled = true;
+      let fireNoiseNode = null;
+      let fireGainNode = null;
+      let snoreOsc = null;
+      let snoreGain = null;
+
+      function initAudio() {
+        if (audioCtx) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0.3, audioCtx.currentTime); 
+        masterGain.connect(audioCtx.destination);
+        setupCampfireSound();
+      }
+
+      function setupCampfireSound() {
+        if (!audioCtx) return;
+        const bufferSize = audioCtx.sampleRate * 2;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+
+        fireNoiseNode = audioCtx.createBufferSource();
+        fireNoiseNode.buffer = noiseBuffer;
+        fireNoiseNode.loop = true;
+
+        const rumbleFilter = audioCtx.createBiquadFilter();
+        rumbleFilter.type = 'lowpass';
+        rumbleFilter.frequency.setValueAtTime(150, audioCtx.currentTime);
+
+        const rumbleGain = audioCtx.createGain();
+        rumbleGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+
+        fireNoiseNode.connect(rumbleFilter);
+        rumbleFilter.connect(rumbleGain);
+        rumbleGain.connect(masterGain);
+
+        fireGainNode = audioCtx.createGain();
+        fireGainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        
+        setInterval(() => {
+          if (!isSoundEnabled || !audioCtx || audioCtx.state === 'suspended') return;
+          if (Math.random() > 0.45) triggerCrackle();
+        }, 120);
+        fireNoiseNode.start(0);
+      }
+
+      function triggerCrackle() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(100 + Math.random() * 300, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.04 + Math.random() * 0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        osc.connect(gain); gain.connect(masterGain);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.09);
+      }
+
+      function playPowerUpSound() {
+        if (!audioCtx || !isSoundEnabled) return;
+        const now = audioCtx.currentTime;
+        [261.63, 329.63, 392.00, 523.25].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+          osc.type = 'square'; osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.08); gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+          osc.connect(gain); gain.connect(masterGain); osc.start(now + idx * 0.08); osc.stop(now + idx * 0.08 + 0.26);
+        });
+      }
+
+      function playTypeBlip() {
+        if (!audioCtx || !isSoundEnabled) return;
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = 'square'; osc.frequency.setValueAtTime(800 + Math.random() * 1200, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.03, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        osc.connect(gain); gain.connect(masterGain); osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+      }
+
+      function startSnoreAudio() {
+        if (!audioCtx || !isSoundEnabled) return;
+        snoreOsc = audioCtx.createOscillator(); snoreGain = audioCtx.createGain();
+        snoreOsc.type = 'triangle'; snoreOsc.frequency.setValueAtTime(65, audioCtx.currentTime);
+        snoreGain.gain.setValueAtTime(0, audioCtx.currentTime);
+        snoreOsc.connect(snoreGain); snoreGain.connect(masterGain); snoreOsc.start();
+        let count = 0;
+        const breathe = setInterval(() => {
+          if (!snoreOsc || !snoreGain || !audioCtx) { clearInterval(breathe); return; }
+          const now = audioCtx.currentTime;
+          if (count % 2 === 0) {
+            snoreOsc.frequency.linearRampToValueAtTime(85, now + 0.8); snoreGain.gain.linearRampToValueAtTime(0.15, now + 0.8);
+          } else {
+            snoreOsc.frequency.linearRampToValueAtTime(60, now + 0.8); snoreGain.gain.linearRampToValueAtTime(0, now + 0.8);
+          }
+          count++;
+        }, 900);
+        snoreOsc._intervalId = breathe;
+      }
+
+      function stopSnoreAudio() {
+        if (snoreOsc) { clearInterval(snoreOsc._intervalId); try { snoreOsc.stop(); } catch(e){} snoreOsc = null; }
+        snoreGain = null;
+      }
+
+      function playTelescopeSweeps() {
+        if (!audioCtx || !isSoundEnabled) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = 'sine'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(2200, now + 1.5);
+        gain.gain.setValueAtTime(0.01, now); gain.gain.linearRampToValueAtTime(0.08, now + 0.7); gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+        osc.connect(gain); gain.connect(masterGain); osc.start(); osc.stop(now + 1.6);
+      }
+
+      function playWaveChime() {
+        if (!audioCtx || !isSoundEnabled) return;
+        const now = audioCtx.currentTime;
+        [880, 1109, 1318, 1760].forEach((f, i) => {
+          const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+          osc.type = 'triangle'; osc.frequency.setValueAtTime(f, now + i * 0.08);
+          gain.gain.setValueAtTime(0.06, now + i * 0.08); gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+          osc.connect(gain); gain.connect(masterGain); osc.start(now + i * 0.08); osc.stop(now + i * 0.08 + 0.35);
+        });
+      }
+
+      let isDayMode = false;
+
+      function generateGrassTexture(isDay) {
+        const c = document.createElement('canvas'); c.width = 16; c.height = 16; const ctx = c.getContext('2d');
+        ctx.fillStyle = isDay ? '#419c4d' : '#256b30'; ctx.fillRect(0, 0, 16, 16);
+        ctx.fillStyle = isDay ? '#256b30' : '#15421d'; ctx.fillRect(2, 2, 4, 4); ctx.fillRect(10, 10, 2, 2);
+        ctx.fillStyle = isDay ? '#65d072' : '#3b9c44'; ctx.fillRect(8, 2, 2, 2); ctx.fillRect(4, 12, 4, 4);
+        document.getElementById('grass').style.backgroundImage = `url(${c.toDataURL()})`;
+      }
+
+      function spawnStars(containerId, count) {
+        const container = document.getElementById(containerId);
+        for (let i = 0; i < count; i++) {
+          const s = document.createElement('div'); s.className = 'star';
+          s.style.left = (Math.random() * 100) + '%'; s.style.top = (Math.random() * 100) + '%';
+          s.style.animationDelay = (Math.random() * 2).toFixed(2) + 's';
+          s.style.opacity = Math.random() * 0.8 + 0.2; container.appendChild(s);
+        }
+      }
+
+      function drawCelestialBody(isDay) {
+        const ctx = document.getElementById('moon-canvas').getContext('2d'); ctx.clearRect(0, 0, 32, 32);
+        const size = 32, r = 12, cx = 15.5, cy = 15.5;
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const dx = x - cx + 0.5, dy = y - cy + 0.5;
+            if (dx * dx + dy * dy <= r * r) {
+              if (isDay) {
+                ctx.fillStyle = '#ffeb3b'; if (dx * dx + dy * dy > (r - 2) * (r - 2)) ctx.fillStyle = '#fbc02d'; ctx.fillRect(x, y, 1, 1);
+              } else {
+                ctx.fillStyle = '#fcf8dc'; 
+                if ((x >= 6 && x <= 9 && y >= 8 && y <= 11) || (x >= 15 && x <= 19 && y >= 10 && y <= 14) || (x >= 10 && x <= 13 && y >= 18 && y <= 21)) ctx.fillStyle = '#cfc280';
+                if (dx * dx + dy * dy > (r - 2) * (r - 2) && x > cx) ctx.fillStyle = '#cfc280';
+                if (dx * dx + dy * dy > (r - 1) * (r - 1) && x > cx + 1) ctx.fillStyle = '#a3975a';
+                ctx.fillRect(x, y, 1, 1);
+              }
+            }
+          }
+        }
+        if (isDay) {
+          ctx.fillStyle = '#fbc02d';
+          [[15,0],[15,1],[15,2],[15,29],[15,30],[15,31],[0,15],[1,15],[2,15],[29,15],[30,15],[31,15],[4,4],[5,5],[26,26],[27,27],[26,5],[27,4],[4,27],[5,26]]
+          .forEach(pt => ctx.fillRect(pt[0], pt[1], 1, 1));
+        }
+      }
+
+      const ssCanvas = document.getElementById('shooting-star-canvas'); const ssCtx = ssCanvas.getContext('2d'); let shootingStars = [];
+      function resizeShootingStarCanvas() { ssCanvas.width = ssCanvas.parentElement.clientWidth; ssCanvas.height = ssCanvas.parentElement.clientHeight; }
+      window.addEventListener('resize', resizeShootingStarCanvas); resizeShootingStarCanvas();
+      
+      function updateAndDrawShootingStars() {
+        if(appContainer.className === 'state-retro') {
+          ssCtx.clearRect(0, 0, ssCanvas.width, ssCanvas.height);
+          if (!isDayMode) {
+            for (let i = shootingStars.length - 1; i >= 0; i--) {
+              let p = shootingStars[i]; p.x += p.dx; p.y += p.dy; p.opacity -= p.fadeSpeed;
+              if (p.opacity <= 0) { shootingStars.splice(i, 1); continue; }
+              ssCtx.strokeStyle = `rgba(255, 255, 255, ${p.opacity})`; ssCtx.lineWidth = 2; ssCtx.beginPath();
+              ssCtx.moveTo(p.x, p.y); ssCtx.lineTo(p.x - p.dx * (p.length/10), p.y - p.dy * (p.length/10)); ssCtx.stroke();
+            }
+            if (Math.random() < 0.007) shootingStars.push({ x: Math.random() * ssCanvas.width * 0.8, y: Math.random() * ssCanvas.height * 0.3, dx: 6 + Math.random() * 4, dy: 2 + Math.random() * 2, length: 40 + Math.random() * 50, opacity: 1, fadeSpeed: 0.015 + Math.random() * 0.01 });
+          }
+        }
+        requestAnimationFrame(updateAndDrawShootingStars);
+      }
+      updateAndDrawShootingStars();
+
+      const birdCanvas = document.getElementById('day-birds-canvas'); const birdCtx = birdCanvas?.getContext('2d');
+      const animalCanvas = document.getElementById('day-animals-canvas'); const animalCtx = animalCanvas?.getContext('2d');
+      function resizeDayCanvas() { if (birdCanvas) { birdCanvas.width = birdCanvas.parentElement.clientWidth; birdCanvas.height = birdCanvas.parentElement.clientHeight; } if (animalCanvas) { animalCanvas.width = animalCanvas.parentElement.clientWidth; animalCanvas.height = animalCanvas.parentElement.clientHeight; } }
+      window.addEventListener('resize', resizeDayCanvas); resizeDayCanvas();
+
+      const ANIMALS = { RABBIT_SIT: ["....W.", "...WW.", "...rW.", "..WWW.", ".WWWWW"], RABBIT_HOP: ["...W..", "..WW..", "..rW..", ".WWWW.", "W...W."], BFLY_A: ["1.1", ".K.", "2.2"], BFLY_B: ["...", "1K1", "..."], BIRD_A: ["K...K", ".K.K.", "..K.."], BIRD_B: [".....", "K...K", ".KKK."] };
+      let dayEntities = [ { type: 'rabbit', x: 200, y: 155, state: 'sit', timer: 0, dir: 1 }, { type: 'rabbit', x: 700, y: 145, state: 'sit', timer: 50, dir: -1 }, { type: 'butterfly', x: 100, y: 60, timer: 0, c1: 'Y', c2: 'y' }, { type: 'butterfly', x: 300, y: 90, timer: 20, c1: 'l', c2: 'P' }, { type: 'butterfly', x: 600, y: 50, timer: 40, c1: 'W', c2: 'Y' }, { type: 'bird', x: 100, y: 50, timer: 0, scale: 2, speed: 1.5, yBase: 50 }, { type: 'bird', x: 500, y: 80, timer: 30, scale: 1.5, speed: 1, yBase: 80 } ];
+      function drawPixelGrid(ctx, grid, x, y, dir, scale, c1, c2) {
+        if(!ctx) return; ctx.save(); ctx.translate(x, y); if (dir === -1) { ctx.scale(-1, 1); ctx.translate(-grid[0].length * scale, 0); }
+        for (let r = 0; r < grid.length; r++) { for (let c = 0; c < grid[r].length; c++) { let char = grid[r][c]; if (char !== '.') { if (char === '1') ctx.fillStyle = PALETTE[c1] || c1; else if (char === '2') ctx.fillStyle = PALETTE[c2] || c2; else ctx.fillStyle = PALETTE[char] || '#fff'; ctx.fillRect(c * scale, r * scale, scale, scale); } } } ctx.restore();
+      }
+
+      function updateDayAnimals() {
+        if (appContainer.className === 'state-retro') {
+          if (animalCtx) animalCtx.clearRect(0, 0, animalCanvas.width, animalCanvas.height);
+          if (birdCtx) birdCtx.clearRect(0, 0, birdCanvas.width, birdCanvas.height);
+          if (isDayMode) {
+            dayEntities.forEach(ent => {
+              if (ent.type === 'rabbit') {
+                ent.timer++;
+                if (ent.state === 'sit') { if (ent.timer > 80 && Math.random() < 0.03) { ent.state = 'hop'; ent.timer = 0; if (Math.random() > 0.6) ent.dir *= -1; if (ent.x < 50) ent.dir = 1; if (ent.x > animalCanvas.width - 50) ent.dir = -1; } } 
+                else if (ent.state === 'hop') { ent.x += ent.dir * 3; let hopY = Math.sin((ent.timer / 15) * Math.PI) * 12; let drawY = ent.y - Math.max(0, hopY); if (ent.timer >= 15) { if (Math.random() > 0.4) { ent.state = 'sit'; ent.timer = 0; } else { ent.timer = 0; } } drawPixelGrid(animalCtx, ANIMALS.RABBIT_HOP, ent.x, drawY, ent.dir, 2); return; }
+                drawPixelGrid(animalCtx, ANIMALS.RABBIT_SIT, ent.x, ent.y, ent.dir, 2);
+              } else if (ent.type === 'butterfly') {
+                ent.timer++; ent.x += Math.sin(ent.timer * 0.05) * 1.5 + 0.3; ent.y += Math.cos(ent.timer * 0.04) * 0.8; if (ent.x > animalCanvas.width + 20) ent.x = -20;
+                drawPixelGrid(animalCtx, (ent.timer % 12 < 6) ? ANIMALS.BFLY_A : ANIMALS.BFLY_B, ent.x, ent.y, 1, 2, ent.c1, ent.c2);
+              } else if (ent.type === 'bird') {
+                ent.timer++; ent.x += ent.speed; ent.y = ent.yBase + Math.sin(ent.timer * 0.03) * 10; if (ent.x > birdCanvas.width + 50) ent.x = -50;
+                drawPixelGrid(birdCtx, (ent.timer % 20 < 10) ? ANIMALS.BIRD_A : ANIMALS.BIRD_B, ent.x, ent.y, 1, ent.scale);
+              }
+            });
+          }
+        }
+        requestAnimationFrame(updateDayAnimals);
+      }
+      
+      const fireGlow = document.querySelector('.fire-glow');
+      function startFireAnimation() {
+        const ctx = document.getElementById('fire-canvas').getContext('2d');
+        setInterval(() => {
+          if (appContainer.className !== 'state-retro') return;
+          ctx.clearRect(0, 0, 16, 16);
+          ctx.fillStyle = '#5a3a22'; ctx.fillRect(2, 13, 12, 2); ctx.fillStyle = '#3d2615'; ctx.fillRect(2, 15, 12, 1); ctx.fillStyle = '#7a5232'; ctx.fillRect(4, 12, 2, 1); ctx.fillRect(10, 12, 2, 1);
+          const j = () => Math.floor(Math.random() * 3) - 1;
+          const flame = (y, h, color) => { ctx.fillStyle = color; for (let i = 0; i < h; i++) { let w = Math.max(1, Math.round((h - i) * 0.8)); ctx.fillRect(Math.round(8 + j() - w / 2), y - i, w, 1); } };
+          const redHeight = 8 + Math.random()*2; flame(12, redHeight, '#d62828'); flame(10, 6 + Math.random()*2, '#ff7b00'); flame(7,  4 + Math.random()*2, '#ffd23f');
+          if (fireGlow) fireGlow.style.transform = `scale(${0.9 + (redHeight / 30)})`;
+          if (Math.random() > 0.4) { ctx.fillStyle = '#ffd23f'; ctx.fillRect(8 + j() * 3, 2 + Math.random() * 4, 1, 1); }
+        }, 150);
+      }
+
+      generateGrassTexture(false); drawCelestialBody(false); spawnStars('sky-stars', 60); spawnStars('reveal-stars', 40); startFireAnimation(); updateDayAnimals();
+
+      const PALETTE = { H: '#3e2723', S: '#ffcc80', E: '#1a0f08', W: '#ffffff', B: '#2b1b12', G: '#3b9c44', g: '#256b30', P: '#1976d2', p: '#1565c0', K: '#111111', '.': 'transparent', t: '#555555', T: '#777777', w: '#e0e0e0', d: '#2f3542', l: '#81d4fa', Y: '#fbc02d', y: '#f57f17', C: '#fff9c4', b: '#0d1b2a', s: '#4f5d75', O: '#5d4037', m: '#2e8b57', M: '#006400', n: '#8b4513', N: '#5c4033', r: '#ff3344', v: '#9c27b0' };
+      const FRAMES = {
+        STAND_FRONT: [ "........HHHHH...........", ".......HHHHHHHH.........", "......HHHHHHHHHH........", ".....HHHHHHHHHHHH.......", ".....HHSSSSSSSSHH.......", ".....HHSWESSWESSH.......", ".....HHSESSSSESHH.......", ".....HSSSSSSSSSSH.......", "......BBSSSSSSBB........", "......BBBBSSBBBB........", ".......BBBBBBBB.........", "........BBBBBB..........", "..........SS............", ".......GGGGGGGG.........", "......GGGGGGGGGG........", "......SSGGGGGGSS........", "......SSGGGGGGSS........", "........GGGGGG..........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........KKK.KKK.........", "........KKK.KKK.........", "........................", "........................" ],
+        LOOK_UP_FRONT: [ "........HHHHH...........", ".......HHHHHHHH.........", "......HHHHHHHHHH........", ".....HHHHHHHHHHHH.......", ".....HHSSSSSSSSHH.......", ".....HHSEESSEESHH.......", ".....HHSWESSWESSH.......", ".....HSSSSSSSSSSH.......", "......BBSSSSSSBB........", "......BBBBSSBBBB........", ".......BBBBBBBB.........", "........BBBBBB..........", "..........SS............", ".......GGGGGGGG.........", "......GGGGGGGGGG........", "......SSGGGGGGSS........", "......SSGGGGGGSS........", "........GGGGGG..........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........KKK.KKK.........", "........KKK.KKK.........", "........................", "........................" ],
+        WAVE_FRONT_A: [ "........HHHHH...........", ".......HHHHHHHH.........", "......HHHHHHHHHH........", ".....HHHHHHHHHHHH.......", ".....HHSSSSSSSSHH.......", ".....HHSWESSWESSH.......", ".....HHSESSSSESHH.......", ".....HSSSSSSSSSSH.......", "......BBSSSSSSBB......SS", "......BBBBSSBBBB.....GG.", ".......BBBBBBBB.....GG..", "........BBBBBB.....GG...", "..........SS......GG....", ".......GGGGGGGGGGGG.....", "......GGGGGGGGGG........", "......SSGGGGGG..........", "......SSGGGGGG..........", "........GGGGGG..........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........KKK.KKK.........", "........KKK.KKK.........", "........................", "........................" ],
+        WAVE_FRONT_B: [ "........HHHHH...........", ".......HHHHHHHH.........", "......HHHHHHHHHH........", ".....HHHHHHHHHHHH.......", ".....HHSSSSSSSSHH.......", ".....HHSWESSWESSH.....SS", ".....HHSESSSSESHH.....GG", ".....HSSSSSSSSSSH.....GG", "......BBSSSSSSBB.....GG.", "......BBBBSSBBBB.....GG.", ".......BBBBBBBB.....GG..", "........BBBBBB.....GG...", "..........SS......GG....", ".......GGGGGGGGGGGG.....", "......GGGGGGGGGG........", "......SSGGGGGG..........", "......SSGGGGGG..........", "........GGGGGG..........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPPPPPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........PPP.PPP.........", "........KKK.KKK.........", "........KKK.KKK.........", "........................", "........................" ],
+        WALK_SIDE_RIGHT_A: [ "........HHHHH...........", "......HHHHHHHHH.........", ".....HHHHHHHHHH.........", "....HHHHHHHHHHH.........", "....HHHHSSSSSS..........", "....HHHSSSWES...........", "....HHHSSSES............", "....HHSSSSSS............", "....HHBBSSSB............", ".....BBBBBBB............", "......BBBBBB............", "........SS..............", "......GGGGGG............", ".....GGGGGGGG...........", ".....SSGGGGGG...........", ".....SSGGGGGG...........", "......GGGGGG............", ".......PPPP.............", "......PP..PP............", "......PP...PP...........", ".....PP....PP...........", ".....PP....PP...........", ".....PP....PP...........", ".....KK....KK...........", ".....KK....KK...........", "........................", "........................", "........................" ],
+        WALK_SIDE_RIGHT_B: [ "........HHHHH...........", "......HHHHHHHHH.........", ".....HHHHHHHHHH.........", "....HHHHHHHHHHH.........", "....HHHHSSSSSS..........", "....HHHSSSWES...........", "....HHHSSSES............", "....HHSSSSSS............", "....HHBBSSSB............", ".....BBBBBBB............", "......BBBBBB............", "........SS..............", "......GGGGGG............", ".....GGGGGGGG...........", ".....SSGGGGGG...........", ".....SSGGGGGG...........", "......GGGGGG............", ".......PPPP.............", "........PP..............", "........PP..............", "........PP..............", "........PP..............", "........PP..............", ".......KKKK.............", ".......KKKK.............", "........................", "........................", "........................" ],
+        SIT_FRONT: [ "........................", "........................", "........HHHHH...........", ".......HHHHHHHH.........", "......HHHHHHHHHH........", ".....HHHHHHHHHHHH.......", ".....HHSSSSSSSSHH.......", ".....HHSWESSWESSH.......", ".....HHSESSSSESHH.......", ".....HSSSSSSSSSSH.......", "......BBSSSSSSBB........", "......BBBBSSBBBB........", ".......BBBBBBBB.........", "........BBBBBB..........", "..........SS............", ".......GGGGGGGG.........", "......GGGGGGGGGG........", "......SSGGGGGGSS........", "......SSGGGGGGSS........", "........GGGGGG..........", ".......PPPPPPPP.........", "......PPPPPPPPPP........", ".....PPPPPPPPPPPP.......", ".....PP........PP.......", ".....KK........KK.......", "........................", "........................", "........................" ],
+        BEND_TELESCOPE_RIGHT: [ "........................", "........................", "........................", "........................", "........................", "........................", ".......HHHHH............", ".....HHHHHHHHH..........", "....HHHHHHHHHH..........", "...HHHHHHHHHHH..........", "...HHHHSSSSSS...........", "...HHHSSSWES............", "...HHHSSSES.............", "...HHSSSSSS.............", "...HHBBSSSB.............", "....BBBBBBB.............", ".....BBBBBB.............", ".......SS...............", "......GGGGGG............", ".....GGGGGGGG...........", ".....SSGGGGGG...........", ".....SSGGGGGG...........", "......GGGGGG............", ".......PPPP.............", ".......PPPP.............", ".......KKKK.............", ".......KKKK.............", "........................" ],
+        SIT_TYPE_A: [ "........................", "........................", "........................", "........................", "........HHHHH...........", "......HHHHHHHHH.........", ".....HHHHHHHHHH.........", "....HHHHHHHHHHH.........", "....HHHHSSSSSS..........", "....HHHSSSWES...........", "....HHHSSSES............", "....HHSSSSSS............", "....HHBBSSSB............", ".....BBBBBBB............", "......BBBBBB............", "........SS..............", "......GGGGGG............", ".....GGGGGGGG...........", ".....SSGGGGGGSSSS.......", ".....SSGGGGGG...........", "......GGGGGG............", ".......PPPP.............", ".......PPPPPPPP.........", ".......PPPPPPPP.........", ".......PP....PP.........", ".......KK....KK.........", ".......KK....KK.........", "........................" ],
+        SIT_TYPE_B: [ "........................", "........................", "........................", "........................", "........HHHHH...........", "......HHHHHHHHH.........", ".....HHHHHHHHHH.........", "....HHHHHHHHHHH.........", "....HHHHSSSSSS..........", "....HHHSSSWES...........", "....HHHSSSES............", "....HHSSSSSS............", "....HHBBSSSB............", ".....BBBBBBB............", "......BBBBBB............", "........SS..............", "......GGGGGG............", ".....GGGGGGGG...........", ".....SSGGGGGG..SS.......", ".....SSGGGGGG..SS.......", "......GGGGGG............", ".......PPPP.............", ".......PPPPPPPP.........", ".......PPPPPPPP.........", ".......PP....PP.........", ".......KK....KK.........", ".......KK....KK.........", "........................" ],
+        HIDDEN: Array(28).fill("........................")
+      };
+
+      const TELESCOPE_GRID = [ ".........................KK.....",".......................KKllK....",".....................KKddwwK....","...................KKddddwK.....", "...........KKK...KKddddddK......",".........KKllK.KKddddddddK......",".......KKddwwKKdddddddddK.......",".....KKddddwKddddddddddK........", "...KKddddddKdddddddddddK........","...KKKKKKKKKddddddddddK.........","......K..KdddddddddddK..........","........KdddddddddddK...........", ".......KdddddddddddK............","......KdddddddddddK.............",".....KdddddddddddK..............","....KdddddddddddK...............", "...KdddddddddddK................","...KddddddddddK.................","....KKKKKKKKKK..................","........KttK....................", ".......KttttK.KKK...............","......KttKttK.KtK...............",".....KttK.KttKKtK...............",".....KttK..KttK.K...............", "...KKKttK...KttK................","...KKKttK....KttK...............","...KKKttK.....KttK..............","....KttK......KttK..............", "....KttK.......KttK.............","...KttK........KttK.............","...KttK.........KttK............","...KKK...........KKK............" ];
+      const DESK_GRID = [ "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "........................................", "...............wwwwwwwww................", "..............wTTTTTTTTTw...............", "..............wT.......Tw...............", "..............wT.......Tw...............", "..............wT.......Tw...............", "..............wT.......Tw...............", "..............wTTTTTTTTTw...............", "..............wwwwwwwwwww...............", "...................w....................", "...............wwwwwwwww................", "....nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn....", "....nNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNn....", "....nNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNn....", "....nNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNn....", "....nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn....", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......", "......NN........................NN......" ];
+      const TENT_GRID = [ "................................................", "................................................", "...................KKKKK........................", "..................KCCCCCK.......................", ".................KCYYYYYCKKKKKKKKKKKKKKK........", "................KCYyyyyyYCCCCCCCCCCCCCCK........", "...............KCYyyyyyyYCYYYYYYYYYYYYYK........", "..............KCYyyyyyyyYCYYYYYYYYYYYYYK........", ".............KCYyyyyyyyyYCYYYYYYYYYYYYYK........", "............KCYyybbbbbyyYCYYYYYYYYYYYYYK........", "...........KCYyybbbbbbbyYCYYYKKKKKYYYYYK........", "..........KCYyybbbbbbbbyYCYYKCCCCCKYYYYK........", ".........KCYyybbbsbbbsbyYCYYKCsssCKYYYYK........", "........KCYyybbbsbbbbsbyYCYYKCbbbCKYYYYK........", ".......KCYyybbbsbbbbbsbyYCYYKCsssCKYYYYK........", "......KCYyybbbsbbbbbbsbyYCYYYKKKKKYYYYYK........", ".....KCYyybbbsbbbbbbbsbyYCYYYYYYYYYYYYYK........", "....KCYyybbbsbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "...KCYyybbbsbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "..KCYyybbbsbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", ".KCYyybbbsbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYyybbbsbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYybbbsbbbbbbbbbbbbbsbyYCYYYYYYYYYYYYYK........", "KCYKKKKKKKbbbbbbbbKKKKKKKCYCCCCCCCCCYCCK........", "KCCCCCCCCCKbbbbbbKCCCCCCCCCCCCCCCCCCCCCK........", "KOOOOOOOOOOKbbbbKOOOOOOOOOOOOOOOOOOOOOOK........" ];
+      const TREE_GRID = [ "...........MM...........", "..........MMMM..........", ".........MMmmMM.........", "........MMmmmmMM........", ".......MMmmmmmmMM.......", "......MMmmmmmmmmMM......", ".........MMmmMM.........", "........MMmmmmMM........", ".......MMmmmmmmMM.......", "......MMmmmmmmmmMM......", ".....MMmmmmmmmmmmMM.....", "........MMmmmmMM........", ".......MMmmmmmmMM.......", "......MMmmmmmmmmMM......", ".....MMmmmmmmmmmmMM.....", "....MMmmmmmmmmmmmmMM....", "..........NNNN..........", "..........NNNN..........", "..........NNNN.........." ];
+      const ROCK_GRID = [ "....TTTT....", "..TTttttTT..", ".TttttttttT.", "TttttwwttttT", "TtttwwwwtttT", ".TTttttttTT.", "...TTTTTT..." ];
+      const FLOWER_R_GRID = [ ".r.r.", "rrrrr", ".rWr.", "rrrrr", ".r.r.", "..m..", ".mm..", "..m.." ];
+      const FLOWER_V_GRID = [ ".v.v.", "vvvvv", ".vWv.", "vvvvv", ".v.v.", "..m..", "..mm.", "..m.." ];
+
+      function generateScenery() {
+        const container = document.getElementById('scenery-container');
+        function addProp(grid, w, h, xPct, yPx, scale, isFlower) {
+          const wrap = document.createElement('div'); wrap.className = 'scenery-prop' + (isFlower ? ' flower' : ''); wrap.style.left = xPct + '%'; wrap.style.top = yPx + 'px'; wrap.style.setProperty('--s', scale); wrap.style.transform = `scale(${scale})`;
+          const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h; const ctx = canvas.getContext('2d');
+          for (let y = 0; y < h; y++) { for (let x = 0; x < w; x++) { if (grid[y] && grid[y][x] && grid[y][x] !== '.') { ctx.fillStyle = PALETTE[grid[y][x]] || '#ffffff'; ctx.fillRect(x, y, 1, 1); } } }
+          wrap.appendChild(canvas); container.appendChild(wrap);
+        }
+        addProp(TREE_GRID, 24, 19, 5, 80, 4); addProp(TREE_GRID, 24, 19, 22, 65, 3.5); addProp(TREE_GRID, 24, 19, 82, 90, 4.5); addProp(TREE_GRID, 24, 19, 93, 75, 3);
+        addProp(ROCK_GRID, 12, 7, 12, 150, 2); addProp(ROCK_GRID, 12, 7, 73, 175, 2.5); addProp(ROCK_GRID, 12, 7, 42, 165, 1.5); addProp(ROCK_GRID, 12, 7, 90, 140, 2);
+        for(let i=0; i<18; i++) addProp(Math.random() > 0.5 ? FLOWER_R_GRID : FLOWER_V_GRID, 5, 8, 5 + Math.random() * 90, 80 + Math.random() * 110, 1.2 + Math.random() * 1, true);
+      }
+
+      const cloudCanvas = document.getElementById('cloud-canvas'); const cloudCtx = cloudCanvas.getContext('2d'); let cloudsList = [];
+      const offCloud = document.createElement('canvas'); offCloud.width = 26; offCloud.height = 10; const offCtx = offCloud.getContext('2d');
+      const CLOUD_PATTERN = [ "........WWWWWW............", "......WWWWWWWWWWWW........", "....WWWWWWWWWWWWWWWW......", "..WWWWWWWWWWWWWWWWWWWW....", ".WWWWWWWWWWWWWWWWWWWWWWW..", "WWWWWWWWWWWWWWWWWWWWWWWWWW", "WWWWWWWWWWWWWWWWWWWWWWWWWW", ".WWWWWWWWWWWWWWWWWWWWWWWW.", "...WWWWWWWWWWWWWWWWWWWW...", "......WWWWWWWWWWWWWW......" ];
+      for (let y = 0; y < 10; y++) { for (let x = 0; x < 26; x++) if (CLOUD_PATTERN[y][x] === 'W') { offCtx.fillStyle = '#ffffff'; offCtx.fillRect(x, y, 1, 1); } }
+      function resizeClouds() { cloudCanvas.width = cloudCanvas.parentElement.clientWidth; cloudCanvas.height = cloudCanvas.parentElement.clientHeight; }
+      window.addEventListener('resize', resizeClouds); resizeClouds();
+      for(let i=0; i<7; i++) cloudsList.push({ x: Math.random() * window.innerWidth, yOffset: 20 + Math.random() * 120, speed: 0.1 + Math.random() * 0.3, scale: 2 + Math.random() * 3, opacity: 0.15 + Math.random() * 0.15 });
+
+      function animateClouds() {
+        if(appContainer.className === 'state-retro') {
+          cloudCtx.clearRect(0, 0, cloudCanvas.width, cloudCanvas.height);
+          for(let i=0; i<cloudsList.length; i++) {
+            let c = cloudsList[i]; c.x -= c.speed;
+            if(c.x + (26 * c.scale) < 0) { c.x = cloudCanvas.width + 10; c.yOffset = 20 + Math.random() * 120; }
+            cloudCtx.globalAlpha = isDayMode ? Math.min(1, c.opacity * 3) : c.opacity;
+            cloudCtx.drawImage(offCloud, c.x, cloudCanvas.height - c.yOffset, 26 * c.scale, 10 * c.scale);
+          }
+          cloudCtx.globalAlpha = 1.0;
+        }
+        requestAnimationFrame(animateClouds);
+      }
+      generateScenery(); animateClouds();
+
+      const charCanvas = document.getElementById('char-canvas'); const charCtx = charCanvas.getContext('2d');
+      const hudCoord = document.getElementById('hud-coord'); const hudStatus = document.getElementById('hud-status'); const hudCycle = document.getElementById('hud-cycle');
+
+      function renderGrid(ctx, grid) { ctx.clearRect(0, 0, 24, 28); for (let y = 0; y < 28; y++) { if (!grid[y]) continue; for (let x = 0; x < 24; x++) { if (grid[y][x] && grid[y][x] !== '.') { ctx.fillStyle = PALETTE[grid[y][x]]; ctx.fillRect(x, y, 1, 1); } } } }
+      function renderProp(canvasId, grid, width, height) { const c = document.getElementById(canvasId); const ctx = c.getContext('2d'); ctx.clearRect(0, 0, width, height); for (let y = 0; y < height; y++) { if (!grid[y]) continue; for (let x = 0; x < width; x++) { if (grid[y][x] && grid[y][x] !== '.') { ctx.fillStyle = PALETTE[grid[y][x]]; ctx.fillRect(x, y, 1, 1); } } } }
+
+      let posPct = 50; let isWalking = false; let walkToggle = false; let isAutoMode = true; let interruptCurrentAction = false; let targetActionQueue = null;
+
+      function setSprite(frameName) { renderGrid(charCtx, FRAMES[frameName]); }
+      renderProp('desk-canvas', DESK_GRID, 40, 32); renderProp('tent-canvas', TENT_GRID, 48, 48); renderProp('telescope-canvas', TELESCOPE_GRID, 32, 32);
+
+      setInterval(() => { if (!isWalking) return; walkToggle = !walkToggle; setSprite(walkToggle ? 'WALK_SIDE_RIGHT_A' : 'WALK_SIDE_RIGHT_B'); }, 160);
+      function updateHUDCoord() { hudCoord.innerText = `X: ${Math.round(posPct)}%`; }
+
+      function walkTo(targetPct) {
+        return new Promise(resolve => {
+          const dir = targetPct > posPct ? 1 : -1; charCanvas.classList.toggle('flip', dir === -1);
+          isWalking = true; hudStatus.innerText = "WALKING"; hudStatus.style.color = "var(--cyan)";
+          let lastTime = performance.now(); const speed = 0.015;
+          function step(now) {
+            if (interruptCurrentAction || !isStarted) { isWalking = false; resolve(); return; }
+            const dt = now - lastTime; lastTime = now; posPct += dir * speed * dt;
+            if ((dir === 1 && posPct >= targetPct) || (dir === -1 && posPct <= targetPct)) { posPct = targetPct; charCanvas.style.left = posPct + '%'; isWalking = false; updateHUDCoord(); resolve(); return; }
+            charCanvas.style.left = posPct + '%'; updateHUDCoord(); requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        });
+      }
+
+      async function lookUpFor(ms) { charCanvas.classList.remove('flip'); setSprite('LOOK_UP_FRONT'); hudStatus.innerText = "STAR-GAZING"; hudStatus.style.color = "var(--gold)"; await safeWait(ms); }
+      async function waveFor(ms) {
+        charCanvas.classList.remove('flip'); hudStatus.innerText = "SAYING HELLO"; hudStatus.style.color = "var(--gold)";
+        const end = performance.now() + ms; playWaveChime();
+        while (performance.now() < end && !interruptCurrentAction && isStarted) {
+          setSprite('WAVE_FRONT_A'); await safeWait(250); if (interruptCurrentAction || !isStarted) break;
+          setSprite('WAVE_FRONT_B'); await safeWait(250);
+        }
+      }
+      async function sitFor(ms) { charCanvas.classList.remove('flip'); setSprite('SIT_FRONT'); hudStatus.innerText = "CAMPFIRE REST"; hudStatus.style.color = "var(--amber)"; await safeWait(ms); }
+      async function lookThroughTelescope(ms) { charCanvas.classList.remove('flip'); setSprite('BEND_TELESCOPE_RIGHT'); retroApp.classList.add('stargazing'); hudStatus.innerText = "OBSERVATION"; hudStatus.style.color = "var(--gold)"; playTelescopeSweeps(); await safeWait(ms); retroApp.classList.remove('stargazing'); }
+      async function typeAtDesk(ms) {
+        charCanvas.classList.remove('flip'); retroApp.classList.add('typing'); hudStatus.innerText = "PROGRAMMING"; hudStatus.style.color = "var(--cyan)";
+        const textEl = document.getElementById('monitor-text'); textEl.innerText = "";
+        const codeLines = [ "  --- - -- -", " - -- -- ---", " -- --- - --", " --- - - ---", " - - --- ---" ]; let lineIdx = 0;
+        let textInterval = setInterval(() => { textEl.innerText += codeLines[lineIdx % codeLines.length] + "\n"; if(textEl.innerText.split('\n').length > 5) textEl.innerText = textEl.innerText.substring(textEl.innerText.indexOf('\n') + 1); lineIdx++; playTypeBlip(); }, 300);
+        let elapsed = 0;
+        while (elapsed < ms && !interruptCurrentAction && isStarted) { setSprite('SIT_TYPE_A'); await safeWait(150); elapsed += 150; if (interruptCurrentAction || !isStarted) break; setSprite('SIT_TYPE_B'); await safeWait(150); elapsed += 150; }
+        clearInterval(textInterval); textEl.innerText = ""; retroApp.classList.remove('typing');
+      }
+      async function sleepInTent(ms) { setSprite('HIDDEN'); retroApp.classList.add('sleeping'); hudStatus.innerText = "RESTING (ZZZ)"; hudStatus.style.color = "#a4b0be"; startSnoreAudio(); await safeWait(ms); stopSnoreAudio(); retroApp.classList.remove('sleeping'); }
+
+      let modalResolver = null;
+      function showModalAndWait(sectionId) {
+        return new Promise(resolve => {
+          document.querySelectorAll('#retro-portfolio .modal-content-section').forEach(el => el.classList.remove('active'));
+          document.getElementById(sectionId).classList.add('active'); document.getElementById('portfolio-modal').classList.add('active'); modalResolver = resolve;
+        });
+      }
+
+      window.closeRetroModal = function() {
+        document.getElementById('portfolio-modal').classList.remove('active');
+        if (modalResolver) { modalResolver(); modalResolver = null; }
+      };
+
+      async function playActionWithModal(actionFn, modalId) {
+        let actionPromise = actionFn(9999999); await sleep(800);
+        if (!isStarted) return;
+        await showModalAndWait(modalId);
+        interruptCurrentAction = true; await sleep(200); interruptCurrentAction = false;
+      }
+
+      let lifeCycleActive = false;
+      async function lifeCycle() {
+        if (lifeCycleActive) return; lifeCycleActive = true;
+        charCanvas.style.left = posPct + '%'; charCanvas.classList.remove('flip'); setSprite('STAND_FRONT'); updateHUDCoord(); await safeWait(2000);
+        while (isStarted) {
+          if (targetActionQueue) {
+            const next = targetActionQueue; targetActionQueue = null; interruptCurrentAction = false;
+            await walkTo(next.pct); if (interruptCurrentAction || !isStarted) continue;
+            if (next.action === 'desk') await playActionWithModal(typeAtDesk, 'projects-section');
+            else if (next.action === 'tent') await playActionWithModal(sleepInTent, 'contact-section');
+            else if (next.action === 'fire') await playActionWithModal(sitFor, 'about-section');
+            else if (next.action === 'telescope') await playActionWithModal(lookThroughTelescope, 'research-section');
+            setSprite('STAND_FRONT'); if (!targetActionQueue && isAutoMode) await safeWait(2000); continue;
+          }
+          if (!isAutoMode) { hudStatus.innerText = "STANDING IDLE"; hudStatus.style.color = "var(--gold)"; setSprite('STAND_FRONT'); await safeWait(500); continue; }
+
+          await walkTo(15); if (interruptCurrentAction || !isStarted) continue; await typeAtDesk(5000); if (interruptCurrentAction || !isStarted) continue; setSprite('STAND_FRONT'); await safeWait(1000); if (interruptCurrentAction || !isStarted) continue;
+          await walkTo(35); if (interruptCurrentAction || !isStarted) continue; charCanvas.classList.remove('flip'); await lookUpFor(2000); if (interruptCurrentAction || !isStarted) continue; setSprite('STAND_FRONT'); await safeWait(1000); if (interruptCurrentAction || !isStarted) continue;
+          await walkTo(50); if (interruptCurrentAction || !isStarted) continue; await sleepInTent(6000); if (interruptCurrentAction || !isStarted) continue; charCanvas.classList.remove('flip'); setSprite('STAND_FRONT'); await safeWait(1000); if (interruptCurrentAction || !isStarted) continue;
+          await walkTo(80); if (interruptCurrentAction || !isStarted) continue; await lookThroughTelescope(5000); if (interruptCurrentAction || !isStarted) continue; charCanvas.classList.remove('flip'); setSprite('STAND_FRONT'); await safeWait(1000); if (interruptCurrentAction || !isStarted) continue;
+          await walkTo(68); if (interruptCurrentAction || !isStarted) continue; await sitFor(4000); if (interruptCurrentAction || !isStarted) continue; setSprite('STAND_FRONT'); await safeWait(1000); if (interruptCurrentAction || !isStarted) continue;
+          await walkTo(50); if (interruptCurrentAction || !isStarted) continue; charCanvas.classList.remove('flip'); setSprite('STAND_FRONT'); await safeWait(500); if (interruptCurrentAction || !isStarted) continue; await waveFor(3000); if (interruptCurrentAction || !isStarted) continue; setSprite('STAND_FRONT'); await safeWait(2000);
+        }
+        lifeCycleActive = false;
+      }
+
+      window.retroCommand = function(targetPct, actionName) {
+        if (!isStarted) return; interruptCurrentAction = true; targetActionQueue = { pct: targetPct, action: actionName };
+        if (isAutoMode) window.toggleMode(); 
+        setTimeout(() => { interruptCurrentAction = false; }, 50);
+      };
+
+      let isStarted = false; let hudTimeout = null;
+
+      window.triggerRetroStart = function() {
+        if (isStarted) return;
+        isStarted = true; interruptCurrentAction = false; retroApp.classList.add('started');
+        hudTimeout = setTimeout(() => { if(isStarted) retroApp.classList.add('hud-ready'); }, 1200);
+        initAudio(); 
+        if (audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        playPowerUpSound();
+        if (fireGainNode && isSoundEnabled) { fireGainNode.connect(masterGain); fireGainNode.gain.cancelScheduledValues(audioCtx.currentTime); fireGainNode.gain.setValueAtTime(0.001, audioCtx.currentTime); fireGainNode.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 2.0); }
+        if (!lifeCycleActive) lifeCycle();
+      };
+
+      window.closeSandbox = function() {
+        if (!isStarted) return; isStarted = false; interruptCurrentAction = true; targetActionQueue = null;
+        clearTimeout(hudTimeout); retroApp.classList.remove('started'); retroApp.classList.remove('hud-ready'); window.closeRetroModal();
+        if (fireGainNode && audioCtx) { fireGainNode.gain.cancelScheduledValues(audioCtx.currentTime); fireGainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8); }
+        stopSnoreAudio();
+        
+        // PAUSE EVERYTHING
+        if (audioCtx && audioCtx.state === 'running') {
+            audioCtx.suspend();
+        }
+
+        retroApp.classList.remove('sleeping'); retroApp.classList.remove('typing'); retroApp.classList.remove('stargazing'); document.getElementById('monitor-text').innerText = "";
+        if (isDayMode) window.toggleTheme(); if (!isAutoMode) window.toggleMode();
+        charCanvas.style.transition = 'left 1s ease-in-out'; posPct = 50; charCanvas.style.left = posPct + '%';
+        setTimeout(() => { if (!isStarted) { charCanvas.classList.remove('flip'); setSprite('STAND_FRONT'); charCanvas.style.transition = 'transform 0.1s'; } }, 1000);
+      };
+
+      window.toggleTheme = function() {
+        isDayMode = !isDayMode; const btn = document.getElementById('theme-toggle');
+        if (isDayMode) { retroApp.classList.add('day-mode'); btn.innerHTML = '<span>🌙 NIGHT MODE</span>'; btn.classList.add('active'); } 
+        else { retroApp.classList.remove('day-mode'); btn.innerHTML = '<span>☀️ DAY MODE</span>'; btn.classList.remove('active'); }
+        drawCelestialBody(isDayMode); generateGrassTexture(isDayMode);
+      };
+
+      window.toggleAudio = function() {
+        isSoundEnabled = !isSoundEnabled; const btn = document.getElementById('toggle-audio');
+        if (isSoundEnabled) { btn.classList.add('active'); btn.innerHTML = '<span>🔊 SOUND: ON</span>'; if (masterGain && audioCtx) masterGain.gain.setValueAtTime(0.3, audioCtx.currentTime); } 
+        else { btn.classList.remove('active'); btn.innerHTML = '<span>🔇 SOUND: OFF</span>'; if (masterGain && audioCtx) masterGain.gain.setValueAtTime(0, audioCtx.currentTime); stopSnoreAudio(); }
+      };
+
+      window.toggleCRT = function() {
+        const crt = document.getElementById('crt-overlay'); const btn = document.getElementById('toggle-crt');
+        if (crt.classList.contains('disabled')) { crt.classList.remove('disabled'); btn.classList.add('active'); btn.innerHTML = '<span>📺 CRT: ON</span>'; }
+        else { crt.classList.add('disabled'); btn.classList.remove('active'); btn.innerHTML = '<span>📺 CRT: OFF</span>'; }
+      };
+
+      window.toggleMode = function() {
+        isAutoMode = !isAutoMode; const btn = document.getElementById('toggle-mode');
+        if (isAutoMode) { btn.classList.add('active'); btn.innerHTML = '<span>🤖 MODE: AUTO</span>'; hudCycle.innerText = "AUTO-ORBIT"; hudCycle.style.color = "var(--gold)"; targetActionQueue = null; interruptCurrentAction = true; setTimeout(() => { interruptCurrentAction = false; }, 50); } 
+        else { btn.classList.remove('active'); btn.innerHTML = '<span>🎮 MODE: MANUAL</span>'; hudCycle.innerText = "MANUAL PILOT"; hudCycle.style.color = "var(--cyan)"; }
+      };
+    })();
+  </script>
+</body>
+</html>

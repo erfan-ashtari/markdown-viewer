@@ -15,7 +15,12 @@ When installed, the plugin:
 Copy the `plugin-html-renderer` folder into your markdown-viewer plugins directory:
 
 ```
-@mdview/core/plugins/plugin-html-renderer/
+{userData}/plugins/plugin-html-renderer/
+```
+
+On Windows, `{userData}` is typically:
+```
+C:\Users\<username>\AppData\Roaming\markdown-viewer\
 ```
 
 The plugin is automatically discovered and activated on startup (`activationEvents: ["onStartup"]`).

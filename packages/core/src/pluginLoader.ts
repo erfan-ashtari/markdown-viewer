@@ -1,7 +1,7 @@
 import { PluginManager } from '@mdview/plugin-api';
 import { useAppStore } from './store/appStore';
 // @ts-ignore — JSON import
-import pluginRegistry from '../../plugins.json';
+import pluginRegistry from '../electron/plugins.json';
 
 // Built-in plugins: static imports
 import { activate as activatePdf, deactivate as deactivatePdf } from '@mdview/plugin-pdf';
