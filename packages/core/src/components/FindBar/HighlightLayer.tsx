@@ -130,7 +130,7 @@ export const HighlightLayer: React.FC<HighlightLayerProps> = ({ containerRef, qu
     } else {
       buildHighlights(container, query, activeIndex)
     }
-  })
+  }, [query, activeIndex, tabId])
 
   // Cleanup on unmount
   useEffect(() => {
