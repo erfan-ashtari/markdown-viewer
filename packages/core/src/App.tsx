@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback, Suspense } from 'react'
 import { useAppStore } from './store/appStore'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Header } from './components/Layout/Header'
 import { Tabs } from './components/Layout/Tabs'
 import { RuntimePluginSidebar } from './components/Layout/RuntimePluginSidebar'
-import { MarkdownRenderer } from './components/Markdown/MarkdownRenderer'
-import { TextRenderer } from './components/Text/TextRenderer'
 import { FindBar } from './components/FindBar/FindBar'
 import { HighlightLayer } from './components/FindBar/HighlightLayer'
 import { FontLoader } from './components/FontLoader'
@@ -16,6 +14,13 @@ import { pluginManager } from './pluginLoader'
 import {
   File, FileText, FileCode, FileImage, FileJson, FileCog, FileArchive
 } from 'lucide-react'
+
+const MarkdownRenderer = React.lazy(() =>
+  import('./components/Markdown/MarkdownRenderer').then(m => ({ default: m.MarkdownRenderer }))
+)
+const TextRenderer = React.lazy(() =>
+  import('./components/Text/TextRenderer').then(m => ({ default: m.TextRenderer }))
+)
 
 const getFileIconLarge = (name: string) => {
   const ext = name.split('.').pop()?.toLowerCase()
@@ -634,19 +639,23 @@ const App: React.FC = () => {
                   filePath={activeTab.filePath}
                 />
               ) : activeTab.type === 'markdown' ? (
+                <Suspense fallback={<div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 14 }}>Loading...</div>}>
                 <MarkdownRenderer
                   content={activeTab.content}
                   zoomLevel={zoomLevel}
                   contentWidth={contentWidth}
                   onZoomChange={setZoomLevel}
                 />
+                </Suspense>
               ) : activeTab.content ? (
+                <Suspense fallback={<div style={{ padding: 20, color: 'var(--text-muted)', fontSize: 14 }}>Loading...</div>}>
                 <TextRenderer
                   content={activeTab.content}
                   fileName={activeTab.fileName}
                   zoomLevel={zoomLevel}
                   onZoomChange={setZoomLevel}
                 />
+                </Suspense>
               ) : (
                 <div style={{
                   display: 'flex',
