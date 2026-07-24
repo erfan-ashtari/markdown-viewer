@@ -53,10 +53,14 @@
     "productName": "Markdown Viewer",
     "executableName": "MarkdownViewer",
     "electronDist": "node_modules/electron/dist",
+    "asar": true,
+    "compression": "maximum",
     "copyright": "Copyright (c) 2026",
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "!node_modules/katex/dist/fonts/*.woff",
+      "!node_modules/katex/dist/fonts/*.ttf"
     ],
     "directories": {
       "output": "release"

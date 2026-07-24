@@ -10,8 +10,29 @@ for (const [key, relativePath] of Object.entries(pluginAliasPaths)) {
   pluginAliases[key] = path.resolve(__dirname, relativePath)
 }
 
+// Vite plugin: strip woff and ttf font files from KaTeX (only woff2 needed in Electron/Chromium)
+function stripLegacyFonts() {
+  return {
+    name: 'strip-legacy-fonts',
+    generateBundle(_: any, bundle: any) {
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (fileName.endsWith('.css') && typeof (chunk as any).source === 'string') {
+          (chunk as any).source = (chunk as any).source
+            // Remove @font-face blocks that reference .woff (not woff2) or .ttf
+            .replace(/@font-face\{[^}]*\.woff[^2][^}]*\}/g, '')
+            .replace(/@font-face\{[^}]*\.ttf[^}]*\}/g, '')
+        }
+        // Delete woff and ttf asset files
+        if (fileName.match(/KaTeX.*\.(woff|ttf)$/)) {
+          delete bundle[fileName]
+        }
+      }
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), stripLegacyFonts()],
   base: './',
   resolve: {
     alias: {

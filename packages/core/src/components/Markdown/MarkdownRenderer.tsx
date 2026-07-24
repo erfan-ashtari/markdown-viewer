@@ -5,7 +5,6 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeRaw from 'rehype-raw'
-import mermaid from 'mermaid'
 import 'katex/dist/katex.min.css'
 
 declare global {
@@ -91,16 +90,20 @@ const encodeLocalUrls = (text: string): string => {
 const MermaidDiagram: React.FC<{ code: string }> = ({ code }) => {
   const ref = useRef<HTMLDivElement>(null)
   const id = useRef(`mermaid-${Math.random().toString(36).substr(2, 9)}`)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (ref.current) {
-      mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' })
-      mermaid.render(id.current, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg
-      }).catch(console.error)
+      import('mermaid').then(({ default: mermaid }) => {
+        mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' })
+        mermaid.render(id.current, code).then(({ svg }) => {
+          if (ref.current) ref.current.innerHTML = svg
+        }).catch(console.error)
+      }).catch(() => setError(true))
     }
   }, [code])
 
+  if (error) return <code className="language-mermaid">{code}</code>
   return <div ref={ref} className="mermaid" />
 }
 
