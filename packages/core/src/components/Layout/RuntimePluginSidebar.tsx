@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   ChevronRight,
   ChevronDown,
@@ -245,9 +245,6 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
         window.electronAPI?.getCommands(),
         window.electronAPI?.getSidebarPanels(),
       ])
-      console.log('[DEBUG-Sidebar] pluginsData:', pluginsData?.length, 'runtime:', pluginsData?.filter((p: any) => p.runtime === true).length)
-      console.log('[DEBUG-Sidebar] commandsData:', commandsData?.length)
-      console.log('[DEBUG-Sidebar] panelsData:', panelsData)
       if (pluginsData && Array.isArray(pluginsData)) {
         const runtimeOnly = pluginsData.filter((p: any) => p.runtime === true)
         setPlugins(runtimeOnly.map((p: any) => ({ ...p, state: p.state || {} })))
@@ -392,10 +389,10 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
     document.addEventListener('mouseup', onMouseUp)
   }, [pluginSidebarWidth, setPluginSidebarWidth])
 
-  const getPanelForPlugin = useCallback((pluginName: string) => {
-    const found = panels.find((p) => p.pluginName === pluginName)
-    console.log('[DEBUG-Sidebar] getPanelForPlugin:', pluginName, '-> found:', !!found, 'panels:', panels.map(p => p.pluginName))
-    return found
+  const panelMap = useMemo(() => {
+    const map = new Map<string, PanelData>()
+    for (const p of panels) map.set(p.pluginName, p)
+    return map
   }, [panels])
 
   if (!isOpen) return null
@@ -535,7 +532,7 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
               key={plugin.name}
               plugin={plugin}
               commands={commands}
-              panel={getPanelForPlugin(plugin.name)}
+              panel={panelMap.get(plugin.name)}
               onExecuteCommand={handleExecuteCommand}
               onUIInteraction={handleUIInteraction}
             />
