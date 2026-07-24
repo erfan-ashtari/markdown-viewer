@@ -364,15 +364,15 @@ const App: React.FC = () => {
     localStorage.setItem('markdown-viewer-font', currentFont)
   }, [currentFont])
 
-  const handleFileSelect = (path: string, content: string, name: string) => {
+  const handleFileSelect = useCallback((path: string, content: string, name: string) => {
     addTab(path, content, name, 'markdown')
-  }
+  }, [addTab])
 
-  const handleNonMarkdownFile = (path: string, content: string, name: string) => {
+  const handleNonMarkdownFile = useCallback((path: string, content: string, name: string) => {
     addTab(path, content, name, 'other')
-  }
+  }, [addTab])
 
-  const handleTabSelect = () => {}
+  const handleTabSelect = useCallback(() => {}, [])
 
   // Find bar search and navigation
   const handleFindSearch = useCallback((query: string) => {
