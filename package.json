@@ -1,7 +1,7 @@
 {
-  "name": "markdown-viewer",
+  "name": "mdview-app",
   "version": "1.2.0",
-  "private": true,
+  "private": false,
   "description": "A fast, beautiful Markdown viewer for Windows, Linux, and macOS",
   "main": "electron/main.js",
   "bin": {
