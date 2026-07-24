@@ -1,4 +1,5 @@
 node_modules/
+Docs/PRE_PUBLISH_REPORT.md
 dist/
 release/
 packages/*/dist/
