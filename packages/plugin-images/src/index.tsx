@@ -118,7 +118,7 @@ const ImageRenderer = memo(({ content, filePath }: { content: string; filePath: 
 ImageRenderer.displayName = 'ImageRenderer';
 
 export function activate(context: PluginContext) {
-  console.log('[plugin-images] Activated — registering image file types');
+  // console.log('[plugin-images] Activated — registering image file types');
   injectPluginStyles();
   context.registerFileType({
     extensions: IMAGE_EXTENSIONS,
@@ -128,5 +128,5 @@ export function activate(context: PluginContext) {
 }
 
 export function deactivate() {
-  console.log('[plugin-images] Deactivated');
+  // console.log('[plugin-images] Deactivated');
 }

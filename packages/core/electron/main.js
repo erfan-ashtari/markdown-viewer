@@ -526,7 +526,7 @@ ipcMain.handle('set-current-file', (event, fileInfo) => {
 
 ipcMain.handle('set-current-directory', (event, dirPath) => {
   runtimePluginManager.currentFile = { filePath: dirPath + '/.current-dir', fileName: path.basename(dirPath), content: '' };
-  console.log('[runtimePlugin] Current directory set:', dirPath);
+  // console.log('[runtimePlugin] Current directory set:', dirPath);
 });
 
 ipcMain.handle('get-plugin-state', () => {
@@ -539,7 +539,7 @@ ipcMain.handle('set-plugin-state', (event, name, enabled) => {
 
 ipcMain.handle('get-exporters', () => {
   const exporters = runtimePluginManager.getExporters();
-  console.log('[main] get-exporters called, returning:', exporters.length, 'exporters');
+  // console.log('[main] get-exporters called, returning:', exporters.length, 'exporters');
   return exporters;
 });
 

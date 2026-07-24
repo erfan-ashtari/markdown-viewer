@@ -263,12 +263,12 @@ class RuntimePluginManager {
           description: description || name,
           plugin: pluginName,
         });
-        console.log(
-          "[runtimePlugin] Registered exporter:",
-          name,
-          "from",
-          pluginName,
-        );
+        // console.log(
+        //   "[runtimePlugin] Registered exporter:",
+        //   name,
+        //   "from",
+        //   pluginName,
+        // );
       },
       registerCommand(name, handler, description) {
         self.commands.set(name, {
@@ -276,43 +276,43 @@ class RuntimePluginManager {
           description: description || name,
           plugin: pluginName,
         });
-        console.log(
-          "[runtimePlugin] Registered command:",
-          name,
-          "from",
-          pluginName,
-        );
+        // console.log(
+        //   "[runtimePlugin] Registered command:",
+        //   name,
+        //   "from",
+        //   pluginName,
+        // );
       },
 
       // Sidebar panel registration
       registerSidebarPanel(panel) {
         // Find the plugin's directory for scoped validation
         const pluginDir = self.loadedPlugins.get(pluginName)?.dir;
-        console.log(
-          "[DEBUG] registerSidebarPanel called by plugin:",
-          pluginName,
-          "panel id:",
-          panel?.id,
-        );
+        // console.log(
+        //   "[DEBUG] registerSidebarPanel called by plugin:",
+        //   pluginName,
+        //   "panel id:",
+        //   panel?.id,
+        // );
         try {
           self._validatePanel(panel, pluginDir);
           self.sidebarPanels.set(pluginName, panel);
           self.panelStates.set(pluginName, {});
-          console.log(
-            "[DEBUG] Panel stored successfully. Map size now:",
-            self.sidebarPanels.size,
-          );
+          // console.log(
+          //   "[DEBUG] Panel stored successfully. Map size now:",
+          //   self.sidebarPanels.size,
+          // );
           self.broadcast("sidebar-panel-registered", {
             pluginName,
             panel,
             state: {},
           });
-          console.log(
-            "[runtimePlugin] Registered sidebar panel:",
-            panel.id,
-            "from",
-            pluginName,
-          );
+          // console.log(
+          //   "[runtimePlugin] Registered sidebar panel:",
+          //   panel.id,
+          //   "from",
+          //   pluginName,
+          // );
         } catch (err) {
           console.error(
             "[runtimePlugin] registerSidebarPanel FAILED:",
@@ -366,11 +366,11 @@ class RuntimePluginManager {
           label: declaration.label || "Preview",
         });
         self.broadcast("content-overrides-changed", self.getContentOverrides());
-        console.log(
-          "[runtimePlugin] Registered content override:",
-          pluginName,
-          declaration.extensions,
-        );
+        // console.log(
+        //   "[runtimePlugin] Registered content override:",
+        //   pluginName,
+        //   declaration.extensions,
+        // );
       },
 
       // Render mode management
@@ -381,11 +381,11 @@ class RuntimePluginManager {
         self._stateCache.renderModes[extension] = rendered;
         self._saveStateDebounced();
         self.broadcast("render-mode-changed", { extension, rendered });
-        console.log(
-          "[runtimePlugin] Render mode:",
-          extension,
-          rendered ? "rendered" : "source",
-        );
+        // console.log(
+        //   "[runtimePlugin] Render mode:",
+        //   extension,
+        //   rendered ? "rendered" : "source",
+        // );
       },
 
       getRenderMode(extension) {
@@ -416,7 +416,7 @@ class RuntimePluginManager {
             icon: options.icon,
           });
           notification.show();
-          console.log("[runtimePlugin] Notification shown:", options.title);
+          // console.log("[runtimePlugin] Notification shown:", options.title);
         } catch (err) {
           console.error(
             "[runtimePlugin] Failed to show notification:",
@@ -434,7 +434,7 @@ class RuntimePluginManager {
 
   loadPlugin(name) {
     if (this.loadedPlugins.has(name)) {
-      console.log("[DEBUG] Plugin already loaded:", name);
+      // console.log("[DEBUG] Plugin already loaded:", name);
       return;
     }
 
@@ -442,20 +442,20 @@ class RuntimePluginManager {
     const plugin = plugins.find((p) => p.name === name);
     if (!plugin) {
       console.warn("[runtimePlugin] Plugin not found:", name);
-      console.log(
-        "[DEBUG] Available plugins:",
-        plugins.map((p) => p.name),
-      );
+      // console.log(
+      //   "[DEBUG] Available plugins:",
+      //   plugins.map((p) => p.name),
+      // );
       return;
     }
 
-    console.log("[DEBUG] Loading plugin:", name, "from", plugin.path);
+    // console.log("[DEBUG] Loading plugin:", name, "from", plugin.path);
     try {
       const entryPath = path.join(plugin.path, plugin.main);
-      console.log("[DEBUG] Entry path:", entryPath);
+      // console.log("[DEBUG] Entry path:", entryPath);
       delete require.cache[require.resolve(entryPath)];
       const mod = require(entryPath);
-      console.log("[DEBUG] Module loaded. Has activate:", typeof mod.activate);
+      // console.log("[DEBUG] Module loaded. Has activate:", typeof mod.activate);
 
       if (mod.activate) {
         // Set loadedPlugins BEFORE activate() so registerSidebarPanel can resolve pluginDir
@@ -469,10 +469,10 @@ class RuntimePluginManager {
 
         const context = this.createContext(name);
         this.pluginContexts.set(name, context);
-        console.log("[DEBUG] Calling activate for:", name);
+        // console.log("[DEBUG] Calling activate for:", name);
         mod.activate(context);
-        console.log("[DEBUG] activate() completed for:", name);
-        console.log("[runtimePlugin] Loaded:", name);
+        // console.log("[DEBUG] activate() completed for:", name);
+        // console.log("[runtimePlugin] Loaded:", name);
       } else {
         console.warn(
           "[runtimePlugin] Plugin",
@@ -531,7 +531,7 @@ class RuntimePluginManager {
 
     this.loadedPlugins.delete(name);
     this.pluginContexts.delete(name);
-    console.log("[runtimePlugin] Unloaded:", name);
+    // console.log("[runtimePlugin] Unloaded:", name);
   }
 
   // Force reload a plugin (unload + load)
@@ -565,17 +565,17 @@ class RuntimePluginManager {
       if (!state.plugins[plugin.name]) {
         state.plugins[plugin.name] = { enabled: true };
         changed = true;
-        console.log("[runtimePlugin] Auto-enabled new plugin:", plugin.name);
+        // console.log("[runtimePlugin] Auto-enabled new plugin:", plugin.name);
       }
     }
 
     // Unload plugins that were removed from disk
     for (const name of this.loadedPlugins.keys()) {
       if (!discoveredNames.has(name)) {
-        console.log(
-          "[runtimePlugin] Plugin removed from disk, unloading:",
-          name,
-        );
+        // console.log(
+        //   "[runtimePlugin] Plugin removed from disk, unloading:",
+        //   name,
+        // );
         this.unloadPlugin(name);
         delete state.plugins[name];
         changed = true;
@@ -588,10 +588,10 @@ class RuntimePluginManager {
       if (loaded) {
         const currentMtime = this.getPluginMtime(plugin.path);
         if (currentMtime !== loaded.mtime) {
-          console.log(
-            "[runtimePlugin] Plugin file changed, reloading:",
-            plugin.name,
-          );
+          // console.log(
+          //   "[runtimePlugin] Plugin file changed, reloading:",
+          //   plugin.name,
+          // );
           this.forceReloadPlugin(plugin.name);
         }
       }
@@ -620,7 +620,7 @@ class RuntimePluginManager {
     }
     const name = this.currentFile ? this.currentFile.fileName : "(none)";
     const dir = this.currentFile ? this.currentFile.dirPath : "(none)";
-    console.log("[Active Tab]", name, "->", dir);
+    // console.log("[Active Tab]", name, "->", dir);
     this.emitEvent("fileOpened", this.currentFile);
   }
 
@@ -812,24 +812,24 @@ class RuntimePluginManager {
 
   getSidebarPanels() {
     const result = [];
-    console.log(
-      "[DEBUG] getSidebarPanels called. sidebarPanels map size:",
-      this.sidebarPanels.size,
-    );
+    // console.log(
+    //   "[DEBUG] getSidebarPanels called. sidebarPanels map size:",
+    //   this.sidebarPanels.size,
+    // );
     for (const [pluginName, panel] of this.sidebarPanels) {
-      console.log(
-        "[DEBUG] Found panel for plugin:",
-        pluginName,
-        "panel id:",
-        panel.id,
-      );
+      // console.log(
+      //   "[DEBUG] Found panel for plugin:",
+      //   pluginName,
+      //   "panel id:",
+      //   panel.id,
+      // );
       result.push({
         pluginName,
         panel,
         state: this.panelStates.get(pluginName) || {},
       });
     }
-    console.log("[DEBUG] getSidebarPanels returning", result.length, "panels");
+    // console.log("[DEBUG] getSidebarPanels returning", result.length, "panels");
     return result;
   }
 
@@ -877,16 +877,16 @@ class RuntimePluginManager {
 
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          console.log(
-            "[runtimePlugin] Plugins directory changed, rescanning...",
-          );
+          // console.log(
+          //   "[runtimePlugin] Plugins directory changed, rescanning...",
+          // );
           self.loadAllEnabled();
           self.broadcast("plugins-changed");
         }, 500);
       },
     );
 
-    console.log("[runtimePlugin] Watching plugins directory:", pluginsDir);
+    // console.log("[runtimePlugin] Watching plugins directory:", pluginsDir);
   }
 }
 

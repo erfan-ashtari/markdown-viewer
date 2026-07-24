@@ -1,0 +1,7 @@
+{
+  "name": "plugin-icon-test",
+  "displayName": "Icon Test",
+  "version": "1.0.0",
+  "description": "Tests all icon names available to runtime plugins",
+  "main": "index.js"
+}

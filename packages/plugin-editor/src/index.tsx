@@ -128,7 +128,7 @@ const EditToggleButton: React.FC<{
 };
 
 export function activate(context: PluginContext) {
-  console.log('[plugin-editor] Activated — registering slot + content override');
+  // console.log('[plugin-editor] Activated — registering slot + content override');
   injectPluginStyles();
   context.registerSlot({
     slot: 'header-right',

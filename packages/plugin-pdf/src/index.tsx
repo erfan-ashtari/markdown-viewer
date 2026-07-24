@@ -83,7 +83,7 @@ const PdfRenderer = memo(({ content, filePath }: { content: string; filePath: st
 PdfRenderer.displayName = 'PdfRenderer';
 
 export function activate(context: PluginContext) {
-  console.log('[plugin-pdf] Activated — registering PDF file type');
+  // console.log('[plugin-pdf] Activated — registering PDF file type');
   injectPluginStyles();
   context.registerFileType({
     extensions: ['pdf'],
@@ -93,6 +93,6 @@ export function activate(context: PluginContext) {
 }
 
 export function deactivate() {
-  console.log('[plugin-pdf] Deactivated');
+  // console.log('[plugin-pdf] Deactivated');
   // No cleanup needed for PDF viewer
 }
