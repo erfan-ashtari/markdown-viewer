@@ -1,6 +1,6 @@
 {
   "name": "markdown-viewer",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "description": "A fast, beautiful Markdown viewer for Windows, Linux, and macOS",
   "main": "electron/main.js",
@@ -76,14 +76,34 @@
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/mdview.ico",
       "artifactName": "${productName}-${version}-setup.${ext}",
       "fileAssociations": [
-        { "ext": "md", "name": "Markdown Document", "icon": "build/mdview.ico", "role": "Editor" },
-        { "ext": "markdown", "name": "Markdown Document", "icon": "build/mdview.ico", "role": "Editor" }
+        {
+          "ext": "md",
+          "name": "Markdown Document",
+          "icon": "build/mdview.ico",
+          "role": "Editor"
+        },
+        {
+          "ext": "markdown",
+          "name": "Markdown Document",
+          "icon": "build/mdview.ico",
+          "role": "Editor"
+        }
       ]
     },
     "nsis": {
@@ -103,20 +123,43 @@
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icons",
       "category": "Utility"
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "icon": "build/icons"
     }
   },
-  "keywords": ["markdown", "viewer", "editor", "themes", "electron", "plugin"],
+  "keywords": [
+    "markdown",
+    "viewer",
+    "editor",
+    "themes",
+    "electron",
+    "plugin"
+  ],
   "author": "",
   "license": "MIT"
 }
