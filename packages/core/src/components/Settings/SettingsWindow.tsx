@@ -512,7 +512,7 @@ const PluginsSection: React.FC = () => {
 
   const loadPluginsList = async () => {
     const list = await window.electronAPI?.getPlugins?.();
-    console.log('[Settings] getPlugins returned:', list?.length, 'plugins');
+    // console.log('[Settings] getPlugins returned:', list?.length, 'plugins');
     setPlugins(list || []);
 
     // Fetch runtime plugin enabled state
@@ -532,7 +532,7 @@ const PluginsSection: React.FC = () => {
   // Auto-refresh when plugins directory changes
   useEffect(() => {
     const handler = () => {
-      console.log('[Settings] Plugins changed, refreshing list...');
+      // console.log('[Settings] Plugins changed, refreshing list...');
       loadPluginsList();
     };
     (window as any).electronAPI?.onPluginsChanged?.(handler);
@@ -620,7 +620,7 @@ const PluginsSection: React.FC = () => {
                           if (!confirmed) return;
                         }
                         const result = await (window as any).electronAPI?.setPluginState?.(plugin.name, !isEnabled);
-                        console.log('[Settings] toggle result:', result);
+                        // console.log('[Settings] toggle result:', result);
                         setTimeout(() => loadPluginsList(), 200);
                       } else {
                         if (isEnabled) disablePlugin(plugin.name);
@@ -664,16 +664,16 @@ const RuntimePluginDebug: React.FC = () => {
     const load = async () => {
       try {
         const api = (window as any).electronAPI;
-        console.log('[RuntimePluginDebug] electronAPI available:', !!api);
-        console.log('[RuntimePluginDebug] getExporters available:', typeof api?.getExporters);
+        // console.log('[RuntimePluginDebug] electronAPI available:', !!api);
+        // console.log('[RuntimePluginDebug] getExporters available:', typeof api?.getExporters);
         if (api?.getExporters) {
           const ex = await api.getExporters();
-          console.log('[RuntimePluginDebug] exporters result:', JSON.stringify(ex));
+          // console.log('[RuntimePluginDebug] exporters result:', JSON.stringify(ex));
           setExporters(ex || []);
         }
         if (api?.getCommands) {
           const cmd = await api.getCommands();
-          console.log('[RuntimePluginDebug] commands result:', JSON.stringify(cmd));
+          // console.log('[RuntimePluginDebug] commands result:', JSON.stringify(cmd));
           setCommands(cmd || []);
         }
       } catch (e) {
@@ -686,13 +686,13 @@ const RuntimePluginDebug: React.FC = () => {
   const testExporter = async (name: string) => {
     const result = await (window as any).electronAPI?.executeExport?.(name, '# Hello World\n\nThis is a test.', { fileName: 'test.md' });
     setTestResult(JSON.stringify(result, null, 2));
-    console.log('[Debug] Export result:', result);
+    // console.log('[Debug] Export result:', result);
   };
 
   const testCommand = async (name: string) => {
     const result = await (window as any).electronAPI?.executeCommand?.(name, { text: 'hello world' });
     setTestResult(JSON.stringify(result, null, 2));
-    console.log('[Debug] Command result:', result);
+    // console.log('[Debug] Command result:', result);
   };
 
   if (exporters.length === 0 && commands.length === 0) {

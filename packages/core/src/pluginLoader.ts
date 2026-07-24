@@ -49,7 +49,7 @@ function setupContentOverrideAutoActivation() {
           fileName: activeTab.fileName,
           content: activeTab.content,
         });
-        console.log('[pluginLoader] Auto-activated content override for HTML file');
+        // console.log('[pluginLoader] Auto-activated content override for HTML file');
       } else if (!data.rendered && pluginManager.isContentOverrideActive()) {
         // Deactivate override for source mode
         pluginManager.toggleContentOverride({
@@ -57,7 +57,7 @@ function setupContentOverrideAutoActivation() {
           fileName: activeTab.fileName,
           content: activeTab.content,
         });
-        console.log('[pluginLoader] Auto-deactivated content override for source mode');
+        // console.log('[pluginLoader] Auto-deactivated content override for source mode');
       }
     }
   });
@@ -81,7 +81,7 @@ function setupContentOverrideAutoActivation() {
               fileName: activeTab.fileName,
               content: activeTab.content,
             });
-            console.log('[pluginLoader] Auto-activated content override for new HTML tab');
+            // console.log('[pluginLoader] Auto-activated content override for new HTML tab');
           }
         });
       } else if (pluginManager.isContentOverrideActive()) {
@@ -91,7 +91,7 @@ function setupContentOverrideAutoActivation() {
           fileName: activeTab.fileName,
           content: activeTab.content,
         });
-        console.log('[pluginLoader] Auto-deactivated content override for non-HTML file');
+        // console.log('[pluginLoader] Auto-deactivated content override for non-HTML file');
       }
     }
   });
@@ -113,7 +113,7 @@ export async function loadPlugins() {
     if (!currentEnabled.includes(name)) continue;
 
     const context = pluginManager.createContext(name);
-    console.log('[pluginLoader] Activating built-in:', name);
+    // console.log('[pluginLoader] Activating built-in:', name);
     plugin.activate(context);
     if (plugin.deactivate) {
       pluginDeactivators.set(name, plugin.deactivate as () => void);
@@ -126,7 +126,7 @@ export async function loadPlugins() {
     useAppStore.setState({ runtimeExporters: exporters || [] });
     const commands = await window.electronAPI.getCommands() || [];
     useAppStore.setState({ runtimeCommands: commands || [] });
-    console.log('[pluginLoader] Runtime plugins loaded. Exporters:', (exporters || []).length, '| Commands:', (commands || []).length);
+    // console.log('[pluginLoader] Runtime plugins loaded. Exporters:', (exporters || []).length, '| Commands:', (commands || []).length);
 
     // Fetch content overrides from runtime plugins
     const contentOverrides = await window.electronAPI.getContentOverrides();
@@ -140,7 +140,7 @@ export async function loadPlugins() {
           },
           component: HtmlRenderer,
         });
-        console.log('[pluginLoader] Registered runtime content override for:', override.extensions);
+        // console.log('[pluginLoader] Registered runtime content override for:', override.extensions);
       }
       // Setup auto-activation for content overrides
       setupContentOverrideAutoActivation();

@@ -289,7 +289,7 @@ export const RuntimePluginSidebar: React.FC<RuntimePluginSidebarProps> = ({ isOp
         } else if (log.level === 'warn') {
           console.warn(prefix, ...log.args)
         } else {
-          console.log(prefix, ...log.args)
+          // console.log(prefix, ...log.args)
         }
       }
     }
