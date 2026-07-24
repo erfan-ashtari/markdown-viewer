@@ -259,7 +259,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, zoo
   const remarkPlugins = useMemo(() => [remarkGfm, remarkMath], [])
   const rehypePlugins = useMemo(() => [rehypeKatex, rehypeHighlight, rehypeRaw], [])
 
-  const components = useMemo(() => ({
+  const baseComponents = useMemo(() => ({
     code: CodeBlock,
     h1: (props: any) => <Heading level={1} {...props} />,
     h2: (props: any) => <Heading level={2} {...props} />,
@@ -267,11 +267,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content, zoo
     h4: (props: any) => <Heading level={4} {...props} />,
     h5: (props: any) => <Heading level={5} {...props} />,
     h6: (props: any) => <Heading level={6} {...props} />,
+  }), [])
+
+  const components = useMemo(() => ({
+    ...baseComponents,
     a: ({ children, href, ...rest }: any) => {
       if (!href) return <a {...rest}>{children}</a>
       return <MarkdownLink href={href} visitedLinks={visitedLinks} onVisit={handleVisit}>{children}</MarkdownLink>
     },
-  }), [visitedLinks, handleVisit])
+  }), [visitedLinks, handleVisit, baseComponents])
 
   const encodedContent = useMemo(() => encodeLocalUrls(content), [content])
 
