@@ -20,7 +20,7 @@
     "start": "electron ."
   },
   "dependencies": {
-    "@mdview/plugin-api": "workspace:*",
+    "@mdview/plugin-api": "file:../plugin-api",
     "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
     "lucide-react": "^0.468.0",

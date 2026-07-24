@@ -8,7 +8,7 @@
   ],
   "name": "@mdview/plugin-editor",
   "dependencies": {
-    "@mdview/plugin-api": "workspace:*"
+    "@mdview/plugin-api": "file:../plugin-api"
   },
   "displayName": "Text Editor",
   "contributes": {

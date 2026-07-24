@@ -14,7 +14,7 @@
   ],
   "name": "@mdview/plugin-images",
   "dependencies": {
-    "@mdview/plugin-api": "workspace:*"
+    "@mdview/plugin-api": "file:../plugin-api"
   },
   "displayName": "Image Viewer",
   "contributes": {
