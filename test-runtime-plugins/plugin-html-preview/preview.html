@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1e1e1e; color: #ccc; font-family: sans-serif; overflow: hidden; }
+    #placeholder {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; color: #666; font-size: 14px; text-align: center;
+      padding: 20px;
+    }
+    iframe { width: 100%; height: 100vh; border: none; display: none; }
+  </style>
+</head>
+<body>
+  <div id="placeholder">Open an HTML file to preview</div>
+  <iframe id="preview"></iframe>
+
+  <script>
+    const placeholder = document.getElementById('placeholder');
+    const previewFrame = document.getElementById('preview');
+    let lastBlobUrl = null;
+
+    window.addEventListener('message', (event) => {
+      if (event.data?.type !== 'state-update') return;
+      const s = event.data.state;
+      if (!s) return;
+
+      if (s.html) {
+        // Clean up previous blob URL
+        if (lastBlobUrl) {
+          URL.revokeObjectURL(lastBlobUrl);
+          lastBlobUrl = null;
+        }
+
+        // Create a blob URL and set it as iframe src
+        const blob = new Blob([s.html], { type: 'text/html' });
+        lastBlobUrl = URL.createObjectURL(blob);
+
+        placeholder.style.display = 'none';
+        previewFrame.style.display = 'block';
+        previewFrame.src = lastBlobUrl;
+      } else if (s.message) {
+        if (lastBlobUrl) {
+          URL.revokeObjectURL(lastBlobUrl);
+          lastBlobUrl = null;
+        }
+        placeholder.style.display = 'flex';
+        previewFrame.style.display = 'none';
+        placeholder.textContent = s.message;
+      }
+    });
+  </script>
+</body>
+</html>

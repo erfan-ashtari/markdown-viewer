@@ -1,0 +1,8 @@
+{
+  "name": "plugin-html-preview",
+  "displayName": "HTML Preview",
+  "version": "1.0.0",
+  "description": "Renders the active HTML file in a sidebar iframe panel",
+  "main": "index.js",
+  "activationEvents": ["onStartup"]
+}
